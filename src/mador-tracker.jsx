@@ -64,7 +64,9 @@ export default function MadorTracker() {
 
   // Local UI state
   const [activeTab, setActiveTab] = useState('expediciones');
-  const [filtroExpedicionId, setFiltroExpedicionId] = useState(null);
+  const [statsExpDesde, setStatsExpDesde] = useState(null);
+  const [statsExpHasta, setStatsExpHasta] = useState(null);
+  const [statsClienteId, setStatsClienteId] = useState(null);
 
   // Usuario activo (local session state)
   const [usuarioActivo, setUsuarioActivo] = useState(() => {
@@ -1701,13 +1703,38 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
 
   // Estadisticas Tab
   const EstadisticasTab = () => {
-    // Preparar datos para el gráfico: bruto por expedición y cliente
+    const sortedExpediciones = useMemo(() =>
+      [...expediciones].sort((a, b) => getExpNum(a.nombre) - getExpNum(b.nombre)),
+      [expediciones]
+    );
+
+    const filteredExpediciones = useMemo(() => {
+      let exps = sortedExpediciones;
+      if (statsExpDesde) {
+        const desdeNum = getExpNum(expediciones.find(e => e.id === statsExpDesde)?.nombre);
+        exps = exps.filter(e => getExpNum(e.nombre) >= desdeNum);
+      }
+      if (statsExpHasta) {
+        const hastaNum = getExpNum(expediciones.find(e => e.id === statsExpHasta)?.nombre);
+        exps = exps.filter(e => getExpNum(e.nombre) <= hastaNum);
+      }
+      return exps;
+    }, [sortedExpediciones, statsExpDesde, statsExpHasta, expediciones]);
+
+    const filteredExpIds = useMemo(() =>
+      new Set(filteredExpediciones.map(e => e.id)),
+      [filteredExpediciones]
+    );
+
+    const filteredClientes = useMemo(() =>
+      statsClienteId ? clientes.filter(c => c.id === statsClienteId) : clientes,
+      [clientes, statsClienteId]
+    );
+
     const chartData = useMemo(() => {
-      return [...expediciones].sort((a, b) => getExpNum(a.nombre) - getExpNum(b.nombre)).map(exp => {
+      return filteredExpediciones.map(exp => {
         const dataPoint = { expedicion: exp.nombre };
-        
-        // Para cada cliente, sumar el bruto de sus paquetes en esta expedición
-        clientes.forEach(cliente => {
+        filteredClientes.forEach(cliente => {
           const clientePaquetes = paquetes.filter(
             p => p.expedicionId === exp.id && p.clienteId === cliente.id
           );
@@ -1716,33 +1743,82 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
           }, 0);
           dataPoint[cliente.nombre] = brutoTotal;
         });
-        
         return dataPoint;
       });
-    }, [expediciones, clientes, paquetes]);
+    }, [filteredExpediciones, filteredClientes, paquetes]);
 
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-amber-800">Estadísticas</h2>
-        
+
+        {/* Filtros */}
         <Card>
-          <h3 className="text-amber-600 font-semibold mb-4">📊 Volumen Bruto por Expedición y Cliente</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-amber-600 font-semibold text-sm">Filtros</h3>
+            {(statsExpDesde || statsExpHasta || statsClienteId) && (
+              <button
+                onClick={() => { setStatsExpDesde(null); setStatsExpHasta(null); setStatsClienteId(null); }}
+                className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+              >Limpiar filtros</button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-stone-600 text-sm min-w-[3rem]">Desde</label>
+            <select
+              value={statsExpDesde || ''}
+              onChange={(e) => setStatsExpDesde(e.target.value || null)}
+              className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Inicio</option>
+              {sortedExpediciones.map(exp => (
+                <option key={exp.id} value={exp.id}>{exp.nombre}</option>
+              ))}
+            </select>
+            <label className="text-stone-600 text-sm min-w-[3rem]">Hasta</label>
+            <select
+              value={statsExpHasta || ''}
+              onChange={(e) => setStatsExpHasta(e.target.value || null)}
+              className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Final</option>
+              {sortedExpediciones.map(exp => (
+                <option key={exp.id} value={exp.id}>{exp.nombre}</option>
+              ))}
+            </select>
+          </div>
+          {statsClienteId && (() => {
+            const cliente = clientes.find(c => c.id === statsClienteId);
+            return (
+              <div className="flex items-center gap-2 mt-2 bg-amber-50 rounded-lg px-3 py-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cliente?.color || '#999' }} />
+                <span className="text-stone-700 text-sm">Filtrando por: <strong>{cliente?.nombre}</strong></span>
+                <button
+                  onClick={() => setStatsClienteId(null)}
+                  className="ml-auto text-stone-400 hover:text-red-500 text-lg leading-none"
+                >&times;</button>
+              </div>
+            );
+          })()}
+        </Card>
+
+        <Card>
+          <h3 className="text-amber-600 font-semibold mb-4">Volumen Bruto por Expedición y Cliente</h3>
           <div className="w-full h-80 -ml-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
                 <XAxis dataKey="expedicion" tick={{ fill: '#78716c', fontSize: 12 }} />
                 <YAxis tick={{ fill: '#78716c', fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(1)}k`} />
-                <Tooltip 
+                <Tooltip
                   formatter={(value, name) => [`${formatNum(value)} g`, name]}
                   contentStyle={{ backgroundColor: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                {clientes.map((cliente) => (
-                  <Bar 
-                    key={cliente.id} 
-                    dataKey={cliente.nombre} 
-                    stackId="a" 
+                {filteredClientes.map((cliente) => (
+                  <Bar
+                    key={cliente.id}
+                    dataKey={cliente.nombre}
+                    stackId="a"
                     fill={cliente.color || '#999999'}
                   />
                 ))}
@@ -1751,23 +1827,35 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
           </div>
         </Card>
 
-        {/* Tabla resumen */}
+        {/* Tabla resumen — click para filtrar por cliente */}
         <Card>
-          <h3 className="text-amber-600 font-semibold mb-3">📋 Resumen por Cliente</h3>
-          <div className="space-y-2">
+          <h3 className="text-amber-600 font-semibold mb-3">Resumen por Cliente</h3>
+          <div className="space-y-1">
             {clientes.map((cliente) => {
               const totalBruto = paquetes
-                .filter(p => p.clienteId === cliente.id)
+                .filter(p => p.clienteId === cliente.id && filteredExpIds.has(p.expedicionId))
                 .reduce((sum, paq) => sum + paq.lineas.reduce((s, l) => s + Math.max(0, l.bruto), 0), 0);
-              const numPaquetes = paquetes.filter(p => p.clienteId === cliente.id).length;
-              
+              const numPaquetes = paquetes.filter(p => p.clienteId === cliente.id && filteredExpIds.has(p.expedicionId)).length;
+
               if (numPaquetes === 0) return null;
-              
+
+              const isActive = statsClienteId === cliente.id;
+
               return (
-                <div key={cliente.id} className="flex justify-between items-center py-2 border-b border-amber-100 last:border-0">
+                <div
+                  key={cliente.id}
+                  onClick={() => setStatsClienteId(isActive ? null : cliente.id)}
+                  className={`flex justify-between items-center py-2 px-2 rounded-lg cursor-pointer transition-all ${
+                    isActive
+                      ? 'bg-amber-100 ring-1 ring-amber-400'
+                      : statsClienteId
+                        ? 'opacity-40 hover:opacity-70'
+                        : 'hover:bg-amber-50'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
+                    <div
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: cliente.color || '#999999' }}
                     />
                     <span className="text-stone-800 font-medium">{cliente.nombre}</span>
