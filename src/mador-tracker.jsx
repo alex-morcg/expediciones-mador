@@ -1003,7 +1003,8 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
             <Button size="sm" onClick={() => openModal('paquete', null)}>+ Nuevo</Button>
           </div>
           
-          {/* Marcar todos como */}
+          {/* Marcar todos como — solo visible en vista por estado */}
+          {ordenVista === 'estado' && (
           <div className="flex items-center gap-2 bg-stone-100 rounded-lg p-2">
             <span className="text-stone-600 text-sm">Marcar todos como:</span>
             <select
@@ -1021,6 +1022,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
               ))}
             </select>
           </div>
+          )}
           
           {/* Modal de confirmación */}
           {marcarTodosModal.open && (
@@ -1758,7 +1760,13 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
         if (editingItem) {
           return { ...editingItem, esActual: expedicionActualId === editingItem.id };
         }
-        return { nombre: '', fechaExportacion: null, esActual: false };
+        // Auto-suggest next expedition number
+        const maxNum = expediciones.reduce((max, exp) => {
+          const match = exp.nombre?.match(/^E(\d+)$/);
+          return match ? Math.max(max, parseInt(match[1])) : max;
+        }, 0);
+        const suggestedName = maxNum > 0 ? `E${maxNum + 1}` : '';
+        return { nombre: suggestedName, fechaExportacion: null, esActual: false };
       }
       if (modalType === 'paquete') {
         const defaultCliente = clientes[0];
@@ -2254,6 +2262,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
+              <span className="text-xs text-white/50 font-mono">v0.2</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
