@@ -217,6 +217,13 @@ export function useFirestore() {
 
   // Set up real-time listeners immediately — seed only if DB is empty
   useEffect(() => {
+    console.log('[useFirestore] Effect running, setting up listeners...');
+
+    // Quick connectivity test
+    getDocs(collection(db, 'categorias'))
+      .then(snap => console.log('[useFirestore] getDocs test OK, docs:', snap.size))
+      .catch(err => console.error('[useFirestore] getDocs test FAILED:', err));
+
     let cancelled = false;
     const unsubscribers = [];
     let loadedCount = 0;
@@ -224,6 +231,7 @@ export function useFirestore() {
 
     const checkLoaded = () => {
       loadedCount++;
+      console.log(`[useFirestore] checkLoaded ${loadedCount}/${totalCollections}`);
       if (loadedCount >= totalCollections && !cancelled) {
         setLoading(false);
       }
