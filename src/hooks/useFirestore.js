@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   collection,
   doc,
@@ -213,82 +213,107 @@ export function useFirestore() {
   const [usuarios, setUsuarios] = useState([]);
   const [expedicionActualId, setExpedicionActualIdState] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [seeded, setSeeded] = useState(false);
+  const seedTriggered = useRef(false);
 
-  // Seed on first mount
+  // Set up real-time listeners immediately — seed only if DB is empty
   useEffect(() => {
-    seedDatabase().then(() => setSeeded(true)).catch((err) => {
-      console.error('Seed error:', err);
-      setSeeded(true); // Continue even if seed fails
-    });
-  }, []);
-
-  // Real-time listeners
-  useEffect(() => {
-    if (!seeded) return;
-
+    let cancelled = false;
     const unsubscribers = [];
     let loadedCount = 0;
     const totalCollections = 7;
 
     const checkLoaded = () => {
       loadedCount++;
-      if (loadedCount >= totalCollections) setLoading(false);
+      if (loadedCount >= totalCollections && !cancelled) {
+        setLoading(false);
+      }
     };
 
+    // Categorias listener — also triggers seeding if empty
     unsubscribers.push(
       onSnapshot(collection(db, 'categorias'), (snap) => {
-        setCategorias(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!cancelled) setCategorias(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+        // Seed if empty and not already triggered
+        if (snap.empty && !seedTriggered.current) {
+          seedTriggered.current = true;
+          seedDatabase().catch(err => console.error('[useFirestore] Seed error:', err));
+        }
+      }, (error) => {
+        console.error('Firestore error (categorias):', error);
         checkLoaded();
       })
     );
 
     unsubscribers.push(
       onSnapshot(collection(db, 'clientes'), (snap) => {
-        setClientes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!cancelled) setClientes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (clientes):', error);
         checkLoaded();
       })
     );
 
     unsubscribers.push(
       onSnapshot(collection(db, 'expediciones'), (snap) => {
-        setExpediciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!cancelled) setExpediciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (expediciones):', error);
         checkLoaded();
       })
     );
 
     unsubscribers.push(
       onSnapshot(collection(db, 'paquetes'), (snap) => {
-        setPaquetes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!cancelled) setPaquetes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (paquetes):', error);
         checkLoaded();
       })
     );
 
     unsubscribers.push(
       onSnapshot(collection(db, 'estadosPaquete'), (snap) => {
-        setEstadosPaquete(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!cancelled) setEstadosPaquete(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (estadosPaquete):', error);
         checkLoaded();
       })
     );
 
     unsubscribers.push(
       onSnapshot(collection(db, 'usuarios'), (snap) => {
-        setUsuarios(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (!cancelled) setUsuarios(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (usuarios):', error);
         checkLoaded();
       })
     );
 
     unsubscribers.push(
       onSnapshot(doc(db, 'config', 'settings'), (snap) => {
-        if (snap.exists()) {
-          setExpedicionActualIdState(snap.data().expedicionActualId || null);
+        if (!cancelled) {
+          if (snap.exists()) {
+            setExpedicionActualIdState(snap.data().expedicionActualId || null);
+          }
         }
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (config):', error);
         checkLoaded();
       })
     );
 
-    return () => unsubscribers.forEach(unsub => unsub());
-  }, [seeded]);
+    return () => {
+      cancelled = true;
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, []);
 
   // --- CRUD functions ---
 
