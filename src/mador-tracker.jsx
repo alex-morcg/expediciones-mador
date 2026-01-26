@@ -2234,7 +2234,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
     );
   };
 
-  if (loading || !usuarioActivo) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">
         <div className="text-center">
