@@ -2399,7 +2399,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.3</span>
+              <span className="text-xs text-white/50 font-mono">v0.4</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
