@@ -114,10 +114,20 @@ export default function MadorTracker() {
     return Math.trunc(fino * 100) / 100; // Truncar a 2 decimales
   };
 
-  const calcularTotalesPaquete = (paquete) => {
+  const getExpedicionPrecioPorDefecto = (expedicionId) => {
+    const exp = expediciones.find(e => e.id === expedicionId);
+    if (exp?.precioPorDefecto) return exp.precioPorDefecto;
+    // Fallback: most recent precioFino from paquetes in this expedition
+    const expPaquetes = paquetes.filter(p => p.expedicionId === expedicionId && p.precioFino);
+    if (expPaquetes.length === 0) return null;
+    const sorted = [...expPaquetes].sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+    return sorted[0]?.precioFino || null;
+  };
+
+  const calcularTotalesPaquete = (paquete, precioPorDefecto) => {
     const cliente = getCliente(paquete.clienteId);
     const noCuentaNegativas = cliente?.lineasNegativasNoCuentanPeso ?? true;
-    
+
     // Para peso: si noCuentaNegativas, excluimos líneas negativas
     // Para cálculo €: siempre incluimos todas las líneas
     const finoTotalPeso = paquete.lineas.reduce((sum, l) => {
@@ -125,43 +135,50 @@ export default function MadorTracker() {
       if (noCuentaNegativas && l.bruto < 0) return sum;
       return sum + fino;
     }, 0);
-    
+
     const brutoTotalPeso = paquete.lineas.reduce((sum, l) => {
       if (noCuentaNegativas && l.bruto < 0) return sum;
       return sum + l.bruto;
     }, 0);
-    
+
     // Para cálculo de €: incluimos TODAS las líneas (incluso negativas)
     const finoTotalCalculo = paquete.lineas.reduce((sum, l) => sum + calcularFinoLinea(l.bruto, l.ley), 0);
-    
-    if (!paquete.precioFino) {
-      return { finoTotal: finoTotalPeso, finoTotalCalculo, brutoTotal: brutoTotalPeso, base: 0, descuento: 0, baseCliente: 0, igi: 0, totalFra: 0, fraJofisa: 0, margen: 0 };
+
+    // Use precioPorDefecto if paquete has no precioFino
+    const precioEfectivo = paquete.precioFino || precioPorDefecto || null;
+    const esEstimado = !paquete.precioFino && !!precioPorDefecto;
+
+    if (!precioEfectivo) {
+      return { finoTotal: finoTotalPeso, finoTotalCalculo, brutoTotal: brutoTotalPeso, base: 0, descuento: 0, baseCliente: 0, igi: 0, totalFra: 0, fraJofisa: 0, margen: 0, esEstimado: false };
     }
-    
-    const base = finoTotalCalculo * paquete.precioFino;
+
+    const base = finoTotalCalculo * precioEfectivo;
     const descuento = base * (paquete.descuento / 100);
     const baseCliente = base - descuento;
     const igi = baseCliente * (paquete.igi / 100);
     const totalFra = baseCliente + igi;
-    const cierreJofisa = paquete.cierreJofisa || (paquete.precioFino - 0.25);
+    const cierreJofisa = paquete.cierreJofisa || (precioEfectivo - 0.25);
     const fraJofisa = cierreJofisa * finoTotalCalculo;
     const margen = fraJofisa - baseCliente;
-    
-    return { finoTotal: finoTotalPeso, finoTotalCalculo, brutoTotal: brutoTotalPeso, base, descuento, baseCliente, igi, totalFra, fraJofisa, margen, cierreJofisa };
+
+    return { finoTotal: finoTotalPeso, finoTotalCalculo, brutoTotal: brutoTotalPeso, base, descuento, baseCliente, igi, totalFra, fraJofisa, margen, cierreJofisa, esEstimado };
   };
 
   const calcularTotalesExpedicion = (expedicionId) => {
     const expedicionPaquetes = paquetes.filter(p => p.expedicionId === expedicionId);
-    
+    const precioPorDefecto = getExpedicionPrecioPorDefecto(expedicionId);
+
     let sumaBruto = 0;
     let sumaFino = 0;
     let totalFra = 0;
     let totalFraJofisa = 0;
     let totalMargen = 0;
+    let totalFraEstimado = 0;
     const porCategoria = {};
-    
+
     expedicionPaquetes.forEach(paq => {
-      const totales = calcularTotalesPaquete(paq);
+      const totales = calcularTotalesPaquete(paq, precioPorDefecto);
+      if (totales.esEstimado) totalFraEstimado += totales.totalFra;
       sumaBruto += totales.brutoTotal;
       sumaFino += totales.finoTotal;
       totalFra += totales.totalFra;
@@ -187,7 +204,7 @@ export default function MadorTracker() {
         : 0;
     });
     
-    return { sumaBruto, sumaFino, totalFra, totalFraJofisa, totalMargen, precioMedioBruto, porCategoria, numPaquetes: expedicionPaquetes.length };
+    return { sumaBruto, sumaFino, totalFra, totalFraJofisa, totalMargen, totalFraEstimado, precioMedioBruto, porCategoria, numPaquetes: expedicionPaquetes.length };
   };
 
   const getPrecioRefExpedicion = (expedicionId) => {
@@ -199,7 +216,7 @@ export default function MadorTracker() {
   };
 
   const generarTexto = (paquete) => {
-    const totales = calcularTotalesPaquete(paquete);
+    const totales = calcularTotalesPaquete(paquete, getExpedicionPrecioPorDefecto(paquete.expedicionId));
     const cliente = getCliente(paquete.clienteId);
     const lineasTexto = paquete.lineas.map(l => {
       const fino = calcularFinoLinea(l.bruto, l.ley);
@@ -355,8 +372,8 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
       }
       
       setVerificandoFactura(true);
-      
-      const totales = calcularTotalesPaquete(paq);
+
+      const totales = calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(paq.expedicionId));
       
       // Extraer base64 sin el prefijo data:...
       const base64Data = paq.factura.data.split(',')[1];
@@ -449,7 +466,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
       const paq = paquetes.find(p => p.id === selectedPaquete);
       if (!paq) return null;
       
-      const totales = calcularTotalesPaquete(paq);
+      const totales = calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(paq.expedicionId));
       const cliente = getCliente(paq.clienteId);
       const categoria = getCategoria(paq.categoriaId);
       const clienteColor = cliente?.color || '#f59e0b';
@@ -697,16 +714,21 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
           
           <Card style={{ backgroundColor: clienteColor + '10', borderColor: clienteColor + '40' }}>
             <h3 className="font-semibold mb-3" style={{ color: clienteColor }}>💰 Cálculos</h3>
+            {totales.esEstimado && (
+              <div className="mb-3 px-2 py-1 rounded text-xs bg-stone-100 text-stone-500 italic">
+                Precio estimado ({formatNum(getExpedicionPrecioPorDefecto(paq.expedicionId))} €/g) — sin precio fino asignado
+              </div>
+            )}
             <div className="space-y-2 text-sm font-mono">
               <div className="flex justify-between"><span className="text-stone-500">Fino (peso):</span><span className="text-stone-800 font-medium">{formatNum(totales.finoTotal, 2)} g</span></div>
               {totales.finoTotalCalculo !== totales.finoTotal && (
                 <div className="flex justify-between"><span className="text-stone-500">Fino (cálculo €):</span><span style={{ color: clienteColor }} className="font-medium">{formatNum(totales.finoTotalCalculo, 2)} g</span></div>
               )}
-              <div className="flex justify-between"><span className="text-stone-500">Base:</span><span className="text-stone-800 font-medium">{formatNum(totales.base)} €</span></div>
+              <div className="flex justify-between"><span className="text-stone-500">Base:</span><span className={totales.esEstimado ? 'text-stone-400 font-medium italic' : 'text-stone-800 font-medium'}>{totales.esEstimado ? '~' : ''}{formatNum(totales.base)} €</span></div>
               <div className="flex justify-between"><span className="text-stone-500">Descuento ({paq.descuento}%):</span><span className="text-red-600 font-medium">-{formatNum(totales.descuento)} €</span></div>
-              <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Base cliente:</span><span className="text-stone-800 font-medium">{formatNum(totales.baseCliente)} €</span></div>
+              <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Base cliente:</span><span className={totales.esEstimado ? 'text-stone-400 font-medium italic' : 'text-stone-800 font-medium'}>{totales.esEstimado ? '~' : ''}{formatNum(totales.baseCliente)} €</span></div>
               <div className="flex justify-between"><span className="text-stone-500">IGI ({paq.igi}%):</span><span className="text-stone-800 font-medium">+{formatNum(totales.igi)} €</span></div>
-              <div className="flex justify-between pt-2 text-base" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="font-bold" style={{ color: clienteColor }}>Total Fra:</span><span className="font-bold" style={{ color: clienteColor }}>{formatNum(totales.totalFra)} €</span></div>
+              <div className="flex justify-between pt-2 text-base" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}Total Fra:</span><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}{formatNum(totales.totalFra)} €</span></div>
               <div className="flex justify-between mt-4 pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Fra a Jofisa:</span><span className="text-stone-800 font-medium">{formatNum(totales.fraJofisa)} €</span></div>
               <div className="flex justify-between"><span className="text-stone-500">Margen:</span><span className={totales.margen >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{formatNum(totales.margen)} €</span></div>
             </div>
@@ -980,6 +1002,9 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
               <div>
                 <span className="text-stone-500">Total Fra</span>
                 <p className="text-stone-800 font-mono font-medium">{formatNum(totales.totalFra)} €</p>
+                {totales.totalFraEstimado > 0 && (
+                  <p className="text-stone-400 text-xs italic font-mono">~{formatNum(totales.totalFraEstimado)} € estimado</p>
+                )}
               </div>
               <div>
                 <span className="text-stone-500">Fra Jofisa</span>
@@ -1068,20 +1093,22 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
                 return a.numero - b.numero;
               });
               
+              const expPrecioPorDefecto = getExpedicionPrecioPorDefecto(selectedExpedicion);
+
               // Pre-calcular suma de bruto por cliente
               const brutoPorCliente = {};
               expedicionPaquetes.forEach(paq => {
-                const totales = calcularTotalesPaquete(paq);
+                const totales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
                 if (!brutoPorCliente[paq.clienteId]) {
                   brutoPorCliente[paq.clienteId] = 0;
                 }
                 brutoPorCliente[paq.clienteId] += totales.brutoTotal;
               });
-              
+
               // Pre-calcular suma de bruto por categoría
               const brutoPorCategoria = {};
               expedicionPaquetes.forEach(paq => {
-                const totales = calcularTotalesPaquete(paq);
+                const totales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
                 if (!brutoPorCategoria[paq.categoriaId]) {
                   brutoPorCategoria[paq.categoriaId] = 0;
                 }
@@ -1093,7 +1120,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
               let lastCategoriaId = null;
               
               return sortedPaquetes.map(paq => {
-                const paqTotales = calcularTotalesPaquete(paq);
+                const paqTotales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
                 const cliente = getCliente(paq.clienteId);
                 const categoria = getCategoria(paq.categoriaId);
                 const tieneVerificacion = paq.verificacionIA && paq.factura && paq.verificacionIA.archivoNombre === paq.factura.nombre;
@@ -1202,7 +1229,9 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-amber-700 font-mono text-sm font-medium">{formatNum(paqTotales.totalFra)} €</p>
+                          <p className={`font-mono text-sm font-medium ${paqTotales.esEstimado ? 'text-stone-400 italic' : 'text-amber-700'}`}>
+                            {paqTotales.esEstimado ? '~' : ''}{formatNum(paqTotales.totalFra)} €
+                          </p>
                           <p className="text-stone-500 text-xs">{formatNum(paqTotales.brutoTotal)}g bruto</p>
                         </div>
                       </div>
@@ -1758,7 +1787,9 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
       }
       if (modalType === 'expedicion') {
         if (editingItem) {
-          return { ...editingItem, esActual: expedicionActualId === editingItem.id };
+          // Auto-populate precioPorDefecto from most recent cierre if not set
+          const defaultPrecio = editingItem.precioPorDefecto || getExpedicionPrecioPorDefecto(editingItem.id) || '';
+          return { ...editingItem, precioPorDefecto: defaultPrecio, esActual: expedicionActualId === editingItem.id };
         }
         // Auto-suggest next expedition number
         const maxNum = expediciones.reduce((max, exp) => {
@@ -1766,7 +1797,10 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
           return match ? Math.max(max, parseInt(match[1])) : max;
         }, 0);
         const suggestedName = maxNum > 0 ? `E${maxNum + 1}` : '';
-        return { nombre: suggestedName, fechaExportacion: null, esActual: false };
+        // Get most recent precioFino across all expediciones as starting default
+        const allPreciosFino = paquetes.filter(p => p.precioFino).map(p => p.precioFino);
+        const defaultPrecio = allPreciosFino.length > 0 ? allPreciosFino[allPreciosFino.length - 1] : '';
+        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio };
       }
       if (modalType === 'paquete') {
         const defaultCliente = clientes[0];
@@ -1924,22 +1958,30 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
           
           {modalType === 'expedicion' && (
             <>
-              <Input 
-                label="Nombre" 
-                value={formData.nombre} 
+              <Input
+                label="Nombre"
+                value={formData.nombre}
                 onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                 placeholder="Ej: E50"
               />
-              <Input 
-                label="Fecha de exportación" 
+              <Input
+                label="Precio por defecto (€/g)"
+                type="number"
+                step="0.01"
+                value={formData.precioPorDefecto || ''}
+                onChange={(e) => setFormData({ ...formData, precioPorDefecto: e.target.value ? parseFloat(e.target.value) : null })}
+                placeholder="Para paquetes sin precio fino"
+              />
+              <Input
+                label="Fecha de exportación"
                 type="date"
-                value={formData.fechaExportacion || ''} 
+                value={formData.fechaExportacion || ''}
                 onChange={(e) => setFormData({ ...formData, fechaExportacion: e.target.value || null })}
               />
               <div className="mb-3">
-                <Checkbox 
-                  label="Expedición actual (para nuevos paquetes)" 
-                  checked={formData.esActual || false} 
+                <Checkbox
+                  label="Expedición actual (para nuevos paquetes)"
+                  checked={formData.esActual || false}
                   onChange={(e) => setFormData({ ...formData, esActual: e.target.checked })}
                 />
               </div>
@@ -2262,7 +2304,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.2</span>
+              <span className="text-xs text-white/50 font-mono">v0.3</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
@@ -2294,7 +2336,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
                   const paq = paquetes.find(p => p.id === selectedPaquete);
                   const cliente = paq ? getCliente(paq.clienteId) : null;
                   const categoria = paq ? getCategoria(paq.categoriaId) : null;
-                  const totales = paq ? calcularTotalesPaquete(paq) : null;
+                  const totales = paq ? calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(paq?.expedicionId)) : null;
                   return (
                     <>
                       <Button variant="ghost" size="sm" onClick={() => setSelectedPaquete(null)}>← Volver</Button>
