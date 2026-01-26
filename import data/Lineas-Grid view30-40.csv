@@ -1,0 +1,939 @@
+﻿Linea,Paquete,Peso Bruto _ CL,Ley_CL,kts,Fino,P.V,no cuenta Peso,fino_CL,bruto_peso,fino*pv,Exp,Cliente
+E33_7_310,E33_7,1.31,310.00,,0.41,,,0.41,1.31,0,"'
+- Una linea de 0.41 grs. de fino: 1.31 grs de bruto x ley  (310/1000)",Nova Joia
+E31_4_313,E31_4,9.54,313.00,,2.99,,,2.99,9.54,0,"'
+- Una linea de 2.99 grs. de fino: 9.54 grs de bruto x ley  (313/1000)",La Milla d'Or
+E30_4_355,E30_4,7.32,355.00,,2.60,,,2.60,7.32,0,"'
+- Una linea de 2.6 grs. de fino: 7.32 grs de bruto x ley  (355/1000)",La Milla d'Or
+E31_13_355,E31_13,1.50,355.00,,0.53,,,0.53,1.50,0,"'
+- Una linea de 0.53 grs. de fino: 1.5 grs de bruto x ley  (355/1000)",La Milla d'Or
+E32_7_355,E32_7,6.26,355.00,,2.22,,,2.22,6.26,0,"'
+- Una linea de 2.22 grs. de fino: 6.26 grs de bruto x ley  (355/1000)",La Milla d'Or
+E32_21_355,E32_21,5.44,355.00,,1.93,,,1.93,5.44,0,"'
+- Una linea de 1.93 grs. de fino: 5.44 grs de bruto x ley  (355/1000)",La Milla d'Or
+E30_12_375,E30_12,10.70,375.00,,4.01,,,4.01,10.70,0,"'
+- Una linea de 4.01 grs. de fino: 10.7 grs de bruto x ley  (375/1000)",Gemma d'Or
+E30_19_440,E30_19,45.00,440.00,11,19.80,,,19.80,45.00,0,"'
+- Una linea de 19.8 grs. de fino: 45 grs de bruto x ley 11 kts (440/1000)",Nova Joia
+E31_2_470,E31_2,9.20,470.00,,4.32,,,4.32,9.20,0,"'
+- Una linea de 4.32 grs. de fino: 9.2 grs de bruto x ley  (470/1000)",Gemma d'Or
+E30_16_540,E30_16,5.90,540.00,,3.19,,,3.19,5.90,0,"'
+- Una linea de 3.19 grs. de fino: 5.9 grs de bruto x ley  (540/1000)",Nova Joia
+E32_15_540,E32_15,8.75,540.00,,4.72,,,4.72,8.75,0,"'
+- Una linea de 4.72 grs. de fino: 8.75 grs de bruto x ley  (540/1000)",Nova Joia
+E33_7_540,E33_7,2.71,540.00,,1.46,,,1.46,2.71,0,"'
+- Una linea de 1.46 grs. de fino: 2.71 grs de bruto x ley  (540/1000)",Nova Joia
+E30_4_565,E30_4,29.12,565.00,,16.45,,,16.45,29.12,0,"'
+- Una linea de 16.45 grs. de fino: 29.12 grs de bruto x ley  (565/1000)",La Milla d'Or
+E30_18_565,E30_18,34.09,565.00,,19.26,,,19.26,34.09,0,"'
+- Una linea de 19.26 grs. de fino: 34.09 grs de bruto x ley  (565/1000)",La Milla d'Or
+E31_4_565,E31_4,14.66,565.00,,8.28,,,8.28,14.66,0,"'
+- Una linea de 8.28 grs. de fino: 14.66 grs de bruto x ley  (565/1000)",La Milla d'Or
+E31_13_565,E31_13,5.97,565.00,,3.37,,,3.37,5.97,0,"'
+- Una linea de 3.37 grs. de fino: 5.97 grs de bruto x ley  (565/1000)",La Milla d'Or
+E32_7_565,E32_7,11.18,565.00,,6.32,,,6.32,11.18,0,"'
+- Una linea de 6.32 grs. de fino: 11.18 grs de bruto x ley  (565/1000)",La Milla d'Or
+E32_21_565,E32_21,22.49,565.00,,12.71,,,12.71,22.49,0,"'
+- Una linea de 12.71 grs. de fino: 22.49 grs de bruto x ley  (565/1000)",La Milla d'Or
+E33_14_565,E33_14,5.55,565.00,,3.14,,,3.14,5.55,0,"'
+- Una linea de 3.14 grs. de fino: 5.55 grs de bruto x ley  (565/1000)",La Milla d'Or
+E31_13_646,E31_13,10.30,646.00,,6.65,,,6.65,10.30,0,"'
+- Una linea de 6.65 grs. de fino: 10.3 grs de bruto x ley  (646/1000)",La Milla d'Or
+E32_7_646,E32_7,22.50,646.00,,14.54,,,14.54,22.50,0,"'
+- Una linea de 14.54 grs. de fino: 22.5 grs de bruto x ley  (646/1000)",La Milla d'Or
+E32_21_646,E32_21,83.91,646.00,,54.21,,,54.21,83.91,0,"'
+- Una linea de 54.21 grs. de fino: 83.91 grs de bruto x ley  (646/1000)",La Milla d'Or
+E33_14_646,E33_14,1.40,646.00,,0.90,,,0.90,1.40,0,"'
+- Una linea de 0.9 grs. de fino: 1.4 grs de bruto x ley  (646/1000)",La Milla d'Or
+E31_6_666,E31_6,633.40,666.00,16,421.84,,,421.84,633.40,0,"'
+- Una linea de 421.84 grs. de fino: 633.4 grs de bruto x ley 16 kts (666/1000)",OrCash
+E30_20_700,E30_20,98.30,700.00,,68.81,,,68.81,98.30,0,"'
+- Una linea de 68.81 grs. de fino: 98.3 grs de bruto x ley  (700/1000)",Gemma d'Or
+E32_14_700,E32_14,301.70,700.00,,211.19,,,211.19,301.70,0,"'
+- Una linea de 211.19 grs. de fino: 301.7 grs de bruto x ley  (700/1000)",Gemma d'Or
+E32_20_700,E32_20,133.80,700.00,,93.66,,,93.66,133.80,0,"'
+- Una linea de 93.66 grs. de fino: 133.8 grs de bruto x ley  (700/1000)",Gemma d'Or
+E30_6_708,E30_6,50.00,708.00,,35.40,,,35.40,50.00,0,"'
+- Una linea de 35.4 grs. de fino: 50 grs de bruto x ley  (708/1000)",Alquimia
+E30_13_708,E30_13,485.08,708.00,,343.44,,,343.44,485.08,0,"'
+- Una linea de 343.44 grs. de fino: 485.08 grs de bruto x ley  (708/1000)",OrCash
+E30_15_708,E30_15,497.75,708.00,,352.41,,,352.41,497.75,0,"'
+- Una linea de 352.41 grs. de fino: 497.75 grs de bruto x ley  (708/1000)",OrCash
+E31_1_708,E31_1,794.34,708.00,,562.39,,,562.39,794.34,0,"'
+- Una linea de 562.39 grs. de fino: 794.34 grs de bruto x ley  (708/1000)",OrCash
+E31_9_708,E31_9,366.33,708.00,,259.36,,,259.36,366.33,0,"'
+- Una linea de 259.36 grs. de fino: 366.33 grs de bruto x ley  (708/1000)",OrCash
+E31_14_708,E31_14,489.33,708.00,,346.45,,,346.45,489.33,0,"'
+- Una linea de 346.45 grs. de fino: 489.33 grs de bruto x ley  (708/1000)",OrCash
+E32_23_708,E32_23,285.07,708.00,,201.83,,,201.83,285.07,0,"'
+- Una linea de 201.83 grs. de fino: 285.07 grs de bruto x ley  (708/1000)",OrCash
+E32_26_708,E32_26,34.00,708.00,,24.07,,,24.07,34.00,0,"'
+- Una linea de 24.07 grs. de fino: 34 grs de bruto x ley  (708/1000)",Alquimia
+E32_25_708,E32_25,243.99,708.00,,172.74,,,172.74,243.99,0,"'
+- Una linea de 172.74 grs. de fino: 243.99 grs de bruto x ley  (708/1000)",OrCash
+E33_9_708,E33_9,209.33,708.00,,148.21,,,148.21,209.33,0,"'
+- Una linea de 148.21 grs. de fino: 209.33 grs de bruto x ley  (708/1000)",OrCash
+E33_11_708,E33_11,366.66,708.00,,259.60,,,259.60,366.66,0,"'
+- Una linea de 259.6 grs. de fino: 366.66 grs de bruto x ley  (708/1000)",OrCash
+E32_17_708.8,E32_17,388.53,708.80,,275.39,,,275.39,388.53,0,"'
+- Una linea de 275.39 grs. de fino: 388.53 grs de bruto x ley  (708.8/1000)",OrCash
+E30_3_710,E30_3,374.35,710.00,,265.79,,,265.79,374.35,0,"'
+- Una linea de 265.79 grs. de fino: 374.35 grs de bruto x ley  (710/1000)",Nova Joia
+E30_3_710,E30_3,95.05,710.00,,67.49,,,67.49,95.05,0,"'
+- Una linea de 67.49 grs. de fino: 95.05 grs de bruto x ley  (710/1000)",Nova Joia
+E30_7_710,E30_7,152.00,710.00,,107.92,,,107.92,152.00,0,"'
+- Una linea de 107.92 grs. de fino: 152 grs de bruto x ley  (710/1000)",Gemma d'Or
+E30_16_710,E30_16,407.30,710.00,,289.18,,,289.18,407.30,0,"'
+- Una linea de 289.18 grs. de fino: 407.3 grs de bruto x ley  (710/1000)",Nova Joia
+E30_17_710,E30_17,64.10,710.00,,45.51,,,45.51,64.10,0,"'
+- Una linea de 45.51 grs. de fino: 64.1 grs de bruto x ley  (710/1000)",Nova Joia
+E30_19_710,E30_19,219.30,710.00,18,155.70,,,155.70,219.30,0,"'
+- Una linea de 155.7 grs. de fino: 219.3 grs de bruto x ley 18 kts (710/1000)",Nova Joia
+E31_5_710,E31_5,301.45,710.00,,214.03,,,214.03,301.45,0,"'
+- Una linea de 214.03 grs. de fino: 301.45 grs de bruto x ley  (710/1000)",Nova Joia
+E31_8_710,E31_8,376.00,710.00,,266.96,,,266.96,376.00,0,"'
+- Una linea de 266.96 grs. de fino: 376 grs de bruto x ley  (710/1000)",Nova Joia
+E31_11_710,E31_11,70.60,710.00,,50.13,,,50.13,70.60,0,"'
+- Una linea de 50.13 grs. de fino: 70.6 grs de bruto x ley  (710/1000)",Gemma d'Or
+E31_12_710,E31_12,162.50,710.00,,115.38,,,115.38,162.50,0,"'
+- Una linea de 115.38 grs. de fino: 162.5 grs de bruto x ley  (710/1000)",Nova Joia
+E31_12_710,E31_12,141.45,710.00,,100.43,,,100.43,141.45,0,"'
+- Una linea de 100.43 grs. de fino: 141.45 grs de bruto x ley  (710/1000)",Nova Joia
+E32_1_710,E32_1,211.59,710.00,,150.23,,,150.23,211.59,0,"'
+- Una linea de 150.23 grs. de fino: 211.59 grs de bruto x ley  (710/1000)",Nova Joia
+E32_4_710,E32_4,115.03,710.00,,81.67,,,81.67,115.03,0,"'
+- Una linea de 81.67 grs. de fino: 115.03 grs de bruto x ley  (710/1000)",Nova Joia
+E32_5_710,E32_5,141.22,710.00,,100.27,,,100.27,141.22,0,"'
+- Una linea de 100.27 grs. de fino: 141.22 grs de bruto x ley  (710/1000)",Nova Joia
+E32_9_710,E32_9,176.86,710.00,,125.57,,,125.57,176.86,0,"'
+- Una linea de 125.57 grs. de fino: 176.86 grs de bruto x ley  (710/1000)",Nova Joia
+E32_10_710,E32_10,244.51,710.00,,173.60,,,173.60,244.51,0,"'
+- Una linea de 173.6 grs. de fino: 244.51 grs de bruto x ley  (710/1000)",Nova Joia
+E32_11_710,E32_11,323.54,710.00,,229.71,,,229.71,323.54,0,"'
+- Una linea de 229.71 grs. de fino: 323.54 grs de bruto x ley  (710/1000)",OrCash
+E32_15_710,E32_15,197.64,710.00,,140.32,,,140.32,197.64,0,"'
+- Una linea de 140.32 grs. de fino: 197.64 grs de bruto x ley  (710/1000)",Nova Joia
+E32_18_710,E32_18,180.92,710.00,,128.45,,,128.45,180.92,0,"'
+- Una linea de 128.45 grs. de fino: 180.92 grs de bruto x ley  (710/1000)",Nova Joia
+E32_18_710,E32_18,84.76,710.00,,60.18,,,60.18,84.76,0,"'
+- Una linea de 60.18 grs. de fino: 84.76 grs de bruto x ley  (710/1000)",Nova Joia
+E33_3_710,E33_3,187.80,710.00,,133.34,,,133.34,187.80,0,"'
+- Una linea de 133.34 grs. de fino: 187.8 grs de bruto x ley  (710/1000)",Nova Joia
+E33_7_710,E33_7,249.40,710.00,,177.07,,,177.07,249.40,0,"'
+- Una linea de 177.07 grs. de fino: 249.4 grs de bruto x ley  (710/1000)",Nova Joia
+E33_10_710,E33_10,141.71,710.00,,100.61,,,100.61,141.71,0,"'
+- Una linea de 100.61 grs. de fino: 141.71 grs de bruto x ley  (710/1000)",Nova Joia
+E33_12_710,E33_12,153.43,710.00,,108.94,,,108.94,153.43,0,"'
+- Una linea de 108.94 grs. de fino: 153.43 grs de bruto x ley  (710/1000)",Nova Joia
+E33_18_710,E33_18,750.34,710.00,,532.74,,,532.74,750.34,0,"'
+- Una linea de 532.74 grs. de fino: 750.34 grs de bruto x ley  (710/1000)",Nova Joia
+E33_19_710,E33_19,198.26,710.00,,140.76,,,140.76,198.26,0,"'
+- Una linea de 140.76 grs. de fino: 198.26 grs de bruto x ley  (710/1000)",Nova Joia
+E30_2_720,E30_2,348.40,720.00,,250.85,,,250.85,348.40,0,"'
+- Una linea de 250.85 grs. de fino: 348.4 grs de bruto x ley  (720/1000)",Gemma d'Or
+E30_9_720,E30_9,134.80,720.00,,97.06,,,97.06,134.80,0,"'
+- Una linea de 97.06 grs. de fino: 134.8 grs de bruto x ley  (720/1000)",Gemma d'Or
+E30_10_720,E30_10,108.90,720.00,,78.41,,,78.41,108.90,0,"'
+- Una linea de 78.41 grs. de fino: 108.9 grs de bruto x ley  (720/1000)",Gemma d'Or
+E30_12_720,E30_12,94.70,720.00,,68.18,,,68.18,94.70,0,"'
+- Una linea de 68.18 grs. de fino: 94.7 grs de bruto x ley  (720/1000)",Gemma d'Or
+E32_3_720,E32_3,78.00,720.00,,56.16,,,56.16,78.00,0,"'
+- Una linea de 56.16 grs. de fino: 78 grs de bruto x ley  (720/1000)",Gemma d'Or
+E32_12_720,E32_12,353.40,720.00,,254.45,,,254.45,353.40,0,"'
+- Una linea de 254.45 grs. de fino: 353.4 grs de bruto x ley  (720/1000)",Gemma d'Or
+E33_2_720,E33_2,99.30,720.00,,71.50,,,71.50,99.30,0,"'
+- Una linea de 71.5 grs. de fino: 99.3 grs de bruto x ley  (720/1000)",Gemma d'Or
+E30_1_730,E30_1,123.90,730.00,,90.45,,,90.45,123.90,0,"'
+- Una linea de 90.45 grs. de fino: 123.9 grs de bruto x ley  (730/1000)",Gemma d'Or
+E30_4_730,E30_4,650.47,730.00,,474.84,,,474.84,650.47,0,"'
+- Una linea de 474.84 grs. de fino: 650.47 grs de bruto x ley  (730/1000)",La Milla d'Or
+E30_8_730,E30_8,253.50,730.00,,185.06,,,185.06,253.50,0,"'
+- Una linea de 185.06 grs. de fino: 253.5 grs de bruto x ley  (730/1000)",Gemma d'Or
+E30_9_730,E30_9,351.70,730.00,,256.74,,,256.74,351.70,0,"'
+- Una linea de 256.74 grs. de fino: 351.7 grs de bruto x ley  (730/1000)",Gemma d'Or
+E30_14_730,E30_14,175.00,730.00,,127.75,,,127.75,175.00,0,"'
+- Una linea de 127.75 grs. de fino: 175 grs de bruto x ley  (730/1000)",Gemma d'Or
+E30_18_730,E30_18,670.52,730.00,,489.48,,,489.48,670.52,0,"'
+- Una linea de 489.48 grs. de fino: 670.52 grs de bruto x ley  (730/1000)",La Milla d'Or
+E30_21_730,E30_21,284.30,730.00,,207.54,,,207.54,284.30,0,"'
+- Una linea de 207.54 grs. de fino: 284.3 grs de bruto x ley  (730/1000)",Gemma d'Or
+E31_3_730,E31_3,102.70,730.00,,74.97,,,74.97,102.70,0,"'
+- Una linea de 74.97 grs. de fino: 102.7 grs de bruto x ley  (730/1000)",Gemma d'Or
+E31_4_730,E31_4,650.77,730.00,,475.06,,,475.06,650.77,0,"'
+- Una linea de 475.06 grs. de fino: 650.77 grs de bruto x ley  (730/1000)",La Milla d'Or
+E31_13_730,E31_13,602.02,730.00,,439.47,,,439.47,602.02,0,"'
+- Una linea de 439.47 grs. de fino: 602.02 grs de bruto x ley  (730/1000)",La Milla d'Or
+E32_7_730,E32_7,537.22,730.00,,392.17,,,392.17,537.22,0,"'
+- Una linea de 392.17 grs. de fino: 537.22 grs de bruto x ley  (730/1000)",La Milla d'Or
+E32_20_730,E32_20,186.50,730.00,,136.15,,,136.15,186.50,0,"'
+- Una linea de 136.15 grs. de fino: 186.5 grs de bruto x ley  (730/1000)",Gemma d'Or
+E32_22_730,E32_22,100.00,730.00,,73.00,,,73.00,100.00,0,"'
+- Una linea de 73 grs. de fino: 100 grs de bruto x ley  (730/1000)",Gemma d'Or
+E32_21_730,E32_21,803.95,730.00,,586.88,,,586.88,803.95,0,"'
+- Una linea de 586.88 grs. de fino: 803.95 grs de bruto x ley  (730/1000)",La Milla d'Or
+E32_24_730,E32_24,83.20,730.00,,60.74,,,60.74,83.20,0,"'
+- Una linea de 60.74 grs. de fino: 83.2 grs de bruto x ley  (730/1000)",Gemma d'Or
+E33_14_730,E33_14,867.12,730.00,,633.00,,,633.00,867.12,0,"'
+- Una linea de 633 grs. de fino: 867.12 grs de bruto x ley  (730/1000)",La Milla d'Or
+E33_15_730,E33_15,120.70,730.00,,88.11,,,88.11,120.70,0,"'
+- Una linea de 88.11 grs. de fino: 120.7 grs de bruto x ley  (730/1000)",Gemma d'Or
+E30_8_740,E30_8,147.00,740.00,,108.78,,,108.78,147.00,0,"'
+- Una linea de 108.78 grs. de fino: 147 grs de bruto x ley  (740/1000)",Gemma d'Or
+E30_14_740,E30_14,157.30,740.00,,116.40,,,116.40,157.30,0,"'
+- Una linea de 116.4 grs. de fino: 157.3 grs de bruto x ley  (740/1000)",Gemma d'Or
+E33_8_740,E33_8,149.60,740.00,,110.70,,,110.70,149.60,0,"'
+- Una linea de 110.7 grs. de fino: 149.6 grs de bruto x ley  (740/1000)",Gemma d'Or
+E33_16_740,E33_16,255.70,740.00,,189.22,,,189.22,255.70,0,"'
+- Una linea de 189.22 grs. de fino: 255.7 grs de bruto x ley  (740/1000)",Gemma d'Or
+E30_2_750,E30_2,72.20,750.00,,54.15,,,54.15,72.20,0,"'
+- Una linea de 54.15 grs. de fino: 72.2 grs de bruto x ley  (750/1000)",Gemma d'Or
+E30_3_750,E30_3,12.40,750.00,,9.30,,,9.30,12.40,0,"'
+- Una linea de 9.3 grs. de fino: 12.4 grs de bruto x ley  (750/1000)",Nova Joia
+E30_14_750,E30_14,89.80,750.00,,67.35,,,67.35,89.80,0,"'
+- Una linea de 67.35 grs. de fino: 89.8 grs de bruto x ley  (750/1000)",Gemma d'Or
+E31_8_750,E31_8,60.20,750.00,,45.15,,,45.15,60.20,0,"'
+- Una linea de 45.15 grs. de fino: 60.2 grs de bruto x ley  (750/1000)",Nova Joia
+E31_10_750,E31_10,199.70,750.00,,149.78,,,149.78,199.70,0,"'
+- Una linea de 149.78 grs. de fino: 199.7 grs de bruto x ley  (750/1000)",Gemma d'Or
+E31_15_750,E31_15,239.00,750.00,,179.25,,,179.25,239.00,0,"'
+- Una linea de 179.25 grs. de fino: 239 grs de bruto x ley  (750/1000)",Gemma d'Or
+E32_3_750,E32_3,47.10,750.00,,35.33,,,35.33,47.10,0,"'
+- Una linea de 35.33 grs. de fino: 47.1 grs de bruto x ley  (750/1000)",Gemma d'Or
+E32_16_750,E32_16,106.50,750.00,,79.88,,,79.88,106.50,0,"'
+- Una linea de 79.88 grs. de fino: 106.5 grs de bruto x ley  (750/1000)",Gemma d'Or
+E33_6_750,E33_6,246.60,750.00,,184.95,,,184.95,246.60,0,"'
+- Una linea de 184.95 grs. de fino: 246.6 grs de bruto x ley  (750/1000)",Gemma d'Or
+E30_5_760,E30_5,164.10,760.00,,124.72,,,124.72,164.10,0,"'
+- Una linea de 124.72 grs. de fino: 164.1 grs de bruto x ley  (760/1000)",Gemma d'Or
+E31_2_760,E31_2,309.50,760.00,,235.22,,,235.22,309.50,0,"'
+- Una linea de 235.22 grs. de fino: 309.5 grs de bruto x ley  (760/1000)",Gemma d'Or
+E31_10_760,E31_10,166.60,760.00,,126.62,,,126.62,166.60,0,"'
+- Una linea de 126.62 grs. de fino: 166.6 grs de bruto x ley  (760/1000)",Gemma d'Or
+E32_18_760,E32_18,9.43,760.00,,7.17,,,7.17,9.43,0,"'
+- Una linea de 7.17 grs. de fino: 9.43 grs de bruto x ley  (760/1000)",Nova Joia
+E33_16_760,E33_16,166.40,760.00,,126.46,,,126.46,166.40,0,"'
+- Una linea de 126.46 grs. de fino: 166.4 grs de bruto x ley  (760/1000)",Gemma d'Or
+E30_4_780,E30_4,8.98,780.00,,7.00,,,7.00,8.98,0,"'
+- Una linea de 7 grs. de fino: 8.98 grs de bruto x ley  (780/1000)",La Milla d'Or
+E30_18_780,E30_18,34.00,780.00,,26.52,,,26.52,34.00,0,"'
+- Una linea de 26.52 grs. de fino: 34 grs de bruto x ley  (780/1000)",La Milla d'Or
+E31_4_780,E31_4,52.55,780.00,,40.99,,,40.99,52.55,0,"'
+- Una linea de 40.99 grs. de fino: 52.55 grs de bruto x ley  (780/1000)",La Milla d'Or
+E31_11_780,E31_11,33.80,780.00,,26.36,,,26.36,33.80,0,"'
+- Una linea de 26.36 grs. de fino: 33.8 grs de bruto x ley  (780/1000)",Gemma d'Or
+E31_13_780,E31_13,10.22,780.00,,7.97,,,7.97,10.22,0,"'
+- Una linea de 7.97 grs. de fino: 10.22 grs de bruto x ley  (780/1000)",La Milla d'Or
+E32_5_780,E32_5,8.15,780.00,,6.36,,,6.36,8.15,0,"'
+- Una linea de 6.36 grs. de fino: 8.15 grs de bruto x ley  (780/1000)",Nova Joia
+E32_7_780,E32_7,47.73,780.00,,37.23,,,37.23,47.73,0,"'
+- Una linea de 37.23 grs. de fino: 47.73 grs de bruto x ley  (780/1000)",La Milla d'Or
+E32_21_780,E32_21,23.75,780.00,,18.52,,,18.52,23.75,0,"'
+- Una linea de 18.52 grs. de fino: 23.75 grs de bruto x ley  (780/1000)",La Milla d'Or
+E33_14_780,E33_14,42.24,780.00,,32.95,,,32.95,42.24,0,"'
+- Una linea de 32.95 grs. de fino: 42.24 grs de bruto x ley  (780/1000)",La Milla d'Or
+E33_8_790,E33_8,146.80,790.00,,115.97,,,115.97,146.80,0,"'
+- Una linea de 115.97 grs. de fino: 146.8 grs de bruto x ley  (790/1000)",Gemma d'Or
+E33_13_790,E33_13,63.60,790.00,,50.24,,,50.24,63.60,0,"'
+- Una linea de 50.24 grs. de fino: 63.6 grs de bruto x ley  (790/1000)",Gemma d'Or
+E33_5_791,E33_5,362.30,791.00,,286.58,,,286.58,362.30,0,"'
+- Una linea de 286.58 grs. de fino: 362.3 grs de bruto x ley  (791/1000)",OrCash
+E31_5_800,E31_5,33.20,800.00,,26.56,,,26.56,33.20,0,"'
+- Una linea de 26.56 grs. de fino: 33.2 grs de bruto x ley  (800/1000)",Nova Joia
+E30_16_810,E30_16,8.80,810.00,,7.13,,,7.13,8.80,0,"'
+- Una linea de 7.13 grs. de fino: 8.8 grs de bruto x ley  (810/1000)",Nova Joia
+E32_24_810,E32_24,26.50,810.00,,21.47,,,21.47,26.50,0,"'
+- Una linea de 21.47 grs. de fino: 26.5 grs de bruto x ley  (810/1000)",Gemma d'Or
+E32_2_830,E32_2,10.60,830.00,20,8.80,,,8.80,10.60,0,"'
+- Una linea de 8.8 grs. de fino: 10.6 grs de bruto x ley 20 kts (830/1000)",Alquimia
+E30_4_855,E30_4,2.06,855.00,,1.76,,,1.76,2.06,0,"'
+- Una linea de 1.76 grs. de fino: 2.06 grs de bruto x ley  (855/1000)",La Milla d'Or
+E32_2_870,E32_2,1.20,870.00,21,1.04,,,1.04,1.20,0,"'
+- Una linea de 1.04 grs. de fino: 1.2 grs de bruto x ley 21 kts (870/1000)",Alquimia
+E32_21_896,E32_21,33.93,896.00,,30.40,,,30.40,33.93,0,"'
+- Una linea de 30.4 grs. de fino: 33.93 grs de bruto x ley  (896/1000)",La Milla d'Or
+E33_14_896,E33_14,34.55,896.00,,30.96,,,30.96,34.55,0,"'
+- Una linea de 30.96 grs. de fino: 34.55 grs de bruto x ley  (896/1000)",La Milla d'Or
+E30_6_900,E30_6,25.70,900.00,,23.13,,,23.13,25.70,0,"'
+- Una linea de 23.13 grs. de fino: 25.7 grs de bruto x ley  (900/1000)",Alquimia
+E30_16_900,E30_16,250.85,900.00,,225.77,,,225.77,250.85,0,"'
+- Una linea de 225.77 grs. de fino: 250.85 grs de bruto x ley  (900/1000)",Nova Joia
+E32_4_900,E32_4,120.01,900.00,,108.01,,,108.01,120.01,0,"'
+- Una linea de 108.01 grs. de fino: 120.01 grs de bruto x ley  (900/1000)",Nova Joia
+E32_5_900,E32_5,5.96,900.00,,5.36,,,5.36,5.96,0,"'
+- Una linea de 5.36 grs. de fino: 5.96 grs de bruto x ley  (900/1000)",Nova Joia
+E32_19_900,E32_19,310.89,900.00,,279.80,,,279.80,310.89,0,"'
+- Una linea de 279.8 grs. de fino: 310.89 grs de bruto x ley  (900/1000)",Nova Joia
+E30_16_917,E30_16,55.85,917.00,,51.21,,,51.21,55.85,0,"'
+- Una linea de 51.21 grs. de fino: 55.85 grs de bruto x ley  (917/1000)",Nova Joia
+E33_16_930,E33_16,51.30,930.00,,47.71,,,47.71,51.30,0,"'
+- Una linea de 47.71 grs. de fino: 51.3 grs de bruto x ley  (930/1000)",Gemma d'Or
+E32_4_986,E32_4,19.96,986.00,,19.68,,,19.68,19.96,0,"'
+- Una linea de 19.68 grs. de fino: 19.96 grs de bruto x ley  (986/1000)",Nova Joia
+E31_13_999,E31_13,118.25,999.00,,118.13,,,118.13,118.25,0,"'
+- Una linea de 118.13 grs. de fino: 118.25 grs de bruto x ley  (999/1000)",La Milla d'Or
+E32_6_999,E32_6,100.00,999.00,,99.90,,,99.90,100.00,0,"'
+- Una linea de 99.9 grs. de fino: 100 grs de bruto x ley  (999/1000)",OrCash
+E32_8_999,E32_8,200.00,999.00,,199.80,,,199.80,200.00,0,"'
+- Una linea de 199.8 grs. de fino: 200 grs de bruto x ley  (999/1000)",Gemma d'Or
+E32_13_999,E32_13,175.00,999.00,,174.83,,,174.83,175.00,0,"'
+- Una linea de 174.83 grs. de fino: 175 grs de bruto x ley  (999/1000)",Gemma d'Or
+E31_7_999.9,E31_7,1000.00,999.90,24,999.90,,,999.90,1000.00,0,"'
+- Una linea de 999.9 grs. de fino: 1000 grs de bruto x ley 24 kts (999.9/1000)",OrCash
+E33_1_999.9,E33_1,131.50,999.90,,131.49,,,131.49,131.50,0,"'
+- Una linea de 131.49 grs. de fino: 131.5 grs de bruto x ley  (999.9/1000)",Gemma d'Or
+E31_4_1000,E31_4,-13.50,1000.00,,-13.50,,checked,0.00,0.00,0,"'
+- Una linea de -13.5 grs. de fino: -13.5 grs de bruto x ley  (1000/1000)",La Milla d'Or
+E32_7_1000,E32_7,-6.00,1000.00,,-6.00,,checked,0.00,0.00,0,"'
+- Una linea de -6 grs. de fino: -6 grs de bruto x ley  (1000/1000)",La Milla d'Or
+E33_17_1000,E33_17,64.69,1000.00,,64.69,,,64.69,64.69,0,"'
+- Una linea de 64.69 grs. de fino: 64.69 grs de bruto x ley  (1000/1000)",Alquimia
+E33_20_999,E33_20,27.21,999.00,,27.18,,,27.18,27.21,0,"'
+- Una linea de 27.18 grs. de fino: 27.21 grs de bruto x ley  (999/1000)",La Milla d'Or
+E33_20_896,E33_20,286.71,896.00,,256.89,,,256.89,286.71,0,"'
+- Una linea de 256.89 grs. de fino: 286.71 grs de bruto x ley  (896/1000)",La Milla d'Or
+E33_20_780,E33_20,31.63,780.00,,24.67,,,24.67,31.63,0,"'
+- Una linea de 24.67 grs. de fino: 31.63 grs de bruto x ley  (780/1000)",La Milla d'Or
+E33_20_730,E33_20,716.88,730.00,,523.32,,,523.32,716.88,0,"'
+- Una linea de 523.32 grs. de fino: 716.88 grs de bruto x ley  (730/1000)",La Milla d'Or
+E33_20_646,E33_20,7.53,646.00,,4.86,,,4.86,7.53,0,"'
+- Una linea de 4.86 grs. de fino: 7.53 grs de bruto x ley  (646/1000)",La Milla d'Or
+E33_20_565,E33_20,58.45,565.00,,33.02,,,33.02,58.45,0,"'
+- Una linea de 33.02 grs. de fino: 58.45 grs de bruto x ley  (565/1000)",La Milla d'Or
+E33_20_500,E33_20,23.28,500.00,,11.64,,,11.64,23.28,0,"'
+- Una linea de 11.64 grs. de fino: 23.28 grs de bruto x ley  (500/1000)",La Milla d'Or
+E33_20_355,E33_20,2.65,355.00,,0.94,,,0.94,2.65,0,"'
+- Una linea de 0.94 grs. de fino: 2.65 grs de bruto x ley  (355/1000)",La Milla d'Or
+E33_21_740,E33_21,139.15,740.00,,102.97,,,102.97,139.15,0,"'
+- Una linea de 102.97 grs. de fino: 139.15 grs de bruto x ley  (740/1000)",Gemma d'Or
+E33_20_1000,E33_20,-2.00,1000.00,,-2.00,,,-2.00,-2.00,0,"'
+- Una linea de -2 grs. de fino: -2 grs de bruto x ley  (1000/1000)",La Milla d'Or
+E33_22_708,E33_22,187.78,708.00,,132.95,,,132.95,187.78,0,"'
+- Una linea de 132.95 grs. de fino: 187.78 grs de bruto x ley  (708/1000)",OrCash
+E33_22_708,E33_22,471.94,708.00,,334.13,,,334.13,471.94,0,"'
+- Una linea de 334.13 grs. de fino: 471.94 grs de bruto x ley  (708/1000)",OrCash
+E33_23_999,E33_23,137.00,999.00,,136.86,,,136.86,137.00,0,"'
+- Una linea de 136.86 grs. de fino: 137 grs de bruto x ley  (999/1000)",OrCash
+E33_24_999,E33_24,21.91,999.00,,21.89,,,21.89,21.91,0,"'
+- Una linea de 21.89 grs. de fino: 21.91 grs de bruto x ley  (999/1000)",La Milla d'Or
+E33_24_896,E33_24,239.22,896.00,,214.34,,,214.34,239.22,0,"'
+- Una linea de 214.34 grs. de fino: 239.22 grs de bruto x ley  (896/1000)",La Milla d'Or
+E33_24_780,E33_24,48.98,780.00,,38.20,,,38.20,48.98,0,"'
+- Una linea de 38.2 grs. de fino: 48.98 grs de bruto x ley  (780/1000)",La Milla d'Or
+E33_24_730,E33_24,404.40,730.00,,295.21,,,295.21,404.40,0,"'
+- Una linea de 295.21 grs. de fino: 404.4 grs de bruto x ley  (730/1000)",La Milla d'Or
+E33_24_646,E33_24,19.05,646.00,,12.31,,,12.31,19.05,0,"'
+- Una linea de 12.31 grs. de fino: 19.05 grs de bruto x ley  (646/1000)",La Milla d'Or
+E33_24_565,E33_24,17.89,565.00,,10.11,,,10.11,17.89,0,"'
+- Una linea de 10.11 grs. de fino: 17.89 grs de bruto x ley  (565/1000)",La Milla d'Or
+E33_19_710,E33_19,335.31,710.00,,238.07,,,238.07,335.31,0,"'
+- Una linea de 238.07 grs. de fino: 335.31 grs de bruto x ley  (710/1000)",Nova Joia
+E33_19_1000,E33_19,6.39,1000.00,,6.39,,checked,0.00,0.00,0,"'
+- Una linea de 6.39 grs. de fino: 6.39 grs de bruto x ley  (1000/1000)",Nova Joia
+E34_1_999.9,E34_1,100.00,999.90,,99.99,,,99.99,100.00,0,"'
+- Una linea de 99.99 grs. de fino: 100 grs de bruto x ley  (999.9/1000)",Gemma d'Or
+E34_2_690,E34_2,32.79,690.00,,22.63,,,22.63,32.79,0,"'
+- Una linea de 22.63 grs. de fino: 32.79 grs de bruto x ley  (690/1000)",Nova Joia
+E34_2_880,E34_2,34.08,880.00,,29.99,,,29.99,34.08,0,"'
+- Una linea de 29.99 grs. de fino: 34.08 grs de bruto x ley  (880/1000)",Nova Joia
+E34_2_710,E34_2,170.88,710.00,,121.32,,,121.32,170.88,0,"'
+- Una linea de 121.32 grs. de fino: 170.88 grs de bruto x ley  (710/1000)",Nova Joia
+E34_3_750,E34_3,40.23,750.00,,30.17,,,30.17,40.23,0,"'
+- Una linea de 30.17 grs. de fino: 40.23 grs de bruto x ley  (750/1000)",Contratos particulares
+"""E34_4.  Pendiente de retirar desde aquí, incluido este.""_750","""E34_4.  Pendiente de retirar desde aquí, incluido este.""",129.40,750.00,,97.05,,,97.05,129.40,0,"'
+- Una linea de 97.05 grs. de fino: 129.4 grs de bruto x ley  (750/1000)",Gemma d'Or
+"""E34_4.  Pendiente de retirar desde aquí, incluido este.""_760","""E34_4.  Pendiente de retirar desde aquí, incluido este.""",148.20,760.00,,112.63,,,112.63,148.20,0,"'
+- Una linea de 112.63 grs. de fino: 148.2 grs de bruto x ley  (760/1000)",Gemma d'Or
+E34_5_710,E34_5,306.81,710.00,,217.84,,,217.84,306.81,0,"'
+- Una linea de 217.84 grs. de fino: 306.81 grs de bruto x ley  (710/1000)",Nova Joia
+E34_5_916,E34_5,49.57,916.00,,45.41,,,45.41,49.57,0,"'
+- Una linea de 45.41 grs. de fino: 49.57 grs de bruto x ley  (916/1000)",Nova Joia
+E34_7_500,E34_7,204.85,500.00,,102.43,,,102.43,204.85,0,"'
+- Una linea de 102.43 grs. de fino: 204.85 grs de bruto x ley  (500/1000)",OrCash
+E34_7_750,E34_7,249.05,750.00,,186.79,,,186.79,249.05,0,"'
+- Una linea de 186.79 grs. de fino: 249.05 grs de bruto x ley  (750/1000)",OrCash
+E34_8_730,E34_8,1052.17,730.00,,768.08,,,768.08,1052.17,0,"'
+- Una linea de 768.08 grs. de fino: 1052.17 grs de bruto x ley  (730/1000)",La Milla d'Or
+E34_8_565,E34_8,58.17,565.00,,32.87,,,32.87,58.17,0,"'
+- Una linea de 32.87 grs. de fino: 58.17 grs de bruto x ley  (565/1000)",La Milla d'Or
+E34_8_355,E34_8,4.16,355.00,,1.48,,,1.48,4.16,0,"'
+- Una linea de 1.48 grs. de fino: 4.16 grs de bruto x ley  (355/1000)",La Milla d'Or
+E34_8_1000,E34_8,-19.00,1000.00,,-19.00,,checked,0.00,0.00,0,"'
+- Una linea de -19 grs. de fino: -19 grs de bruto x ley  (1000/1000)",La Milla d'Or
+E34_9_510,E34_9,31.12,510.00,,15.87,,,15.87,31.12,0,"'
+- Una linea de 15.87 grs. de fino: 31.12 grs de bruto x ley  (510/1000)",Nova Joia
+E34_9_520,E34_9,7.81,520.00,,4.06,,,4.06,7.81,0,"'
+- Una linea de 4.06 grs. de fino: 7.81 grs de bruto x ley  (520/1000)",Nova Joia
+E34_9_530,E34_9,15.53,530.00,,8.23,,,8.23,15.53,0,"'
+- Una linea de 8.23 grs. de fino: 15.53 grs de bruto x ley  (530/1000)",Nova Joia
+E34_9_620,E34_9,7.74,620.00,,4.80,,,4.80,7.74,0,"'
+- Una linea de 4.8 grs. de fino: 7.74 grs de bruto x ley  (620/1000)",Nova Joia
+E34_9_650,E34_9,13.21,650.00,,8.59,,,8.59,13.21,0,"'
+- Una linea de 8.59 grs. de fino: 13.21 grs de bruto x ley  (650/1000)",Nova Joia
+E34_9_720,E34_9,7.75,720.00,,5.58,,,5.58,7.75,0,"'
+- Una linea de 5.58 grs. de fino: 7.75 grs de bruto x ley  (720/1000)",Nova Joia
+E34_9_770,E34_9,31.70,770.00,,24.41,,,24.41,31.70,0,"'
+- Una linea de 24.41 grs. de fino: 31.7 grs de bruto x ley  (770/1000)",Nova Joia
+E34_9_710,E34_9,386.64,710.00,,274.51,,,274.51,386.64,0,"'
+- Una linea de 274.51 grs. de fino: 386.64 grs de bruto x ley  (710/1000)",Nova Joia
+E34_9_320,E34_9,4.45,320.00,,1.42,,,1.42,4.45,0,"'
+- Una linea de 1.42 grs. de fino: 4.45 grs de bruto x ley  (320/1000)",Nova Joia
+E34_10_740,E34_10,214.00,740.00,,158.36,,,158.36,214.00,0,"'
+- Una linea de 158.36 grs. de fino: 214 grs de bruto x ley  (740/1000)",Gemma d'Or
+E34_11_999.9,E34_11,1000.00,999.90,,999.90,,,999.90,1000.00,0,"'
+- Una linea de 999.9 grs. de fino: 1000 grs de bruto x ley  (999.9/1000)",La Milla d'Or
+E34_12_710,E34_12,18.67,710.00,,13.26,,,13.26,18.67,0,"'
+- Una linea de 13.26 grs. de fino: 18.67 grs de bruto x ley  (710/1000)",Nova Joia
+E34_12_916,E34_12,142.14,916.00,,130.20,,,130.20,142.14,0,"'
+- Una linea de 130.2 grs. de fino: 142.14 grs de bruto x ley  (916/1000)",Nova Joia
+E34_12_670,E34_12,7.77,670.00,,5.21,,,5.21,7.77,0,"'
+- Una linea de 5.21 grs. de fino: 7.77 grs de bruto x ley  (670/1000)",Nova Joia
+E34_12_916,E34_12,85.76,916.00,,78.56,,,78.56,85.76,0,"'
+- Una linea de 78.56 grs. de fino: 85.76 grs de bruto x ley  (916/1000)",Nova Joia
+E34_13_720,E34_13,211.10,720.00,,151.99,,,151.99,211.10,0,"'
+- Una linea de 151.99 grs. de fino: 211.1 grs de bruto x ley  (720/1000)",Gemma d'Or
+E34_15_710,E34_15,300.08,710.00,,213.06,,,213.06,300.08,0,"'
+- Una linea de 213.06 grs. de fino: 300.08 grs de bruto x ley  (710/1000)",Nova Joia
+E34_14_896,E34_14,26.93,896.00,,24.13,,,24.13,26.93,0,"'
+- Una linea de 24.13 grs. de fino: 26.93 grs de bruto x ley  (896/1000)",La Milla d'Or
+E34_14_855,E34_14,6.44,855.00,,5.51,,,5.51,6.44,0,"'
+- Una linea de 5.51 grs. de fino: 6.44 grs de bruto x ley  (855/1000)",La Milla d'Or
+E34_14_780,E34_14,5.03,780.00,,3.92,,,3.92,5.03,0,"'
+- Una linea de 3.92 grs. de fino: 5.03 grs de bruto x ley  (780/1000)",La Milla d'Or
+E34_14_730,E34_14,677.58,730.00,,494.63,,,494.63,677.58,0,"'
+- Una linea de 494.63 grs. de fino: 677.58 grs de bruto x ley  (730/1000)",La Milla d'Or
+E34_14_565,E34_14,36.37,565.00,,20.55,,,20.55,36.37,0,"'
+- Una linea de 20.55 grs. de fino: 36.37 grs de bruto x ley  (565/1000)",La Milla d'Or
+E34_16_708,E34_16,890.99,708.00,,630.82,,,630.82,890.99,0,"'
+- Una linea de 630.82 grs. de fino: 890.99 grs de bruto x ley  (708/1000)",OrCash
+E34_17_710,E34_17,352.97,710.00,,250.61,,,250.61,352.97,0,"'
+- Una linea de 250.61 grs. de fino: 352.97 grs de bruto x ley  (710/1000)",Nova Joia
+E34_17_870,E34_17,35.38,870.00,,30.78,,,30.78,35.38,0,"'
+- Una linea de 30.78 grs. de fino: 35.38 grs de bruto x ley  (870/1000)",Nova Joia
+E34_17_850,E34_17,192.33,850.00,,163.48,,,163.48,192.33,0,"'
+- Una linea de 163.48 grs. de fino: 192.33 grs de bruto x ley  (850/1000)",Nova Joia
+E34_17_860,E34_17,22.15,860.00,,19.05,,,19.05,22.15,0,"'
+- Una linea de 19.05 grs. de fino: 22.15 grs de bruto x ley  (860/1000)",Nova Joia
+E34_17_750,E34_17,40.92,750.00,,30.69,,,30.69,40.92,0,"'
+- Una linea de 30.69 grs. de fino: 40.92 grs de bruto x ley  (750/1000)",Nova Joia
+E34_17_540,E34_17,10.59,540.00,,5.72,,,5.72,10.59,0,"'
+- Una linea de 5.72 grs. de fino: 10.59 grs de bruto x ley  (540/1000)",Nova Joia
+E34_17_375,E34_17,1.00,375.00,,0.38,,,0.38,1.00,0,"'
+- Una linea de 0.38 grs. de fino: 1 grs de bruto x ley  (375/1000)",Nova Joia
+"""""""E35
+""""_2""_896","""""""E35
+""""_2""",31.71,896.00,,28.41,,,28.41,31.71,0,"'
+- Una linea de 28.41 grs. de fino: 31.71 grs de bruto x ley  (896/1000)",La Milla d'Or
+"""""""E35
+""""_2""_855","""""""E35
+""""_2""",14.82,855.00,,12.67,,,12.67,14.82,0,"'
+- Una linea de 12.67 grs. de fino: 14.82 grs de bruto x ley  (855/1000)",La Milla d'Or
+"""""""E35
+""""_2""_780","""""""E35
+""""_2""",6.05,780.00,,4.72,,,4.72,6.05,0,"'
+- Una linea de 4.72 grs. de fino: 6.05 grs de bruto x ley  (780/1000)",La Milla d'Or
+"""""""E35
+""""_2""_730","""""""E35
+""""_2""",512.84,730.00,,374.37,,,374.37,512.84,0,"'
+- Una linea de 374.37 grs. de fino: 512.84 grs de bruto x ley  (730/1000)",La Milla d'Or
+"""""""E35
+""""_2""_565","""""""E35
+""""_2""",8.21,565.00,,4.64,,,4.64,8.21,0,"'
+- Una linea de 4.64 grs. de fino: 8.21 grs de bruto x ley  (565/1000)",La Milla d'Or
+E34_19_999.9,E34_19,500.00,999.90,,499.95,,,499.95,500.00,0,"'
+- Una linea de 499.95 grs. de fino: 500 grs de bruto x ley  (999.9/1000)",Mador stock
+"""""""E35
+""""_1""_730","""""""E35
+""""_1""",214.40,730.00,,156.51,,,156.51,214.40,0,"'
+- Una linea de 156.51 grs. de fino: 214.4 grs de bruto x ley  (730/1000)",Gemma d'Or
+"""""""E35
+""""_2""_355","""""""E35
+""""_2""",6.83,355.00,,2.42,,,2.42,6.83,0,"'
+- Una linea de 2.42 grs. de fino: 6.83 grs de bruto x ley  (355/1000)",La Milla d'Or
+"""""""E35
+""""_2""_999","""""""E35
+""""_2""",123.58,999.00,,123.46,,,123.46,123.58,0,"'
+- Una linea de 123.46 grs. de fino: 123.58 grs de bruto x ley  (999/1000)",La Milla d'Or
+"""""""E35
+""""_2""_646","""""""E35
+""""_2""",11.09,646.00,,7.16,,,7.16,11.09,0,"'
+- Una linea de 7.16 grs. de fino: 11.09 grs de bruto x ley  (646/1000)",La Milla d'Or
+"""""""E35
+""""_3""_999.9_58.42€","""""""E35
+""""_3""",500.00,999.90,,499.95,€58.42,,499.95,500.00,29207,"'
+- Una linea de 499.95 grs. de fino: 500 grs de bruto x ley  (999.9/1000)",OrCash
+"""""""E35
+""""_3""_999.9_59.2€","""""""E35
+""""_3""",100.00,999.90,,99.99,€59.20,,99.99,100.00,5919,"'
+- Una linea de 99.99 grs. de fino: 100 grs de bruto x ley  (999.9/1000)",OrCash
+"""""""E35
+""""_4""_730","""""""E35
+""""_4""",359.95,730.00,,262.76,,,262.76,359.95,0,"'
+- Una linea de 262.76 grs. de fino: 359.95 grs de bruto x ley  (730/1000)",La Milla d'Or
+"""""""E35
+""""_5""_710","""""""E35
+""""_5""",165.07,710.00,,117.20,,,117.20,165.07,0,"'
+- Una linea de 117.2 grs. de fino: 165.07 grs de bruto x ley  (710/1000)",Nova Joia
+"""""""E35
+""""_5""_999.9","""""""E35
+""""_5""",7.96,999.90,,7.96,,,7.96,7.96,0,"'
+- Una linea de 7.96 grs. de fino: 7.96 grs de bruto x ley  (999.9/1000)",Nova Joia
+"""""""E35
+""""_6""_999","""""""E35
+""""_6""",1000.00,999.00,,999.00,,,999.00,1000.00,0,"'
+- Una linea de 999 grs. de fino: 1000 grs de bruto x ley  (999/1000)",Mador stock
+"""""""E35
+""""_6""_625","""""""E35
+""""_6""",48.37,625.00,,30.23,,,30.23,48.37,0,"'
+- Una linea de 30.23 grs. de fino: 48.37 grs de bruto x ley  (625/1000)",Mador stock
+"""""""E35
+""""_6""_708","""""""E35
+""""_6""",60.29,708.00,,42.69,,,42.69,60.29,0,"'
+- Una linea de 42.69 grs. de fino: 60.29 grs de bruto x ley  (708/1000)",Mador stock
+"""""""E35
+""""_7""_710","""""""E35
+""""_7""",125.87,710.00,,89.37,,,89.37,125.87,0,"'
+- Una linea de 89.37 grs. de fino: 125.87 grs de bruto x ley  (710/1000)",Nova Joia
+"""""""E35
+""""_8""_710","""""""E35
+""""_8""",167.47,710.00,,118.90,,,118.90,167.47,0,"'
+- Una linea de 118.9 grs. de fino: 167.47 grs de bruto x ley  (710/1000)",Nova Joia
+"""""""E35
+""""_8""_900","""""""E35
+""""_8""",6.43,900.00,,5.79,,,5.79,6.43,0,"'
+- Una linea de 5.79 grs. de fino: 6.43 grs de bruto x ley  (900/1000)",Nova Joia
+"""""""E35
+""""_9""_540","""""""E35
+""""_9""",157.08,540.00,,84.82,,,84.82,157.08,0,"'
+- Una linea de 84.82 grs. de fino: 157.08 grs de bruto x ley  (540/1000)",Nova Joia
+"""""""E35
+""""_9""_710","""""""E35
+""""_9""",111.33,710.00,,79.04,,,79.04,111.33,0,"'
+- Una linea de 79.04 grs. de fino: 111.33 grs de bruto x ley  (710/1000)",Nova Joia
+"""""""E35
+""""_9""_335","""""""E35
+""""_9""",39.57,335.00,,13.26,,,13.26,39.57,0,"'
+- Una linea de 13.26 grs. de fino: 39.57 grs de bruto x ley  (335/1000)",Nova Joia
+"""""""E35
+""""_10""_708","""""""E35
+""""_10""",300.00,708.00,,212.40,,,212.40,300.00,0,"'
+- Una linea de 212.4 grs. de fino: 300 grs de bruto x ley  (708/1000)",OrCash
+"""""""E35
+""""_11""_710","""""""E35
+""""_11""",192.27,710.00,,136.51,,,136.51,192.27,0,"'
+- Una linea de 136.51 grs. de fino: 192.27 grs de bruto x ley  (710/1000)",Nova Joia
+"""""""E35
+""""_11""_540","""""""E35
+""""_11""",6.51,540.00,,3.52,,,3.52,6.51,0,"'
+- Una linea de 3.52 grs. de fino: 6.51 grs de bruto x ley  (540/1000)",Nova Joia
+"""""""E35
+""""_11""_335","""""""E35
+""""_11""",4.14,335.00,,1.39,,,1.39,4.14,0,"'
+- Una linea de 1.39 grs. de fino: 4.14 grs de bruto x ley  (335/1000)",Nova Joia
+"""""""E35
+""""_13""_708","""""""E35
+""""_13""",558.86,708.00,,395.67,,,395.67,558.86,0,"'
+- Una linea de 395.67 grs. de fino: 558.86 grs de bruto x ley  (708/1000)",OrCash
+"""""""E35
+""""_12""_720","""""""E35
+""""_12""",217.60,720.00,,156.67,,,156.67,217.60,0,"'
+- Una linea de 156.67 grs. de fino: 217.6 grs de bruto x ley  (720/1000)",Gemma d'Or
+"""""""E35
+""""_14""_999.9","""""""E35
+""""_14""",250.00,999.90,,249.98,,,249.98,250.00,0,"'
+- Una linea de 249.98 grs. de fino: 250 grs de bruto x ley  (999.9/1000)",Nova Joia
+"""""""E35
+""""_15""_710","""""""E35
+""""_15""",54.01,710.00,,38.35,,,38.35,54.01,0,"'
+- Una linea de 38.35 grs. de fino: 54.01 grs de bruto x ley  (710/1000)",Nova Joia
+"""""""E35
+""""_15""_540","""""""E35
+""""_15""",5.40,540.00,,2.92,,,2.92,5.40,0,"'
+- Una linea de 2.92 grs. de fino: 5.4 grs de bruto x ley  (540/1000)",Nova Joia
+"""""""E35
+""""_15""_900","""""""E35
+""""_15""",1.46,900.00,,1.31,,,1.31,1.46,0,"'
+- Una linea de 1.31 grs. de fino: 1.46 grs de bruto x ley  (900/1000)",Nova Joia
+"""""""E35
+""""_16""_780","""""""E35
+""""_16""",25.73,780.00,,20.07,,,20.07,25.73,0,"'
+- Una linea de 20.07 grs. de fino: 25.73 grs de bruto x ley  (780/1000)",La Milla d'Or
+"""""""E35
+""""_16""_730","""""""E35
+""""_16""",570.88,730.00,,416.74,,,416.74,570.88,0,"'
+- Una linea de 416.74 grs. de fino: 570.88 grs de bruto x ley  (730/1000)",La Milla d'Or
+"""""""E35
+""""_16""_565","""""""E35
+""""_16""",34.93,565.00,,19.74,,,19.74,34.93,0,"'
+- Una linea de 19.74 grs. de fino: 34.93 grs de bruto x ley  (565/1000)",La Milla d'Or
+"""""""E35
+""""_16""_355","""""""E35
+""""_16""",2.62,355.00,,0.93,,,0.93,2.62,0,"'
+- Una linea de 0.93 grs. de fino: 2.62 grs de bruto x ley  (355/1000)",La Milla d'Or
+"""""""E35
+""""_17""_740","""""""E35
+""""_17""",97.00,740.00,,71.78,,,71.78,97.00,0,"'
+- Una linea de 71.78 grs. de fino: 97 grs de bruto x ley  (740/1000)",Gemma d'Or
+"""""""E35
+""""_17""_870","""""""E35
+""""_17""",51.90,870.00,,45.15,,,45.15,51.90,0,"'
+- Una linea de 45.15 grs. de fino: 51.9 grs de bruto x ley  (870/1000)",Gemma d'Or
+"""""""E35
+""""_19""_790","""""""E35
+""""_19""",1704.00,790.00,,1346.16,,,1346.16,1704.00,0,"'
+- Una linea de 1346.16 grs. de fino: 1704 grs de bruto x ley  (790/1000)",OrCash
+"""""""E35
+""""_15""_710","""""""E35
+""""_15""",255.22,710.00,,181.21,,,181.21,255.22,0,"'
+- Una linea de 181.21 grs. de fino: 255.22 grs de bruto x ley  (710/1000)",Nova Joia
+E36_1_740,E36_1,110.20,740.00,,81.55,,,81.55,110.20,0,"'
+- Una linea de 81.55 grs. de fino: 110.2 grs de bruto x ley  (740/1000)",Gemma d'Or
+E36_1_740,E36_1,233.70,740.00,,172.94,,,172.94,233.70,0,"'
+- Una linea de 172.94 grs. de fino: 233.7 grs de bruto x ley  (740/1000)",Gemma d'Or
+E36_2_540,E36_2,12.74,540.00,,6.88,,,6.88,12.74,0,"'
+- Una linea de 6.88 grs. de fino: 12.74 grs de bruto x ley  (540/1000)",Nova Joia
+E36_2_710,E36_2,344.15,710.00,,244.35,,,244.35,344.15,0,"'
+- Una linea de 244.35 grs. de fino: 344.15 grs de bruto x ley  (710/1000)",Nova Joia
+E36_2_710,E36_2,100.24,710.00,,71.17,,,71.17,100.24,0,"'
+- Una linea de 71.17 grs. de fino: 100.24 grs de bruto x ley  (710/1000)",Nova Joia
+E36_3_999,E36_3,500.00,999.00,,499.50,,,499.50,500.00,0,"'
+- Una linea de 499.5 grs. de fino: 500 grs de bruto x ley  (999/1000)",Contratos particulares
+E36_4_709,E36_4,66.09,709.00,,46.86,,,46.86,66.09,0,"'
+- Una linea de 46.86 grs. de fino: 66.09 grs de bruto x ley  (709/1000)",Alquimia
+E36_5_708,E36_5,503.92,708.00,,356.78,,,356.78,503.92,0,"'
+- Una linea de 356.78 grs. de fino: 503.92 grs de bruto x ley  (708/1000)",OrCash
+E36_5_1000,E36_5,-27.93,1000.00,,-27.93,,checked,0.00,0.00,0,"'
+- Una linea de -27.93 grs. de fino: -27.93 grs de bruto x ley  (1000/1000)",OrCash
+E36_6_730,E36_6,209.70,730.00,,153.08,,,153.08,209.70,0,"'
+- Una linea de 153.08 grs. de fino: 209.7 grs de bruto x ley  (730/1000)",Gemma d'Or
+E36_7_999.9,E36_7,999.00,999.90,,998.90,,,998.90,999.00,0,"'
+- Una linea de 998.9 grs. de fino: 999 grs de bruto x ley  (999.9/1000)",OrCash
+E36_8_710,E36_8,165.63,710.00,,117.60,,,117.60,165.63,0,"'
+- Una linea de 117.6 grs. de fino: 165.63 grs de bruto x ley  (710/1000)",Nova Joia
+E36_8_335,E36_8,48.34,335.00,,16.19,,,16.19,48.34,0,"'
+- Una linea de 16.19 grs. de fino: 48.34 grs de bruto x ley  (335/1000)",Nova Joia
+E36_8_500,E36_8,41.65,500.00,,20.83,,,20.83,41.65,0,"'
+- Una linea de 20.83 grs. de fino: 41.65 grs de bruto x ley  (500/1000)",Nova Joia
+E36_9_780,E36_9,30.45,780.00,,23.75,,,23.75,30.45,0,"'
+- Una linea de 23.75 grs. de fino: 30.45 grs de bruto x ley  (780/1000)",La Milla d'Or
+E36_9_730,E36_9,695.96,730.00,,508.05,,,508.05,695.96,0,"'
+- Una linea de 508.05 grs. de fino: 695.96 grs de bruto x ley  (730/1000)",La Milla d'Or
+E36_9_565,E36_9,1.42,565.00,,0.80,,,0.80,1.42,0,"'
+- Una linea de 0.8 grs. de fino: 1.42 grs de bruto x ley  (565/1000)",La Milla d'Or
+E36_9_355,E36_9,5.71,355.00,,2.03,,,2.03,5.71,0,"'
+- Una linea de 2.03 grs. de fino: 5.71 grs de bruto x ley  (355/1000)",La Milla d'Or
+E36_10_710,E36_10,157.10,710.00,,111.54,,,111.54,157.10,0,"'
+- Una linea de 111.54 grs. de fino: 157.1 grs de bruto x ley  (710/1000)",Nova Joia
+E36_11_708,E36_11,540.14,708.00,,382.42,,,382.42,540.14,0,"'
+- Una linea de 382.42 grs. de fino: 540.14 grs de bruto x ley  (708/1000)",OrCash
+E36_12_710,E36_12,86.00,710.00,,61.06,,,61.06,86.00,0,"'
+- Una linea de 61.06 grs. de fino: 86 grs de bruto x ley  (710/1000)",Nova Joia
+E36_12_540,E36_12,1.59,540.00,,0.86,,,0.86,1.59,0,"'
+- Una linea de 0.86 grs. de fino: 1.59 grs de bruto x ley  (540/1000)",Nova Joia
+E36_13_740,E36_13,211.47,740.00,,156.49,,,156.49,211.47,0,"'
+- Una linea de 156.49 grs. de fino: 211.47 grs de bruto x ley  (740/1000)",Gemma d'Or
+E36_14_710,E36_14,150.98,710.00,,107.20,,,107.20,150.98,0,"'
+- Una linea de 107.2 grs. de fino: 150.98 grs de bruto x ley  (710/1000)",Nova Joia
+E36_14_540,E36_14,4.52,540.00,,2.44,,,2.44,4.52,0,"'
+- Una linea de 2.44 grs. de fino: 4.52 grs de bruto x ley  (540/1000)",Nova Joia
+E36_14_917,E36_14,15.07,917.00,,13.82,,,13.82,15.07,0,"'
+- Una linea de 13.82 grs. de fino: 15.07 grs de bruto x ley  (917/1000)",Nova Joia
+E36_14_999.9,E36_14,11.42,999.90,,11.42,,,11.42,11.42,0,"'
+- Una linea de 11.42 grs. de fino: 11.42 grs de bruto x ley  (999.9/1000)",Nova Joia
+E36_15_896,E36_15,7.98,896.00,,7.15,,,7.15,7.98,0,"'
+- Una linea de 7.15 grs. de fino: 7.98 grs de bruto x ley  (896/1000)",La Milla d'Or
+E36_15_855,E36_15,4.82,855.00,,4.12,,,4.12,4.82,0,"'
+- Una linea de 4.12 grs. de fino: 4.82 grs de bruto x ley  (855/1000)",La Milla d'Or
+E36_15_780,E36_15,23.00,780.00,,17.94,,,17.94,23.00,0,"'
+- Una linea de 17.94 grs. de fino: 23 grs de bruto x ley  (780/1000)",La Milla d'Or
+E36_15_730,E36_15,336.96,730.00,,245.98,,,245.98,336.96,0,"'
+- Una linea de 245.98 grs. de fino: 336.96 grs de bruto x ley  (730/1000)",La Milla d'Or
+E36_15_565,E36_15,7.82,565.00,,4.42,,,4.42,7.82,0,"'
+- Una linea de 4.42 grs. de fino: 7.82 grs de bruto x ley  (565/1000)",La Milla d'Or
+E36_15_355,E36_15,27.51,355.00,,9.77,,,9.77,27.51,0,"'
+- Una linea de 9.77 grs. de fino: 27.51 grs de bruto x ley  (355/1000)",La Milla d'Or
+E37_1_710,E37_1,164.14,710.00,,116.54,,,116.54,164.14,0,"'
+- Una linea de 116.54 grs. de fino: 164.14 grs de bruto x ley  (710/1000)",Nova Joia
+E37_2_708,E37_2,650.00,708.00,,460.20,,,460.20,650.00,0,"'
+- Una linea de 460.2 grs. de fino: 650 grs de bruto x ley  (708/1000)",OrCash
+E37_4_1000,E37_4,50.00,1000.00,,50.00,,,50.00,50.00,0,"'
+- Una linea de 50 grs. de fino: 50 grs de bruto x ley  (1000/1000)",Nova Joia
+E37_3_750,E37_3,81.02,750.00,,60.77,,,60.77,81.02,0,"'
+- Una linea de 60.77 grs. de fino: 81.02 grs de bruto x ley  (750/1000)",Nova Joia
+E37_3_900,E37_3,125.08,900.00,,112.57,,,112.57,125.08,0,"'
+- Una linea de 112.57 grs. de fino: 125.08 grs de bruto x ley  (900/1000)",Nova Joia
+E37_3_1000,E37_3,1.80,1000.00,,1.80,,,1.80,1.80,0,"'
+- Una linea de 1.8 grs. de fino: 1.8 grs de bruto x ley  (1000/1000)",Nova Joia
+_5_720,_5,155.30,720.00,,111.82,,,111.82,155.30,0,"'
+- Una linea de 111.82 grs. de fino: 155.3 grs de bruto x ley  (720/1000)",Gemma d'Or
+_5_720,_5,142.80,720.00,,102.82,,,102.82,142.80,0,"'
+- Una linea de 102.82 grs. de fino: 142.8 grs de bruto x ley  (720/1000)",Gemma d'Or
+E37_6_710,E37_6,236.48,710.00,,167.90,,,167.90,236.48,0,"'
+- Una linea de 167.9 grs. de fino: 236.48 grs de bruto x ley  (710/1000)",Nova Joia
+E37_7_896,E37_7,20.40,896.00,,18.28,,,18.28,20.40,0,"'
+- Una linea de 18.28 grs. de fino: 20.4 grs de bruto x ley  (896/1000)",La Milla d'Or
+E37_7_780,E37_7,12.05,780.00,,9.40,,,9.40,12.05,0,"'
+- Una linea de 9.4 grs. de fino: 12.05 grs de bruto x ley  (780/1000)",La Milla d'Or
+E37_7_730,E37_7,940.00,730.00,,686.20,,,686.20,940.00,0,"'
+- Una linea de 686.2 grs. de fino: 940 grs de bruto x ley  (730/1000)",La Milla d'Or
+E37_7_646,E37_7,17.15,646.00,,11.08,,,11.08,17.15,0,"'
+- Una linea de 11.08 grs. de fino: 17.15 grs de bruto x ley  (646/1000)",La Milla d'Or
+E37_7_565,E37_7,4.05,565.00,,2.29,,,2.29,4.05,0,"'
+- Una linea de 2.29 grs. de fino: 4.05 grs de bruto x ley  (565/1000)",La Milla d'Or
+E37_8_540,E37_8,3.79,540.00,,2.05,,,2.05,3.79,0,"'
+- Una linea de 2.05 grs. de fino: 3.79 grs de bruto x ley  (540/1000)",Nova Joia
+E37_8_710,E37_8,252.88,710.00,,179.54,,,179.54,252.88,0,"'
+- Una linea de 179.54 grs. de fino: 252.88 grs de bruto x ley  (710/1000)",Nova Joia
+_9_730,_9,223.80,730.00,,163.37,,,163.37,223.80,0,"'
+- Una linea de 163.37 grs. de fino: 223.8 grs de bruto x ley  (730/1000)",Gemma d'Or
+E37_10_710,E37_10,68.38,710.00,,48.55,,,48.55,68.38,0,"'
+- Una linea de 48.55 grs. de fino: 68.38 grs de bruto x ley  (710/1000)",Nova Joia
+E37_10_710,E37_10,45.49,710.00,,32.30,,,32.30,45.49,0,"'
+- Una linea de 32.3 grs. de fino: 45.49 grs de bruto x ley  (710/1000)",Nova Joia
+E37_10_630,E37_10,13.34,630.00,,8.40,,,8.40,13.34,0,"'
+- Una linea de 8.4 grs. de fino: 13.34 grs de bruto x ley  (630/1000)",Nova Joia
+E37_10_540,E37_10,20.05,540.00,,10.83,,,10.83,20.05,0,"'
+- Una linea de 10.83 grs. de fino: 20.05 grs de bruto x ley  (540/1000)",Nova Joia
+E37_10_335,E37_10,7.63,335.00,,2.56,,,2.56,7.63,0,"'
+- Una linea de 2.56 grs. de fino: 7.63 grs de bruto x ley  (335/1000)",Nova Joia
+E37_11_708,E37_11,338.50,708.00,,239.66,,,239.66,338.50,0,"'
+- Una linea de 239.66 grs. de fino: 338.5 grs de bruto x ley  (708/1000)",Gaudia
+E37_12_708,E37_12,298.87,708.00,,211.60,,,211.60,298.87,0,"'
+- Una linea de 211.6 grs. de fino: 298.87 grs de bruto x ley  (708/1000)",OrCash
+E37_12_1000,E37_12,3.87,1000.00,,3.87,,checked,0.00,0.00,0,"'
+- Una linea de 3.87 grs. de fino: 3.87 grs de bruto x ley  (1000/1000)",OrCash
+E37_13_710,E37_13,202.90,710.00,,144.06,,,144.06,202.90,0,"'
+- Una linea de 144.06 grs. de fino: 202.9 grs de bruto x ley  (710/1000)",Nova Joia
+E37_13_640,E37_13,30.90,640.00,,19.78,,,19.78,30.90,0,"'
+- Una linea de 19.78 grs. de fino: 30.9 grs de bruto x ley  (640/1000)",Nova Joia
+E37_13_540,E37_13,2.47,540.00,,1.33,,,1.33,2.47,0,"'
+- Una linea de 1.33 grs. de fino: 2.47 grs de bruto x ley  (540/1000)",Nova Joia
+E37_14_896,E37_14,7.97,896.00,,7.14,,,7.14,7.97,0,"'
+- Una linea de 7.14 grs. de fino: 7.97 grs de bruto x ley  (896/1000)",La Milla d'Or
+E37_14_780,E37_14,23.38,780.00,,18.24,,,18.24,23.38,0,"'
+- Una linea de 18.24 grs. de fino: 23.38 grs de bruto x ley  (780/1000)",La Milla d'Or
+E37_14_730,E37_14,489.29,730.00,,357.18,,,357.18,489.29,0,"'
+- Una linea de 357.18 grs. de fino: 489.29 grs de bruto x ley  (730/1000)",La Milla d'Or
+E37_14_565,E37_14,6.78,565.00,,3.83,,,3.83,6.78,0,"'
+- Una linea de 3.83 grs. de fino: 6.78 grs de bruto x ley  (565/1000)",La Milla d'Or
+E37_14_355,E37_14,0.49,355.00,,0.17,,,0.17,0.49,0,"'
+- Una linea de 0.17 grs. de fino: 0.49 grs de bruto x ley  (355/1000)",La Milla d'Or
+E37_15_710,E37_15,176.83,710.00,,125.55,,,125.55,176.83,0,"'
+- Una linea de 125.55 grs. de fino: 176.83 grs de bruto x ley  (710/1000)",Nova Joia
+E37_16_780,E37_16,5.80,780.00,,4.52,,,4.52,5.80,0,"'
+- Una linea de 4.52 grs. de fino: 5.8 grs de bruto x ley  (780/1000)",La Milla d'Or
+E37_16_730,E37_16,364.09,730.00,,265.79,,,265.79,364.09,0,"'
+- Una linea de 265.79 grs. de fino: 364.09 grs de bruto x ley  (730/1000)",La Milla d'Or
+E37_16_565,E37_16,1.65,565.00,,0.93,,,0.93,1.65,0,"'
+- Una linea de 0.93 grs. de fino: 1.65 grs de bruto x ley  (565/1000)",La Milla d'Or
+E37_16_355,E37_16,9.80,355.00,,3.48,,,3.48,9.80,0,"'
+- Una linea de 3.48 grs. de fino: 9.8 grs de bruto x ley  (355/1000)",La Milla d'Or
+E37_17_708,E37_17,195.24,708.00,,138.23,,,138.23,195.24,0,"'
+- Una linea de 138.23 grs. de fino: 195.24 grs de bruto x ley  (708/1000)",OrCash
+E37_18_710,E37_18,312.35,710.00,,221.77,,,221.77,312.35,0,"'
+- Una linea de 221.77 grs. de fino: 312.35 grs de bruto x ley  (710/1000)",Nova Joia
+E37_19_720,E37_19,132.60,720.00,,95.47,,,95.47,132.60,0,"'
+- Una linea de 95.47 grs. de fino: 132.6 grs de bruto x ley  (720/1000)",Gemma d'Or
+E37_20_710,E37_20,141.31,710.00,,100.33,,,100.33,141.31,0,"'
+- Una linea de 100.33 grs. de fino: 141.31 grs de bruto x ley  (710/1000)",Nova Joia
+E37_21A_999.9,E37_21A,2500.00,999.90,,2499.75,,,2499.75,2500.00,0,"'
+- Una linea de 2499.75 grs. de fino: 2500 grs de bruto x ley  (999.9/1000)",Contratos particulares
+E37_21B_907.43,E37_21B,1949.80,907.43,,1769.31,,,1769.31,1949.80,0,"'
+- Una linea de 1769.31 grs. de fino: 1949.8 grs de bruto x ley  (907.43/1000)",Contratos particulares
+E37_21A_999.9,E37_21A,-900.00,999.90,,-899.91,,,-899.91,-900.00,0,"'
+- Una linea de -899.91 grs. de fino: -900 grs de bruto x ley  (999.9/1000)",Contratos particulares
+E38_4_896,E38_4,3.43,896.00,,3.07,,,3.07,3.43,0,"'
+- Una linea de 3.07 grs. de fino: 3.43 grs de bruto x ley  (896/1000)",La Milla d'Or
+E38_4_780,E38_4,3.05,780.00,,2.38,,,2.38,3.05,0,"'
+- Una linea de 2.38 grs. de fino: 3.05 grs de bruto x ley  (780/1000)",La Milla d'Or
+E38_4_730,E38_4,432.43,730.00,,315.67,,,315.67,432.43,0,"'
+- Una linea de 315.67 grs. de fino: 432.43 grs de bruto x ley  (730/1000)",La Milla d'Or
+E38_4_565,E38_4,11.43,565.00,,6.46,,,6.46,11.43,0,"'
+- Una linea de 6.46 grs. de fino: 11.43 grs de bruto x ley  (565/1000)",La Milla d'Or
+E38_4_355,E38_4,3.09,355.00,,1.10,,,1.10,3.09,0,"'
+- Una linea de 1.1 grs. de fino: 3.09 grs de bruto x ley  (355/1000)",La Milla d'Or
+E38_1_710,E38_1,92.50,710.00,,65.68,,,65.68,92.50,0,"'
+- Una linea de 65.68 grs. de fino: 92.5 grs de bruto x ley  (710/1000)",Nova Joia
+E38_4_1000,E38_4,-14.50,1000.00,,-14.50,,checked,0.00,0.00,0,"'
+- Una linea de -14.5 grs. de fino: -14.5 grs de bruto x ley  (1000/1000)",La Milla d'Or
+E38_2_740,E38_2,198.90,740.00,,147.19,,,147.19,198.90,0,"'
+- Una linea de 147.19 grs. de fino: 198.9 grs de bruto x ley  (740/1000)",Gemma d'Or
+E38_2_350,E38_2,11.10,350.00,,3.89,,,3.89,11.10,0,"'
+- Una linea de 3.89 grs. de fino: 11.1 grs de bruto x ley  (350/1000)",Gemma d'Or
+E38_3_740,E38_3,136.60,740.00,,101.08,,,101.08,136.60,0,"'
+- Una linea de 101.08 grs. de fino: 136.6 grs de bruto x ley  (740/1000)",Gemma d'Or
+E38_5_708,E38_5,514.70,708.00,,364.41,,,364.41,514.70,0,"'
+- Una linea de 364.41 grs. de fino: 514.7 grs de bruto x ley  (708/1000)",OrCash
+E38_6_855,E38_6,6.46,855.00,,5.52,,,5.52,6.46,0,"'
+- Una linea de 5.52 grs. de fino: 6.46 grs de bruto x ley  (855/1000)",La Milla d'Or
+E38_6_780,E38_6,20.58,780.00,,16.05,,,16.05,20.58,0,"'
+- Una linea de 16.05 grs. de fino: 20.58 grs de bruto x ley  (780/1000)",La Milla d'Or
+E38_6_730,E38_6,466.86,730.00,,340.81,,,340.81,466.86,0,"'
+- Una linea de 340.81 grs. de fino: 466.86 grs de bruto x ley  (730/1000)",La Milla d'Or
+E38_6_565,E38_6,6.90,565.00,,3.90,,,3.90,6.90,0,"'
+- Una linea de 3.9 grs. de fino: 6.9 grs de bruto x ley  (565/1000)",La Milla d'Or
+E38_6_355,E38_6,11.15,355.00,,3.96,,,3.96,11.15,0,"'
+- Una linea de 3.96 grs. de fino: 11.15 grs de bruto x ley  (355/1000)",La Milla d'Or
+E38_7_720,E38_7,199.80,720.00,,143.86,,,143.86,199.80,0,"'
+- Una linea de 143.86 grs. de fino: 199.8 grs de bruto x ley  (720/1000)",Gemma d'Or
+E38_8_710,E38_8,175.62,710.00,,124.69,,,124.69,175.62,0,"'
+- Una linea de 124.69 grs. de fino: 175.62 grs de bruto x ley  (710/1000)",Nova Joia
+E38_8_750,E38_8,9.59,750.00,,7.19,,,7.19,9.59,0,"'
+- Una linea de 7.19 grs. de fino: 9.59 grs de bruto x ley  (750/1000)",Nova Joia
+E38_8_720,E38_8,62.33,720.00,,44.88,,,44.88,62.33,0,"'
+- Una linea de 44.88 grs. de fino: 62.33 grs de bruto x ley  (720/1000)",Nova Joia
+E38_8_540,E38_8,1.34,540.00,,0.72,,,0.72,1.34,0,"'
+- Una linea de 0.72 grs. de fino: 1.34 grs de bruto x ley  (540/1000)",Nova Joia
+E38_8_335,E38_8,3.75,335.00,,1.26,,,1.26,3.75,0,"'
+- Una linea de 1.26 grs. de fino: 3.75 grs de bruto x ley  (335/1000)",Nova Joia
+E38_9_715,E38_9,117.50,715.00,,84.01,,,84.01,117.50,0,"'
+- Una linea de 84.01 grs. de fino: 117.5 grs de bruto x ley  (715/1000)",Alquimia
+E38_9_590,E38_9,7.00,590.00,,4.13,,,4.13,7.00,0,"'
+- Una linea de 4.13 grs. de fino: 7 grs de bruto x ley  (590/1000)",Alquimia
+E38_10_999.9,E38_10,112.28,999.90,,112.27,,,112.27,112.28,0,"'
+- Una linea de 112.27 grs. de fino: 112.28 grs de bruto x ley  (999.9/1000)",OrCash
+E38_11_750,E38_11,528.88,750.00,,396.66,,,396.66,528.88,0,"'
+- Una linea de 396.66 grs. de fino: 528.88 grs de bruto x ley  (750/1000)",OrCash
+E38_12_740,E38_12,61.10,740.00,,45.21,,,45.21,61.10,0,"'
+- Una linea de 45.21 grs. de fino: 61.1 grs de bruto x ley  (740/1000)",Nova Joia
+E38_12_710,E38_12,220.65,710.00,,156.66,,,156.66,220.65,0,"'
+- Una linea de 156.66 grs. de fino: 220.65 grs de bruto x ley  (710/1000)",Nova Joia
+E38_12_830,E38_12,8.27,830.00,,6.86,,,6.86,8.27,0,"'
+- Una linea de 6.86 grs. de fino: 8.27 grs de bruto x ley  (830/1000)",Nova Joia
+E38_13_710,E38_13,125.59,710.00,,89.17,,,89.17,125.59,0,"'
+- Una linea de 89.17 grs. de fino: 125.59 grs de bruto x ley  (710/1000)",Nova Joia
+E38_14_900,E38_14,216.16,900.00,,194.54,,,194.54,216.16,0,"'
+- Una linea de 194.54 grs. de fino: 216.16 grs de bruto x ley  (900/1000)",Nova Joia
+E38_14_917,E38_14,67.87,917.00,,62.24,,,62.24,67.87,0,"'
+- Una linea de 62.24 grs. de fino: 67.87 grs de bruto x ley  (917/1000)",Nova Joia
+E38_14_875,E38_14,6.68,875.00,,5.85,,,5.85,6.68,0,"'
+- Una linea de 5.85 grs. de fino: 6.68 grs de bruto x ley  (875/1000)",Nova Joia
+E38_14_710,E38_14,53.08,710.00,,37.69,,,37.69,53.08,0,"'
+- Una linea de 37.69 grs. de fino: 53.08 grs de bruto x ley  (710/1000)",Nova Joia
+E38_15_730,E38_15,101.65,730.00,,74.20,,,74.20,101.65,0,"'
+- Una linea de 74.2 grs. de fino: 101.65 grs de bruto x ley  (730/1000)",Gemma d'Or
+E38_15_740,E38_15,92.50,740.00,,68.45,,,68.45,92.50,0,"'
+- Una linea de 68.45 grs. de fino: 92.5 grs de bruto x ley  (740/1000)",Gemma d'Or
+E38_15_740,E38_15,209.50,740.00,,155.03,,,155.03,209.50,0,"'
+- Una linea de 155.03 grs. de fino: 209.5 grs de bruto x ley  (740/1000)",Gemma d'Or
+E38_15_720,E38_15,214.00,720.00,,154.08,,,154.08,214.00,0,"'
+- Una linea de 154.08 grs. de fino: 214 grs de bruto x ley  (720/1000)",Gemma d'Or
+E38_15_720,E38_15,206.20,720.00,,148.46,,,148.46,206.20,0,"'
+- Una linea de 148.46 grs. de fino: 206.2 grs de bruto x ley  (720/1000)",Gemma d'Or
+E38_15_710,E38_15,204.50,710.00,,145.20,,,145.20,204.50,0,"'
+- Una linea de 145.2 grs. de fino: 204.5 grs de bruto x ley  (710/1000)",Gemma d'Or
+E38_15_740,E38_15,199.00,740.00,,147.26,,,147.26,199.00,0,"'
+- Una linea de 147.26 grs. de fino: 199 grs de bruto x ley  (740/1000)",Gemma d'Or
+E38_16_999,E38_16,23.25,999.00,,23.23,,,23.23,23.25,0,"'
+- Una linea de 23.23 grs. de fino: 23.25 grs de bruto x ley  (999/1000)",La Milla d'Or
+E38_16_896,E38_16,17.57,896.00,,15.74,,,15.74,17.57,0,"'
+- Una linea de 15.74 grs. de fino: 17.57 grs de bruto x ley  (896/1000)",La Milla d'Or
+E38_16_855,E38_16,21.71,855.00,,18.56,,,18.56,21.71,0,"'
+- Una linea de 18.56 grs. de fino: 21.71 grs de bruto x ley  (855/1000)",La Milla d'Or
+E38_16_780,E38_16,9.76,780.00,,7.61,,,7.61,9.76,0,"'
+- Una linea de 7.61 grs. de fino: 9.76 grs de bruto x ley  (780/1000)",La Milla d'Or
+E38_16_730,E38_16,666.45,730.00,,486.51,,,486.51,666.45,0,"'
+- Una linea de 486.51 grs. de fino: 666.45 grs de bruto x ley  (730/1000)",La Milla d'Or
+E38_16_565,E38_16,19.56,565.00,,11.05,,,11.05,19.56,0,"'
+- Una linea de 11.05 grs. de fino: 19.56 grs de bruto x ley  (565/1000)",La Milla d'Or
+E39_1_710,E39_1,229.70,710.00,,163.09,,,163.09,229.70,0,"'
+- Una linea de 163.09 grs. de fino: 229.7 grs de bruto x ley  (710/1000)",Nova Joia
+E39_1_540,E39_1,1.55,540.00,,0.84,,,0.84,1.55,0,"'
+- Una linea de 0.84 grs. de fino: 1.55 grs de bruto x ley  (540/1000)",Nova Joia
+E39_1_335,E39_1,3.34,335.00,,1.12,,,1.12,3.34,0,"'
+- Una linea de 1.12 grs. de fino: 3.34 grs de bruto x ley  (335/1000)",Nova Joia
+E39_2_708,E39_2,1012.00,708.00,,716.50,,,716.50,1012.00,0,"'
+- Una linea de 716.5 grs. de fino: 1012 grs de bruto x ley  (708/1000)",OrCash
+E39_3_710,E39_3,58.45,710.00,,41.50,,,41.50,58.45,0,"'
+- Una linea de 41.5 grs. de fino: 58.45 grs de bruto x ley  (710/1000)",Nova Joia
+E39_3_900,E39_3,399.81,900.00,,359.83,,,359.83,399.81,0,"'
+- Una linea de 359.83 grs. de fino: 399.81 grs de bruto x ley  (900/1000)",Nova Joia
+E39_4_708,E39_4,235.50,708.00,,166.73,,,166.73,235.50,0,"'
+- Una linea de 166.73 grs. de fino: 235.5 grs de bruto x ley  (708/1000)",Gaudia
+E39_5_720,E39_5,40.10,720.00,,28.87,,,28.87,40.10,0,"'
+- Una linea de 28.87 grs. de fino: 40.1 grs de bruto x ley  (720/1000)",Gemma d'Or
+E39_5_740,E39_5,137.10,740.00,,101.45,,,101.45,137.10,0,"'
+- Una linea de 101.45 grs. de fino: 137.1 grs de bruto x ley  (740/1000)",Gemma d'Or
+E39_6_740,E39_6,16.62,740.00,,12.30,,,12.30,16.62,0,"'
+- Una linea de 12.3 grs. de fino: 16.62 grs de bruto x ley  (740/1000)",Nova Joia
+E39_6_710,E39_6,293.81,710.00,,208.61,,,208.61,293.81,0,"'
+- Una linea de 208.61 grs. de fino: 293.81 grs de bruto x ley  (710/1000)",Nova Joia
+E39_7_710,E39_7,71.52,710.00,,50.78,,,50.78,71.52,0,"'
+- Una linea de 50.78 grs. de fino: 71.52 grs de bruto x ley  (710/1000)",Nova Joia
+E39_7_900,E39_7,64.49,900.00,,58.04,,,58.04,64.49,0,"'
+- Una linea de 58.04 grs. de fino: 64.49 grs de bruto x ley  (900/1000)",Nova Joia
+E39_8_999.9,E39_8,250.00,999.90,,249.98,,,249.98,250.00,0,"'
+- Una linea de 249.98 grs. de fino: 250 grs de bruto x ley  (999.9/1000)",Nova Joia
+E39_9_710,E39_9,109.27,710.00,,77.58,,,77.58,109.27,0,"'
+- Una linea de 77.58 grs. de fino: 109.27 grs de bruto x ley  (710/1000)",Nova Joia
+E39_9_540,E39_9,7.15,540.00,,3.86,,,3.86,7.15,0,"'
+- Una linea de 3.86 grs. de fino: 7.15 grs de bruto x ley  (540/1000)",Nova Joia
+E39_9_710,E39_9,37.00,710.00,,26.27,,,26.27,37.00,0,"'
+- Una linea de 26.27 grs. de fino: 37 grs de bruto x ley  (710/1000)",Nova Joia
+E39_10_725,E39_10,59.90,725.00,,43.43,,,43.43,59.90,0,"'
+- Una linea de 43.43 grs. de fino: 59.9 grs de bruto x ley  (725/1000)",Alquimia
+E39_10_900,E39_10,6.45,900.00,,5.81,,,5.81,6.45,0,"'
+- Una linea de 5.81 grs. de fino: 6.45 grs de bruto x ley  (900/1000)",Alquimia
+E39_11_710,E39_11,143.64,710.00,,101.98,,,101.98,143.64,0,"'
+- Una linea de 101.98 grs. de fino: 143.64 grs de bruto x ley  (710/1000)",Nova Joia
+E39_11_917,E39_11,67.91,917.00,,62.27,,,62.27,67.91,0,"'
+- Una linea de 62.27 grs. de fino: 67.91 grs de bruto x ley  (917/1000)",Nova Joia
+E39_12_999,E39_12,25.74,999.00,,25.71,,,25.71,25.74,0,"'
+- Una linea de 25.71 grs. de fino: 25.74 grs de bruto x ley  (999/1000)",La Milla d'Or
+E39_12_896,E39_12,10.58,896.00,,9.48,,,9.48,10.58,0,"'
+- Una linea de 9.48 grs. de fino: 10.58 grs de bruto x ley  (896/1000)",La Milla d'Or
+E39_12_780,E39_12,57.85,780.00,,45.12,,,45.12,57.85,0,"'
+- Una linea de 45.12 grs. de fino: 57.85 grs de bruto x ley  (780/1000)",La Milla d'Or
+E39_12_730,E39_12,508.92,730.00,,371.51,,,371.51,508.92,0,"'
+- Una linea de 371.51 grs. de fino: 508.92 grs de bruto x ley  (730/1000)",La Milla d'Or
+E39_12_646,E39_12,11.69,646.00,,7.55,,,7.55,11.69,0,"'
+- Una linea de 7.55 grs. de fino: 11.69 grs de bruto x ley  (646/1000)",La Milla d'Or
+E39_12_565,E39_12,52.19,565.00,,29.49,,,29.49,52.19,0,"'
+- Una linea de 29.49 grs. de fino: 52.19 grs de bruto x ley  (565/1000)",La Milla d'Or
+E39_12_355,E39_12,3.74,355.00,,1.33,,,1.33,3.74,0,"'
+- Una linea de 1.33 grs. de fino: 3.74 grs de bruto x ley  (355/1000)",La Milla d'Or
+E40_1_999.9,E40_1,175.00,999.90,,174.98,,,174.98,175.00,0,"'
+- Una linea de 174.98 grs. de fino: 175 grs de bruto x ley  (999.9/1000)",Gemma d'Or
+E40_2_710,E40_2,150.80,710.00,,107.07,,,107.07,150.80,0,"'
+- Una linea de 107.07 grs. de fino: 150.8 grs de bruto x ley  (710/1000)",Gemma d'Or
+E40_3_710,E40_3,224.60,710.00,,159.47,,,159.47,224.60,0,"'
+- Una linea de 159.47 grs. de fino: 224.6 grs de bruto x ley  (710/1000)",Nova Joia
+E40_3_540,E40_3,122.97,540.00,,66.40,,,66.40,122.97,0,"'
+- Una linea de 66.4 grs. de fino: 122.97 grs de bruto x ley  (540/1000)",Nova Joia
+E40_3_335,E40_3,11.82,335.00,,3.96,,,3.96,11.82,0,"'
+- Una linea de 3.96 grs. de fino: 11.82 grs de bruto x ley  (335/1000)",Nova Joia
+E40_4_710,E40_4,239.41,710.00,,169.98,,,169.98,239.41,0,"'
+- Una linea de 169.98 grs. de fino: 239.41 grs de bruto x ley  (710/1000)",Nova Joia
+E40_4_900,E40_4,19.36,900.00,,17.42,,,17.42,19.36,0,"'
+- Una linea de 17.42 grs. de fino: 19.36 grs de bruto x ley  (900/1000)",Nova Joia
+E40_4_999.9,E40_4,7.91,999.90,,7.91,,,7.91,7.91,0,"'
+- Una linea de 7.91 grs. de fino: 7.91 grs de bruto x ley  (999.9/1000)",Nova Joia
+E40_4_625,E40_4,6.27,625.00,,3.92,,,3.92,6.27,0,"'
+- Una linea de 3.92 grs. de fino: 6.27 grs de bruto x ley  (625/1000)",Nova Joia
+E40_4_916,E40_4,67.88,916.00,,62.18,,,62.18,67.88,0,"'
+- Una linea de 62.18 grs. de fino: 67.88 grs de bruto x ley  (916/1000)",Nova Joia
+E40_4_916,E40_4,67.86,916.00,,62.16,,,62.16,67.86,0,"'
+- Una linea de 62.16 grs. de fino: 67.86 grs de bruto x ley  (916/1000)",Nova Joia
+E40_6_999.9,E40_6,400.00,999.90,,399.96,,,399.96,400.00,0,"'
+- Una linea de 399.96 grs. de fino: 400 grs de bruto x ley  (999.9/1000)",Gemma d'Or
+E40_5_708,E40_5,272.50,708.00,,192.93,,,192.93,272.50,0,"'
+- Una linea de 192.93 grs. de fino: 272.5 grs de bruto x ley  (708/1000)",Gaudia
+E40_7_708,E40_7,516.00,708.00,,365.33,,,365.33,516.00,0,"'
+- Una linea de 365.33 grs. de fino: 516 grs de bruto x ley  (708/1000)",OrCash
+E40_8_999,E40_8,15.48,999.00,,15.46,,,15.46,15.48,0,"'
+- Una linea de 15.46 grs. de fino: 15.48 grs de bruto x ley  (999/1000)",La Milla d'Or
+E40_8_896,E40_8,17.29,896.00,,15.49,,,15.49,17.29,0,"'
+- Una linea de 15.49 grs. de fino: 17.29 grs de bruto x ley  (896/1000)",La Milla d'Or
+E40_8_780,E40_8,21.76,780.00,,16.97,,,16.97,21.76,0,"'
+- Una linea de 16.97 grs. de fino: 21.76 grs de bruto x ley  (780/1000)",La Milla d'Or
+E40_8_730,E40_8,580.97,730.00,,424.11,,,424.11,580.97,0,"'
+- Una linea de 424.11 grs. de fino: 580.97 grs de bruto x ley  (730/1000)",La Milla d'Or
+E40_8_565,E40_8,33.50,565.00,,18.93,,,18.93,33.50,0,"'
+- Una linea de 18.93 grs. de fino: 33.5 grs de bruto x ley  (565/1000)",La Milla d'Or
+E40_8_355,E40_8,0.46,355.00,,0.16,,,0.16,0.46,0,"'
+- Una linea de 0.16 grs. de fino: 0.46 grs de bruto x ley  (355/1000)",La Milla d'Or
+E40_9_710,E40_9,132.49,710.00,,94.07,,,94.07,132.49,0,"'
+- Una linea de 94.07 grs. de fino: 132.49 grs de bruto x ley  (710/1000)",Nova Joia
+E40_9_540,E40_9,44.61,540.00,,24.09,,,24.09,44.61,0,"'
+- Una linea de 24.09 grs. de fino: 44.61 grs de bruto x ley  (540/1000)",Nova Joia
+E40_10_720,E40_10,166.00,720.00,,119.52,,,119.52,166.00,0,"'
+- Una linea de 119.52 grs. de fino: 166 grs de bruto x ley  (720/1000)",Gemma d'Or
