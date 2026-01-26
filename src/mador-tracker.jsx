@@ -11,6 +11,13 @@ const formatNum = (num, decimals = 2) => {
 const formatEur = (num) => formatNum(num, 2) + ' €';
 const formatGr = (num, decimals = 2) => formatNum(num, decimals) + ' g';
 
+// Extraer número de expedición (E39 → 39, E50 → 50)
+const getExpNum = (nombre) => {
+  const m = nombre?.match(/E(\d+)/);
+  return m ? parseInt(m[1]) : 0;
+};
+const sortExpDescending = (a, b) => getExpNum(b.nombre) - getExpNum(a.nombre);
+
 // Helper para tiempo relativo
 const tiempoRelativo = (fecha) => {
   if (!fecha) return '';
@@ -1259,7 +1266,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
           {[...expediciones].sort((a, b) => {
             if (a.id === expedicionActualId) return -1;
             if (b.id === expedicionActualId) return 1;
-            return 0;
+            return sortExpDescending(a, b);
           }).map(exp => {
             const totales = calcularTotalesExpedicion(exp.id);
             const esActual = exp.id === expedicionActualId;
@@ -1696,7 +1703,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
   const EstadisticasTab = () => {
     // Preparar datos para el gráfico: bruto por expedición y cliente
     const chartData = useMemo(() => {
-      return expediciones.map(exp => {
+      return [...expediciones].sort((a, b) => getExpNum(a.nombre) - getExpNum(b.nombre)).map(exp => {
         const dataPoint = { expedicion: exp.nombre };
         
         // Para cada cliente, sumar el bruto de sus paquetes en esta expedición
@@ -2002,7 +2009,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
                     }}
                     className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
                   >
-                    {expediciones.map(e => (
+                    {[...expediciones].sort(sortExpDescending).map(e => (
                       <option key={e.id} value={e.id}>{e.nombre}</option>
                     ))}
                   </select>
