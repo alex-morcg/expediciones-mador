@@ -371,56 +371,66 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
         alert('No hay factura subida');
         return;
       }
-      
+
+      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        alert('Falta configurar VITE_ANTHROPIC_API_KEY en las variables de entorno');
+        return;
+      }
+
       const esImagen = paq.factura.tipo?.startsWith('image/');
       const esPDF = paq.factura.tipo === 'application/pdf';
-      
+
       if (!esImagen && !esPDF) {
         alert('Solo se pueden verificar imágenes o PDFs');
         return;
       }
-      
+
       setVerificandoFactura(true);
 
       const totales = calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(paq.expedicionId));
-      
-      // Extraer base64 sin el prefijo data:...
+
+      // Preparar resumen de líneas del paquete para comparar pesos
+      const lineasResumen = paq.lineas.map(l => `${l.bruto}g x ley ${l.ley}`).join(', ');
+
       const base64Data = paq.factura.data.split(',')[1];
-      
-      const prompt = `Analiza esta factura/albarán y extrae SOLO el importe TOTAL final de la factura (el que pagaría el cliente). 
-Responde SOLO con un JSON así, sin texto adicional:
-{"total": número}
 
-El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"total": null}`;
+      const prompt = `Analiza esta factura/albarán y extrae:
+1. El importe TOTAL final (lo que paga el cliente)
+2. Todos los pesos brutos que aparezcan, con su ley/kilataje si se indica
 
-      // Construir el contenido según el tipo de archivo
-      const archivoContent = esImagen 
-        ? {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: paq.factura.tipo,
-              data: base64Data
-            }
-          }
-        : {
-            type: 'document',
-            source: {
-              type: 'base64',
-              media_type: 'application/pdf',
-              data: base64Data
-            }
-          };
+Nuestros datos del paquete son:
+- Total calculado: ${totales.totalFra.toFixed(2)} €
+- Líneas: ${lineasResumen}
+- Bruto total: ${totales.brutoTotal.toFixed(2)} g
+- Fino total: ${totales.finoTotal.toFixed(2)} g
+
+Responde SOLO con JSON, sin texto adicional:
+{
+  "total": número_o_null,
+  "pesos": [{"bruto": número, "ley": número_o_null}],
+  "pesosCuadran": true/false,
+  "observaciones": "texto breve si hay discrepancias"
+}
+
+Usa punto decimal. Si no encuentras algo, pon null.`;
+
+      const archivoContent = esImagen
+        ? { type: 'image', source: { type: 'base64', media_type: paq.factura.tipo, data: base64Data } }
+        : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } };
 
       try {
         const response = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
           },
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 200,
+            max_tokens: 500,
             messages: [{
               role: 'user',
               content: [
@@ -431,42 +441,47 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
           })
         });
 
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error?.message || `HTTP ${response.status}`);
+        }
+
         const data = await response.json();
         const respuestaTexto = data.content?.[0]?.text || '';
-        
-        // Intentar parsear JSON de la respuesta
-        let totalFactura = null;
+
+        let resultado = null;
         try {
           const jsonMatch = respuestaTexto.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            totalFactura = parsed.total;
+            resultado = JSON.parse(jsonMatch[0]);
           }
         } catch (e) {
           // No se pudo parsear
         }
-        
-        if (totalFactura === null) {
+
+        if (!resultado || resultado.total === null) {
           alert('No se pudo leer el total de la factura');
           setVerificandoFactura(false);
           return;
         }
-        
-        // Calcular diferencia y guardar
-        const diferencia = totalFactura - totales.totalFra;
-        
+
+        const diferencia = resultado.total - totales.totalFra;
+
         updatePaqueteVerificacion(paq.id, {
-          totalFactura,
+          totalFactura: resultado.total,
           totalPaquete: totales.totalFra,
           diferencia,
+          pesos: resultado.pesos || [],
+          pesosCuadran: resultado.pesosCuadran ?? null,
+          observaciones: resultado.observaciones || null,
           fecha: new Date().toISOString(),
           archivoNombre: paq.factura.nombre
         });
-        
+
       } catch (error) {
         alert('Error al conectar con la IA: ' + error.message);
       }
-      
+
       setVerificandoFactura(false);
     };
     
@@ -770,7 +785,10 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
                     alt="Factura" 
                     className="w-full rounded-lg cursor-pointer"
                     style={{ border: `1px solid ${clienteColor}30` }}
-                    onClick={() => window.open(paq.factura.data, '_blank')}
+                    onClick={() => {
+                      const w = window.open('');
+                      if (w) { w.document.write(`<img src="${paq.factura.data}" style="max-width:100%">`); w.document.title = paq.factura.nombre; }
+                    }}
                   />
                 ) : (
                   <div className="bg-white/50 rounded-lg p-3 flex items-center gap-3" style={{ border: `1px solid ${clienteColor}30` }}>
@@ -779,7 +797,10 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
                       <p className="text-stone-800 font-medium truncate">{paq.factura.nombre}</p>
                       <p className="text-stone-500 text-xs">PDF</p>
                     </div>
-                    <Button size="sm" onClick={() => window.open(paq.factura.data, '_blank')}>Ver</Button>
+                    <Button size="sm" onClick={() => {
+                      const w = window.open('');
+                      if (w) { w.document.write(`<iframe src="${paq.factura.data}" style="width:100%;height:100vh;border:none"></iframe>`); w.document.title = paq.factura.nombre; }
+                    }}>Ver</Button>
                   </div>
                 )}
                 
@@ -815,6 +836,34 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
                           {paq.verificacionIA.diferencia >= 0 ? '+' : ''}{formatNum(paq.verificacionIA.diferencia)} €
                         </span>
                       </div>
+                      {/* Verificación de pesos */}
+                      {paq.verificacionIA.pesosCuadran !== undefined && paq.verificacionIA.pesosCuadran !== null && (
+                        <div className={`flex justify-between border-t border-current/10 pt-1 mt-1`}>
+                          <span className="font-medium">Pesos:</span>
+                          <span className={`font-bold ${paq.verificacionIA.pesosCuadran ? 'text-green-600' : 'text-orange-600'}`}>
+                            {paq.verificacionIA.pesosCuadran ? '✓ Cuadran' : '⚠ Discrepancia'}
+                          </span>
+                        </div>
+                      )}
+                      {paq.verificacionIA.observaciones && (
+                        <div className="bg-white/60 rounded p-2 mt-1">
+                          <span className="text-stone-500 text-xs">Obs: </span>
+                          <span className="text-stone-700 text-xs">{paq.verificacionIA.observaciones}</span>
+                        </div>
+                      )}
+                      {paq.verificacionIA.pesos && paq.verificacionIA.pesos.length > 0 && (
+                        <details className="mt-1">
+                          <summary className="text-stone-400 text-xs cursor-pointer hover:text-stone-600">Ver pesos extraídos</summary>
+                          <div className="mt-1 space-y-0.5">
+                            {paq.verificacionIA.pesos.map((p, i) => (
+                              <div key={i} className="flex justify-between text-xs text-stone-500">
+                                <span>{p.bruto}g</span>
+                                {p.ley && <span>ley {p.ley}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
                     </div>
                     
                     {/* Validación manual */}
@@ -2399,7 +2448,7 @@ El número debe usar punto decimal, no coma. Si no encuentras el total, pon {"to
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.4</span>
+              <span className="text-xs text-white/50 font-mono">v0.5</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
