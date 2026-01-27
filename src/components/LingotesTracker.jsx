@@ -7,6 +7,29 @@ const formatNum = (num, decimals = 2) => {
 
 const formatEur = (num) => formatNum(num, 2) + ' €';
 
+// Entrega date as short label: "2025-01-19" → "25-1"
+const formatEntregaShort = (fecha) => {
+  if (!fecha || fecha === '-') return '-';
+  const m = fecha.match(/^(\d{4})-(\d{2})/);
+  if (!m) return fecha;
+  return `${m[1].slice(2)}-${parseInt(m[2])}`;
+};
+
+// 20-color palette for entrega badges
+const ENTREGA_COLORS = [
+  '#e11d48', '#db2777', '#c026d3', '#9333ea', '#7c3aed',
+  '#4f46e5', '#2563eb', '#0284c7', '#0891b2', '#0d9488',
+  '#059669', '#16a34a', '#65a30d', '#ca8a04', '#d97706',
+  '#ea580c', '#dc2626', '#be185d', '#7e22ce', '#1d4ed8',
+];
+
+const getEntregaColor = (fecha) => {
+  const label = formatEntregaShort(fecha);
+  let hash = 0;
+  for (let i = 0; i < label.length; i++) hash = ((hash << 5) - hash + label.charCodeAt(i)) | 0;
+  return ENTREGA_COLORS[Math.abs(hash) % ENTREGA_COLORS.length];
+};
+
 // Helper: sum all lingotes peso in an entrega
 const pesoEntrega = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.peso || 0), 0);
 const pesoCerrado = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado').reduce((s, l) => s + (l.peso || 0) - (l.pesoDevuelto || 0), 0);
@@ -506,7 +529,14 @@ export default function LingotesTracker({
                 <tbody>
                   {allLingotesFinalizados.map((l, i) => (
                     <tr key={i} className="border-b border-stone-100 hover:bg-stone-50">
-                      <td className="py-2 px-1 text-xs text-stone-600">{l.fechaEntrega || '-'}</td>
+                      <td className="py-2 px-1">
+                        {l.fechaEntrega ? (
+                          <span
+                            className="text-xs px-1.5 py-0.5 rounded font-bold"
+                            style={{ backgroundColor: getEntregaColor(l.fechaEntrega) + '20', color: getEntregaColor(l.fechaEntrega) }}
+                          >{formatEntregaShort(l.fechaEntrega)}</span>
+                        ) : '-'}
+                      </td>
                       <td className="py-2 px-1 text-xs">{l.fechaCierre || '-'}</td>
                       <td className="py-2 px-1 text-right font-mono text-xs">{l.peso}g</td>
                       <td className="py-2 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
