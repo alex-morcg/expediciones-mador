@@ -126,10 +126,9 @@ async function main() {
     // Skip special text rows (like "El client respon de la custòdia...")
     if (fechaStr.length > 20) continue;
 
-    // Skip "FUTURA" entries without precio (empty placeholders for future lingotes)
-    // But keep FUTURA entries that HAVE a precio (those are real en_curso lingotes)
     const precio = parseNumES(cols[3]);
-    if (fechaStr === 'FUTURA' && precio === null) continue;
+    // FUTURA without precio = "vendido sin stock" → import with estado "futura"
+    const isFuturaWithoutPrecio = (fechaStr === 'FUTURA' && precio === null);
 
     const importe = parseNumES(cols[4]);
     const nFactura = (cols[5] || '').trim() || null;
@@ -156,7 +155,7 @@ async function main() {
       pesoCerrado,
       pesoDevuelto,
       exportacion,
-      estado: estado.includes('finalizado') ? 'finalizado' : 'en_curso',
+      estado: isFuturaWithoutPrecio ? 'futura' : (estado.includes('finalizado') ? 'finalizado' : 'en_curso'),
       pagado,
       esDevolucion: isPureDevolucion,
     });

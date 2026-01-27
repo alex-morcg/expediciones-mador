@@ -7,14 +7,17 @@ const formatNum = (num, decimals = 2) => {
 
 const formatEur = (num) => formatNum(num, 2) + ' €';
 
-// Helper: sum all lingotes peso in an entrega
-const pesoEntrega = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.peso || 0), 0);
+// Helper: sum all lingotes peso in an entrega (excludes futura - not physically delivered)
+const pesoEntrega = (entrega) => (entrega.lingotes || []).filter(l => l.estado !== 'futura').reduce((s, l) => s + (l.peso || 0), 0);
 const pesoCerrado = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado').reduce((s, l) => s + (l.peso || 0) - (l.pesoDevuelto || 0), 0);
 const pesoDevuelto = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.pesoDevuelto || 0), 0);
 const importeEntrega = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado').reduce((s, l) => s + (l.importe || 0), 0);
 const numLingotes = (entrega) => (entrega.lingotes || []).length;
 const lingotesEnCurso = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'en_curso');
 const lingotesFinalizados = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado');
+const lingotesFutura = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'futura');
+const pesoFutura = (entrega) => lingotesFutura(entrega).reduce((s, l) => s + (l.peso || 0), 0);
+const isFuturaEntrega = (entrega) => entrega.fechaEntrega === 'FUTURA';
 
 export default function LingotesTracker({
   clientes,
@@ -36,6 +39,9 @@ export default function LingotesTracker({
   const [selectedEntrega, setSelectedEntrega] = useState(null);
   const [selectedLingoteIdx, setSelectedLingoteIdx] = useState(null);
   const [editingEntregaClienteId, setEditingEntregaClienteId] = useState(null);
+  const [showFuturaModal, setShowFuturaModal] = useState(false);
+  const [showAssignFuturaModal, setShowAssignFuturaModal] = useState(false);
+  const [assignFuturaTarget, setAssignFuturaTarget] = useState(null);
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -57,8 +63,10 @@ export default function LingotesTracker({
       const pendiente = entregado - cerrado - devuelto;
       const enCurso = entregasCliente.reduce((sum, e) => sum + lingotesEnCurso(e).length, 0);
       const importeTotal = entregasCliente.reduce((sum, e) => sum + importeEntrega(e), 0);
-      return { ...cliente, entregado, cerrado, devuelto, pendiente, enCurso, importeTotal };
-    }).filter(c => c.entregado > 0 || c.enCurso > 0);
+      const futuraWeight = entregasCliente.reduce((sum, e) => sum + pesoFutura(e), 0);
+      const futuraCount = entregasCliente.reduce((sum, e) => sum + lingotesFutura(e).length, 0);
+      return { ...cliente, entregado, cerrado, devuelto, pendiente, enCurso, importeTotal, futuraWeight, futuraCount };
+    }).filter(c => c.entregado > 0 || c.enCurso > 0 || c.futuraCount > 0);
   }, [clientes, entregas]);
 
   const stockTotal = useMemo(() => {
@@ -66,7 +74,8 @@ export default function LingotesTracker({
     const totalCerrado = entregas.reduce((sum, e) => sum + pesoCerrado(e), 0);
     const totalDevuelto = entregas.reduce((sum, e) => sum + pesoDevuelto(e), 0);
     const stockClientes = totalEntregado - totalCerrado - totalDevuelto;
-    return { totalEntregado, totalCerrado, totalDevuelto, stockClientes };
+    const totalFutura = entregas.reduce((sum, e) => sum + pesoFutura(e), 0);
+    return { totalEntregado, totalCerrado, totalDevuelto, stockClientes, totalFutura };
   }, [entregas]);
 
   // CRUD
@@ -95,6 +104,75 @@ export default function LingotesTracker({
     });
     setShowEntregaModal(false);
     setEditingEntregaClienteId(null);
+
+    // Check if client has FUTURA lingotes → prompt to assign
+    const clientFutura = entregas.find(e => e.clienteId === data.clienteId && isFuturaEntrega(e));
+    if (clientFutura && lingotesFutura(clientFutura).length > 0) {
+      setAssignFuturaTarget({ clienteId: data.clienteId });
+      setShowAssignFuturaModal(true);
+    }
+  };
+
+  const addFutura = async (data) => {
+    // data: { clienteId, cantidad, pesoUnitario }
+    const futuraExp = exportaciones.find(e => e.nombre === 'FUTURA');
+    const lingotes = [];
+    for (let i = 0; i < data.cantidad; i++) {
+      lingotes.push({
+        peso: data.pesoUnitario,
+        precio: null,
+        importe: 0,
+        nFactura: null,
+        fechaCierre: null,
+        pesoCerrado: 0,
+        pesoDevuelto: 0,
+        estado: 'futura',
+        pagado: false,
+        esDevolucion: false,
+      });
+    }
+    // Consolidate: append to existing FUTURA entrega for this client, or create new
+    const existingFutura = entregas.find(e => e.clienteId === data.clienteId && isFuturaEntrega(e));
+    if (existingFutura) {
+      await onUpdateEntrega(existingFutura.id, {
+        lingotes: [...existingFutura.lingotes, ...lingotes],
+      });
+    } else {
+      await onSaveEntrega({
+        clienteId: data.clienteId,
+        exportacionId: futuraExp?.id || '',
+        fechaEntrega: 'FUTURA',
+        lingotes,
+      });
+    }
+    setShowFuturaModal(false);
+  };
+
+  const assignFuturaLingotes = async (futuraEntregaId, selectedIndices, targetEntregaId) => {
+    const futuraEntrega = entregas.find(e => e.id === futuraEntregaId);
+    const targetEntrega = entregas.find(e => e.id === targetEntregaId);
+    if (!futuraEntrega || !targetEntrega) return;
+
+    // Move selected lingotes: change estado to en_curso
+    const movedLingotes = selectedIndices.map(idx => ({
+      ...futuraEntrega.lingotes[idx],
+      estado: 'en_curso',
+    }));
+
+    // Remove from FUTURA entrega
+    const remaining = futuraEntrega.lingotes.filter((_, idx) => !selectedIndices.includes(idx));
+
+    // Add to target entrega
+    const updatedTarget = [...targetEntrega.lingotes, ...movedLingotes];
+
+    if (remaining.length === 0) {
+      await onDeleteEntrega(futuraEntregaId);
+    } else {
+      await onUpdateEntrega(futuraEntregaId, { lingotes: remaining });
+    }
+    await onUpdateEntrega(targetEntregaId, { lingotes: updatedTarget });
+    setShowAssignFuturaModal(false);
+    setAssignFuturaTarget(null);
   };
 
   const cerrarLingote = async (entregaId, lingoteIdx, data) => {
@@ -175,7 +253,7 @@ export default function LingotesTracker({
 
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid ${stockTotal.totalFutura > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
           <div className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-4 text-white shadow-lg`}>
             <div className="text-center">
               <p className={`text-xs ${stockColor.text} mb-1`}>Stock Ma d'Or</p>
@@ -190,6 +268,15 @@ export default function LingotesTracker({
               <div className="text-xs text-stone-400">gramos</div>
             </div>
           </div>
+          {stockTotal.totalFutura > 0 && (
+            <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-700 rounded-2xl p-4 text-white shadow-lg">
+              <div className="text-center">
+                <p className="text-xs text-red-200 mb-1">Sin Stock</p>
+                <div className="text-3xl font-black text-white">-{formatNum(stockTotal.totalFutura, 0)}</div>
+                <div className="text-xs text-red-200">gramos</div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -208,6 +295,9 @@ export default function LingotesTracker({
                   <div className="text-right text-xs text-stone-500">
                     <div>Entregado: {formatNum(cliente.entregado, 0)}g</div>
                     <div>Cerrado: {formatNum(cliente.cerrado, 0)}g</div>
+                    {cliente.futuraWeight > 0 && (
+                      <div className="text-red-500 font-semibold">-{formatNum(cliente.futuraWeight, 0)}g sin stock</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -235,12 +325,19 @@ export default function LingotesTracker({
     const entregasCliente = entregas.filter(e => e.clienteId === cliente.id);
     const stats = statsClientes.find(s => s.id === cliente.id);
 
-    // Separate entregas that have any en_curso lingotes
-    const entregasConEnCurso = entregasCliente.filter(e => lingotesEnCurso(e).length > 0);
+    // Separate entregas that have any en_curso lingotes (exclude FUTURA entregas)
+    const entregasConEnCurso = entregasCliente.filter(e => !isFuturaEntrega(e) && lingotesEnCurso(e).length > 0);
     // All lingotes finalizados across all entregas
     const allLingotesFinalizados = entregasCliente.flatMap(e =>
       (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx, fechaEntrega: e.fechaEntrega }))
     ).filter(l => l.estado === 'finalizado');
+    // FUTURA lingotes
+    const futuraEntregasCliente = entregasCliente.filter(e => isFuturaEntrega(e));
+    const allFuturaLingotes = futuraEntregasCliente.flatMap(e =>
+      (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx }))
+    ).filter(l => l.estado === 'futura');
+    // Potential targets for assigning futura
+    const targetEntregasForAssign = entregasCliente.filter(e => !isFuturaEntrega(e) && lingotesEnCurso(e).length > 0);
 
     return (
       <div className="space-y-5">
@@ -270,6 +367,32 @@ export default function LingotesTracker({
             </div>
           </div>
         </div>
+
+        {allFuturaLingotes.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-red-800">Vendido sin Stock</h3>
+              <div className="text-sm text-red-600 font-semibold">
+                {allFuturaLingotes.length} lingotes &bull; -{formatNum(stats?.futuraWeight || 0, 0)}g
+              </div>
+            </div>
+            <div className="space-y-1">
+              {allFuturaLingotes.map((l, i) => (
+                <div key={i} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-white/60">
+                  <span className="font-mono text-red-700">{l.peso}g</span>
+                  <span className="text-xs text-red-400">FUTURA</span>
+                </div>
+              ))}
+            </div>
+            {targetEntregasForAssign.length > 0 && (
+              <div className="mt-3">
+                <Button size="sm" onClick={() => { setAssignFuturaTarget({ clienteId: cliente.id }); setShowAssignFuturaModal(true); }}>
+                  Asignar a entrega
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {entregasConEnCurso.length > 0 && (
           <Card>
@@ -360,9 +483,14 @@ export default function LingotesTracker({
           )}
         </Card>
 
-        <Button className="w-full" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
-          + Nueva Entrega
-        </Button>
+        <div className="flex gap-3">
+          <Button className="flex-1" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
+            + Nueva Entrega
+          </Button>
+          <Button className="flex-1" size="lg" variant="danger" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}>
+            + Venta sin Stock
+          </Button>
+        </div>
       </div>
     );
   };
@@ -735,6 +863,158 @@ export default function LingotesTracker({
     );
   };
 
+  // Futura Modal - register lingotes sold without stock
+  const FuturaModal = () => {
+    const [formData, setFormData] = useState({
+      clienteId: editingEntregaClienteId || clientes[0]?.id || '',
+      cantidad: 1,
+      pesoUnitario: 50,
+    });
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowFuturaModal(false); setEditingEntregaClienteId(null); }}>
+        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-red-800 mb-2">Venta sin Stock</h3>
+          <p className="text-sm text-stone-500 mb-6">Registrar lingotes vendidos sin stock fisico.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Cliente</label>
+              <select value={formData.clienteId} onChange={e => setFormData({ ...formData, clienteId: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400">
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Cantidad de lingotes</label>
+              <div className="flex gap-2">
+                {[1, 2, 4, 6, 10].map(q => (
+                  <button key={q} onClick={() => setFormData({ ...formData, cantidad: q })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.cantidad === q ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
+                    {q}
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={formData.cantidad} onChange={(e) => setFormData({ ...formData, cantidad: parseInt(e.target.value) || 1 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-red-400" placeholder="Otra cantidad..." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Peso por lingote (gramos)</label>
+              <div className="flex gap-2">
+                {[50, 100].map(p => (
+                  <button key={p} onClick={() => setFormData({ ...formData, pesoUnitario: p })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.pesoUnitario === p ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
+                    {p}g
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={formData.pesoUnitario} onChange={(e) => setFormData({ ...formData, pesoUnitario: parseFloat(e.target.value) || 50 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-red-400" placeholder="Otro peso..." />
+            </div>
+            <div className="bg-red-50 rounded-xl p-3 text-center">
+              <span className="text-red-500 text-sm">Total vendido sin stock: </span>
+              <span className="font-bold text-red-800">{formData.cantidad} x {formData.pesoUnitario}g = {formData.cantidad * formData.pesoUnitario}g</span>
+            </div>
+          </div>
+          <div className="flex gap-3 mt-6">
+            <Button variant="secondary" className="flex-1" onClick={() => { setShowFuturaModal(false); setEditingEntregaClienteId(null); }}>Cancelar</Button>
+            <Button variant="danger" className="flex-1" onClick={() => addFutura(formData)}>
+              Registrar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Assign Futura Modal - select FUTURA lingotes to move to a real entrega
+  const AssignFuturaModal = () => {
+    const clienteId = assignFuturaTarget?.clienteId;
+    const cliente = getCliente(clienteId);
+    const futuraEntrega = entregas.find(e => e.clienteId === clienteId && isFuturaEntrega(e));
+    const futuraList = futuraEntrega ? futuraEntrega.lingotes.map((l, idx) => ({ ...l, idx })).filter(l => l.estado === 'futura') : [];
+    const targetEntregasList = entregas.filter(e => e.clienteId === clienteId && !isFuturaEntrega(e) && lingotesEnCurso(e).length > 0);
+
+    const [selectedFutura, setSelectedFutura] = useState([]);
+    const [selectedTarget, setSelectedTarget] = useState(targetEntregasList[0]?.id || '');
+
+    if (!futuraEntrega || futuraList.length === 0) return null;
+
+    const toggleFutura = (idx) => {
+      setSelectedFutura(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
+    };
+
+    const selectAll = () => {
+      setSelectedFutura(futuraList.map(l => l.idx));
+    };
+
+    const handleAssign = async () => {
+      if (selectedFutura.length === 0 || !selectedTarget) return;
+      await assignFuturaLingotes(futuraEntrega.id, selectedFutura, selectedTarget);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowAssignFuturaModal(false); setAssignFuturaTarget(null); }}>
+        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-stone-800 mb-2">Asignar Lingotes FUTURA</h3>
+          <p className="text-sm text-stone-500 mb-4">{cliente?.nombre} tiene {futuraList.length} lingotes vendidos sin stock</p>
+
+          {targetEntregasList.length > 0 ? (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-stone-700 mb-1">Asignar a entrega</label>
+                <select value={selectedTarget} onChange={e => setSelectedTarget(e.target.value)} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  {targetEntregasList.map(e => {
+                    const exp = getExportacion(e.exportacionId);
+                    return <option key={e.id} value={e.id}>{e.fechaEntrega} {exp ? `(${exp.nombre})` : ''} - {lingotesEnCurso(e).length} lingotes</option>;
+                  })}
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-stone-700">Seleccionar lingotes</label>
+                  <button onClick={selectAll} className="text-xs text-amber-600 font-semibold hover:text-amber-700">
+                    Seleccionar todos
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {futuraList.map((l) => {
+                    const isSelected = selectedFutura.includes(l.idx);
+                    return (
+                      <div key={l.idx} onClick={() => toggleFutura(l.idx)} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-amber-100 border border-amber-300' : 'bg-stone-50 border border-stone-200 hover:bg-stone-100'}`}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${isSelected ? 'bg-amber-500 border-amber-500 text-white' : 'border-stone-300'}`}>
+                            {isSelected && '✓'}
+                          </div>
+                          <span className="font-mono text-sm">{l.peso}g</span>
+                        </div>
+                        <span className="text-xs text-red-400">FUTURA</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {selectedFutura.length > 0 && (
+                <div className="bg-amber-50 rounded-xl p-3 text-center mb-4">
+                  <span className="text-amber-600 text-sm">Asignar: </span>
+                  <span className="font-bold text-amber-800">{selectedFutura.length} lingotes ({selectedFutura.reduce((s, idx) => s + (futuraEntrega.lingotes[idx]?.peso || 0), 0)}g)</span>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="secondary" className="flex-1" onClick={() => { setShowAssignFuturaModal(false); setAssignFuturaTarget(null); }}>Omitir</Button>
+                <Button className="flex-1" disabled={selectedFutura.length === 0 || !selectedTarget} onClick={handleAssign}>
+                  Asignar{selectedFutura.length > 0 ? ` (${selectedFutura.length})` : ''}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-stone-500 text-sm mb-4">No hay entregas en curso a las que asignar. Crea una nueva entrega primero.</p>
+              <Button variant="secondary" className="w-full" onClick={() => { setShowAssignFuturaModal(false); setAssignFuturaTarget(null); }}>Cerrar</Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Tab button
   const TabBtn = ({ id, label, icon }) => (
     <button
@@ -783,6 +1063,8 @@ export default function LingotesTracker({
       {/* Modals */}
       {showEntregaModal && <EntregaModal />}
       {showCierreModal && <CierreModal />}
+      {showFuturaModal && <FuturaModal />}
+      {showAssignFuturaModal && <AssignFuturaModal />}
     </div>
   );
 }
