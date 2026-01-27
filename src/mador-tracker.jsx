@@ -1079,21 +1079,33 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
           {/* Barra de seguro */}
           {exp.seguro > 0 && (
-            <div className="bg-white rounded-xl p-3 border border-stone-200">
-              <div className="flex justify-between items-center text-xs mb-1">
-                <span className="text-stone-500">Seguro</span>
-                <span className="text-stone-600 font-mono">{formatNum(totales.totalFra)} / {formatNum(exp.seguro)} €</span>
-              </div>
-              <div className="w-full bg-stone-200 rounded-full h-3 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    totales.totalFra / exp.seguro > 0.9 ? 'bg-red-500' : totales.totalFra / exp.seguro > 0.7 ? 'bg-amber-500' : 'bg-green-500'
-                  }`}
-                  style={{ width: `${Math.min(100, (totales.totalFra / exp.seguro) * 100)}%` }}
-                />
-              </div>
-              <p className="text-right text-xs text-stone-400 mt-1">{formatNum((totales.totalFra / exp.seguro) * 100, 1)}%</p>
-            </div>
+            {(() => {
+              const pct = (totales.totalFra / exp.seguro) * 100;
+              const over = pct > 100;
+              const maxPct = over ? pct : 100;
+              const barPct = (pct / maxPct) * 100;
+              const markPct = over ? (100 / pct) * 100 : null;
+              return (
+                <div className="bg-white rounded-xl p-3 border border-stone-200">
+                  <div className="flex justify-between items-center text-xs mb-1">
+                    <span className="text-stone-500">Seguro</span>
+                    <span className="text-stone-600 font-mono">{formatNum(totales.totalFra)} / {formatNum(exp.seguro)} €</span>
+                  </div>
+                  <div className="relative w-full bg-stone-200 rounded-full h-3">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        pct > 100 ? 'bg-red-500' : pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, barPct)}%` }}
+                    />
+                    {markPct && (
+                      <div className="absolute top-0 h-full w-0.5 bg-stone-800" style={{ left: `${markPct}%` }} title="Límite seguro" />
+                    )}
+                  </div>
+                  <p className="text-right text-xs text-stone-400 mt-1">{formatNum(pct, 1)}%</p>
+                </div>
+              );
+            })()}
           )}
 
           <div className="flex justify-between items-center">
@@ -1380,22 +1392,31 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); openModal('expedicion', exp); }}>Editar</Button>
                   <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); deleteExpedicion(exp.id); }}>Eliminar</Button>
                 </div>
-                {exp.seguro > 0 && (
-                  <div className="mt-3 pt-2 border-t border-stone-200">
-                    <div className="flex justify-between items-center text-xs mb-1">
-                      <span className="text-stone-400">Seguro</span>
-                      <span className="text-stone-500 font-mono">{formatNum((totales.totalFra / exp.seguro) * 100, 1)}%</span>
+                {exp.seguro > 0 && (() => {
+                  const pct = (totales.totalFra / exp.seguro) * 100;
+                  const over = pct > 100;
+                  const barPct = over ? 100 : pct;
+                  const markPct = over ? (100 / pct) * 100 : null;
+                  return (
+                    <div className="mt-3 pt-2 border-t border-stone-200">
+                      <div className="flex justify-between items-center text-xs mb-1">
+                        <span className="text-stone-400">Seguro</span>
+                        <span className="text-stone-500 font-mono">{formatNum(pct, 1)}%</span>
+                      </div>
+                      <div className="relative w-full bg-stone-200 rounded-full h-2">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${barPct}%` }}
+                        />
+                        {markPct && (
+                          <div className="absolute top-0 h-full w-0.5 bg-stone-800" style={{ left: `${markPct}%` }} />
+                        )}
+                      </div>
                     </div>
-                    <div className="w-full bg-stone-200 rounded-full h-2 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          totales.totalFra / exp.seguro > 0.9 ? 'bg-red-500' : totales.totalFra / exp.seguro > 0.7 ? 'bg-amber-500' : 'bg-green-500'
-                        }`}
-                        style={{ width: `${Math.min(100, (totales.totalFra / exp.seguro) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </Card>
             );
           })}
