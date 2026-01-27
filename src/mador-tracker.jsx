@@ -60,6 +60,7 @@ export default function MadorTracker() {
     guardarEdicionUsuario: fguardarEdicionUsuario,
     agregarEstado: fagregarEstado, eliminarEstado: feliminarEstado,
     guardarEdicionEstado: fguardarEdicionEstado,
+    updateExpedicionResultados: fupdateResultados,
   } = useFirestore();
 
   // Local UI state
@@ -185,6 +186,7 @@ export default function MadorTracker() {
     let totalMargen = 0;
     let totalFraEstimado = 0;
     const porCategoria = {};
+    const porCliente = {};
 
     expedicionPaquetes.forEach(paq => {
       const totales = calcularTotalesPaquete(paq, precioPorDefecto);
@@ -194,7 +196,7 @@ export default function MadorTracker() {
       totalFra += totales.totalFra;
       totalFraJofisa += totales.fraJofisa;
       totalMargen += totales.margen;
-      
+
       const cat = getCategoria(paq.categoriaId);
       if (cat) {
         if (!porCategoria[cat.nombre]) {
@@ -203,6 +205,19 @@ export default function MadorTracker() {
         porCategoria[cat.nombre].bruto += totales.brutoTotal;
         porCategoria[cat.nombre].fino += totales.finoTotal;
         porCategoria[cat.nombre].totalFra += totales.totalFra;
+      }
+
+      if (paq.clienteId) {
+        if (!porCliente[paq.clienteId]) {
+          porCliente[paq.clienteId] = { bruto: 0, fino: 0, finoCalculo: 0, totalFra: 0, baseCliente: 0, fraJofisa: 0, margen: 0 };
+        }
+        porCliente[paq.clienteId].bruto += totales.brutoTotal;
+        porCliente[paq.clienteId].fino += totales.finoTotal;
+        porCliente[paq.clienteId].finoCalculo += totales.finoTotalCalculo;
+        porCliente[paq.clienteId].totalFra += totales.totalFra;
+        porCliente[paq.clienteId].baseCliente += totales.baseCliente;
+        porCliente[paq.clienteId].fraJofisa += totales.fraJofisa;
+        porCliente[paq.clienteId].margen += totales.margen;
       }
     });
     
@@ -214,7 +229,7 @@ export default function MadorTracker() {
         : 0;
     });
     
-    return { sumaBruto, sumaFino, totalFra, totalFraJofisa, totalMargen, totalFraEstimado, precioMedioBruto, porCategoria, numPaquetes: expedicionPaquetes.length };
+    return { sumaBruto, sumaFino, totalFra, totalFraJofisa, totalMargen, totalFraEstimado, precioMedioBruto, porCategoria, porCliente, numPaquetes: expedicionPaquetes.length };
   };
 
   const getPrecioRefExpedicion = (expedicionId) => {
@@ -1071,7 +1086,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <p className="text-stone-800 font-mono font-medium">{formatNum(totales.totalFraJofisa)} €</p>
               </div>
               <div>
-                <span className="text-stone-500">Margen Total</span>
+                <span className="text-stone-500 flex items-center gap-1">
+                  Margen Fras
+                  <button onClick={() => setShowResultadosModal(true)} className="text-amber-500 hover:text-amber-700 text-base">🔍</button>
+                </span>
                 <p className={`font-mono font-medium ${totales.totalMargen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatNum(totales.totalMargen)} €
                 </p>
@@ -2629,6 +2647,171 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     );
   };
 
+  // Estado para modal de resultados
+  const [showResultadosModal, setShowResultadosModal] = useState(false);
+
+  // Modal de resultados por cliente
+  const ResultadosModal = () => {
+    if (!showResultadosModal || !selectedExpedicion) return null;
+    const totales = calcularTotalesExpedicion(selectedExpedicion);
+    const expInfo = expediciones.find(e => e.id === selectedExpedicion);
+    const resultados = expInfo?.resultados || {};
+    const precioFinoSobra = resultados.precioFinoSobra ?? '';
+    const clientesResultados = resultados.clientes || {};
+
+    const handlePrecioChange = (val) => {
+      const nuevo = { ...resultados, precioFinoSobra: val === '' ? null : parseFloat(val), clientes: { ...clientesResultados } };
+      fupdateResultados(selectedExpedicion, nuevo);
+    };
+
+    const handleClienteField = (clienteId, field, val) => {
+      const clienteData = { ...(clientesResultados[clienteId] || {}) };
+      clienteData[field] = val === '' ? null : parseFloat(val);
+      const nuevo = { ...resultados, clientes: { ...clientesResultados, [clienteId]: clienteData } };
+      fupdateResultados(selectedExpedicion, nuevo);
+    };
+
+    const clienteEntries = Object.entries(totales.porCliente).sort((a, b) => {
+      const cA = getCliente(a[0])?.nombre || '';
+      const cB = getCliente(b[0])?.nombre || '';
+      return cA.localeCompare(cB);
+    });
+
+    let totalFinoSobra = 0;
+    let totalGramosDevueltos = 0;
+    clienteEntries.forEach(([cId]) => {
+      totalFinoSobra += clientesResultados[cId]?.finoSobra || 0;
+      totalGramosDevueltos += clientesResultados[cId]?.gramosDevueltos || 0;
+    });
+    const precioNum = parseFloat(precioFinoSobra) || 0;
+    const valorTotalSobra = totalFinoSobra * precioNum;
+    const finoSobraNeto = totalFinoSobra - totalGramosDevueltos;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowResultadosModal(false)}>
+        <div className="bg-white border border-amber-300 rounded-2xl p-5 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-bold text-amber-800 mb-4">📊 {expInfo?.nombre} — Resultados</h3>
+
+          {/* Sección 1: Margen por Cliente */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-stone-600 mb-2">Margen por Cliente</h4>
+            <div className="space-y-2">
+              {clienteEntries.map(([clienteId, vals]) => {
+                const cliente = getCliente(clienteId);
+                const color = cliente?.color || '#f59e0b';
+                return (
+                  <div key={clienteId} className="rounded-lg p-3 border" style={{ backgroundColor: color + '10', borderColor: color + '40' }}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium text-sm" style={{ color }}>{cliente?.nombre || 'Sin cliente'}</span>
+                      <span className={`font-mono font-bold text-sm ${vals.margen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatNum(vals.margen)} €
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 text-xs text-stone-500">
+                      <div>Fino: <span className="text-stone-700 font-mono">{formatNum(vals.finoCalculo)}g</span></div>
+                      <div>Base: <span className="text-stone-700 font-mono">{formatNum(vals.baseCliente)}€</span></div>
+                      <div>Jofisa: <span className="text-stone-700 font-mono">{formatNum(vals.fraJofisa)}€</span></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex justify-between items-center text-sm font-semibold border-t border-amber-200 pt-2">
+              <span className="text-stone-600">Total Margen Fras</span>
+              <span className={`font-mono ${totales.totalMargen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatNum(totales.totalMargen)} €
+              </span>
+            </div>
+          </div>
+
+          {/* Sección 2: Fino Sobra por Cliente */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-stone-600 mb-2">Fino Sobra por Cliente</h4>
+            <div className="space-y-2">
+              {clienteEntries.map(([clienteId]) => {
+                const cliente = getCliente(clienteId);
+                const color = cliente?.color || '#f59e0b';
+                const finoSobra = clientesResultados[clienteId]?.finoSobra ?? '';
+                return (
+                  <div key={clienteId} className="flex items-center gap-2">
+                    <span className="text-sm font-medium w-24 truncate" style={{ color }}>{cliente?.nombre}</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={finoSobra}
+                      onChange={e => handleClienteField(clienteId, 'finoSobra', e.target.value)}
+                      className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
+                    />
+                    <span className="text-xs text-stone-400">g</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Sección 3: Valoración del Fino Sobrante */}
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <h4 className="text-sm font-semibold text-stone-600 mb-2">Valoración Fino Sobra</h4>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm text-stone-500">Precio €/g:</span>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={precioFinoSobra}
+                onChange={e => handlePrecioChange(e.target.value)}
+                className="w-28 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div><span className="text-stone-500">Total sobra:</span> <span className="text-stone-800 font-mono">{formatNum(totalFinoSobra)} g</span></div>
+              <div><span className="text-stone-500">Valor:</span> <span className="text-green-600 font-mono font-medium">{formatNum(valorTotalSobra)} €</span></div>
+            </div>
+          </div>
+
+          {/* Sección 4: Gramos Devueltos */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-stone-600 mb-2">Gramos Devueltos</h4>
+            <div className="space-y-2">
+              {clienteEntries.map(([clienteId]) => {
+                const cliente = getCliente(clienteId);
+                const color = cliente?.color || '#f59e0b';
+                const gramosDevueltos = clientesResultados[clienteId]?.gramosDevueltos ?? '';
+                return (
+                  <div key={clienteId} className="flex items-center gap-2">
+                    <span className="text-sm font-medium w-24 truncate" style={{ color }}>{cliente?.nombre}</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={gramosDevueltos}
+                      onChange={e => handleClienteField(clienteId, 'gramosDevueltos', e.target.value)}
+                      className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
+                    />
+                    <span className="text-xs text-stone-400">g</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex justify-between items-center text-sm border-t border-stone-200 pt-2">
+              <span className="text-stone-500">Fino sobra neto:</span>
+              <span className="text-stone-800 font-mono font-medium">{formatNum(finoSobraNeto)} g</span>
+            </div>
+            {precioNum > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-stone-500">Valor neto:</span>
+                <span className="text-green-600 font-mono font-medium">{formatNum(finoSobraNeto * precioNum)} €</span>
+              </div>
+            )}
+          </div>
+
+          <Button className="w-full" onClick={() => setShowResultadosModal(false)}>Cerrar</Button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">
@@ -2773,6 +2956,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
       {modalOpen && <ModalForm />}
       {showTextModal && <TextModal />}
       <CategoriasResumenModal />
+      <ResultadosModal />
     </div>
   );
 }

@@ -649,6 +649,11 @@ export function useFirestore() {
     });
   };
 
+  // Resultados expedición
+  const updateExpedicionResultados = async (expedicionId, resultados) => {
+    await updateDoc(doc(db, 'expediciones', expedicionId), { resultados });
+  };
+
   // Usuarios
   const agregarUsuario = async (nombre) => {
     const id = nombre.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
@@ -730,5 +735,6 @@ export function useFirestore() {
     agregarEstado,
     eliminarEstado,
     guardarEdicionEstado,
+    updateExpedicionResultados,
   };
 }
