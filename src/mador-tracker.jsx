@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useFirestore } from './hooks/useFirestore';
+import LingotesTracker from './components/LingotesTracker';
 
 // Formateo numérico europeo (100.000,25)
 const formatNum = (num, decimals = 2) => {
@@ -62,9 +63,14 @@ export default function MadorTracker() {
     agregarEstado: fagregarEstado, eliminarEstado: feliminarEstado,
     guardarEdicionEstado: fguardarEdicionEstado,
     updateExpedicionResultados: fupdateResultados,
+    lingotesExportaciones, lingotesEntregas, lingotesConfig,
+    saveLingoteExportacion, deleteLingoteExportacion,
+    saveLingoteEntrega, deleteLingoteEntrega, updateLingoteEntrega,
+    updateLingotesConfig,
   } = useFirestore();
 
   // Local UI state
+  const [showLingotes, setShowLingotes] = useState(false);
   const [activeTab, setActiveTab] = useState('expediciones');
   const [statsExpDesde, setStatsExpDesde] = useState(null);
   const [statsExpHasta, setStatsExpHasta] = useState(null);
@@ -2967,16 +2973,34 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     return sum + expPaqs.filter(p => !p.precioFino || !p.factura || !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length;
   }, 0);
 
+  if (showLingotes) {
+    return (
+      <LingotesTracker
+        clientes={clientes}
+        exportaciones={lingotesExportaciones}
+        entregas={lingotesEntregas}
+        config={lingotesConfig}
+        onBack={() => setShowLingotes(false)}
+        onSaveExportacion={saveLingoteExportacion}
+        onDeleteExportacion={deleteLingoteExportacion}
+        onSaveEntrega={saveLingoteEntrega}
+        onDeleteEntrega={deleteLingoteEntrega}
+        onUpdateEntrega={updateLingoteEntrega}
+        onUpdateConfig={updateLingotesConfig}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 text-stone-800">
       {/* Header + Nav sticky */}
       <div className="sticky top-0 z-40">
         <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
           <div className="flex items-center justify-between max-w-2xl mx-auto">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowLingotes(true)}>
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.9</span>
+              <span className="text-xs text-white/50 font-mono">v1.0</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}

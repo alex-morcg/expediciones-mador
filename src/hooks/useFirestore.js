@@ -212,6 +212,9 @@ export function useFirestore() {
   const [estadosPaquete, setEstadosPaquete] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [expedicionActualId, setExpedicionActualIdState] = useState(null);
+  const [lingotesExportaciones, setLingotesExportaciones] = useState([]);
+  const [lingotesEntregas, setLingotesEntregas] = useState([]);
+  const [lingotesConfig, setLingotesConfig] = useState({ stockMador: 0, umbralRojo: 200, umbralNaranja: 500, umbralAmarillo: 1000 });
   const [loading, setLoading] = useState(true);
   const seedTriggered = useRef(false);
 
@@ -227,7 +230,7 @@ export function useFirestore() {
     let cancelled = false;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 7;
+    const totalCollections = 10;
 
     const checkLoaded = () => {
       loadedCount++;
@@ -313,6 +316,39 @@ export function useFirestore() {
         checkLoaded();
       }, (error) => {
         console.error('Firestore error (config):', error);
+        checkLoaded();
+      })
+    );
+
+    // Lingotes listeners
+    unsubscribers.push(
+      onSnapshot(collection(db, 'lingotes_exportaciones'), (snap) => {
+        if (!cancelled) setLingotesExportaciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (lingotes_exportaciones):', error);
+        checkLoaded();
+      })
+    );
+
+    unsubscribers.push(
+      onSnapshot(collection(db, 'lingotes_entregas'), (snap) => {
+        if (!cancelled) setLingotesEntregas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (lingotes_entregas):', error);
+        checkLoaded();
+      })
+    );
+
+    unsubscribers.push(
+      onSnapshot(doc(db, 'lingotes_config', 'settings'), (snap) => {
+        if (!cancelled && snap.exists()) {
+          setLingotesConfig(snap.data());
+        }
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (lingotes_config):', error);
         checkLoaded();
       })
     );
@@ -695,6 +731,35 @@ export function useFirestore() {
     await updateDoc(doc(db, 'estadosPaquete', id), data);
   };
 
+  // --- Lingotes CRUD ---
+  const saveLingoteExportacion = async (data, editId) => {
+    if (editId) {
+      await updateDoc(doc(db, 'lingotes_exportaciones', editId), data);
+    } else {
+      await addDoc(collection(db, 'lingotes_exportaciones'), data);
+    }
+  };
+
+  const deleteLingoteExportacion = async (id) => {
+    await deleteDoc(doc(db, 'lingotes_exportaciones', id));
+  };
+
+  const saveLingoteEntrega = async (data) => {
+    await addDoc(collection(db, 'lingotes_entregas'), data);
+  };
+
+  const deleteLingoteEntrega = async (id) => {
+    await deleteDoc(doc(db, 'lingotes_entregas', id));
+  };
+
+  const updateLingoteEntrega = async (id, data) => {
+    await updateDoc(doc(db, 'lingotes_entregas', id), data);
+  };
+
+  const updateLingotesConfig = async (data) => {
+    await setDoc(doc(db, 'lingotes_config', 'settings'), data, { merge: true });
+  };
+
   return {
     // Data
     categorias,
@@ -736,5 +801,16 @@ export function useFirestore() {
     eliminarEstado,
     guardarEdicionEstado,
     updateExpedicionResultados,
+
+    // Lingotes
+    lingotesExportaciones,
+    lingotesEntregas,
+    lingotesConfig,
+    saveLingoteExportacion,
+    deleteLingoteExportacion,
+    saveLingoteEntrega,
+    deleteLingoteEntrega,
+    updateLingoteEntrega,
+    updateLingotesConfig,
   };
 }
