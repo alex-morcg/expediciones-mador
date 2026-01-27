@@ -344,13 +344,12 @@ export default function LingotesTracker({
     // Entregas with en_curso lingotes
     const entregasConEnCurso = entregasFiltered.filter(e => lingotesEnCurso(e).length > 0);
 
-    // All finalizados as flat list with entrega info (always from ALL entregas, not filtered)
-    const allLingotesFinalizados = [...allEntregasCliente]
+    // All finalizados as flat list with entrega info, sorted by entrega date desc
+    const allLingotesFinalizados = [...entregasFiltered]
       .sort((a, b) => (b.fechaEntrega || '').localeCompare(a.fechaEntrega || ''))
       .flatMap(e =>
         (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx, fechaEntrega: e.fechaEntrega }))
       ).filter(l => l.estado === 'finalizado');
-    const totalImporteFinalizados = allLingotesFinalizados.reduce((sum, l) => sum + (l.importe || 0), 0);
 
     // FUTURA orphan lingotes for this client
     const clienteFutura = (futuraLingotes || []).filter(f => f.clienteId === cliente.id);
@@ -439,7 +438,7 @@ export default function LingotesTracker({
         )}
 
         {/* En Curso */}
-        {(entregaFilter === 'en_curso' || entregaFilter === 'todas') && entregasConEnCurso.length > 0 && (
+        {entregasConEnCurso.length > 0 && (
           <Card>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-stone-800">En Curso</h3>
@@ -484,12 +483,12 @@ export default function LingotesTracker({
         )}
 
         {/* Finalizados table with Entrega column */}
-        {(entregaFilter === 'finalizada' || entregaFilter === 'todas') && allLingotesFinalizados.length > 0 && (
+        {allLingotesFinalizados.length > 0 && (
           <Card>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-stone-800">Finalizados ({allLingotesFinalizados.length})</h3>
               <div className="text-sm text-stone-500">
-                Importe: <span className="font-semibold text-emerald-600">{formatEur(totalImporteFinalizados)}</span>
+                Importe: <span className="font-semibold text-emerald-600">{formatEur(filteredImporte)}</span>
               </div>
             </div>
             <div className="overflow-x-auto -mx-5 px-5">
@@ -530,14 +529,12 @@ export default function LingotesTracker({
           </Card>
         )}
 
-        {entregaFilter === 'en_curso' && entregasConEnCurso.length === 0 && clienteFutura.length === 0 && (
-          <Card><p className="text-stone-400 text-center py-6 text-sm">No hay entregas en curso</p></Card>
-        )}
-        {entregaFilter === 'finalizada' && allLingotesFinalizados.length === 0 && (
-          <Card><p className="text-stone-400 text-center py-6 text-sm">No hay entregas finalizadas</p></Card>
-        )}
-        {entregaFilter === 'todas' && allEntregasCliente.length === 0 && clienteFutura.length === 0 && (
-          <Card><p className="text-stone-400 text-center py-6 text-sm">No hay entregas</p></Card>
+        {entregasFiltered.length === 0 && clienteFutura.length === 0 && (
+          <Card>
+            <p className="text-stone-400 text-center py-6 text-sm">
+              {entregaFilter === 'en_curso' ? 'No hay entregas en curso' : entregaFilter === 'finalizada' ? 'No hay entregas finalizadas' : 'No hay entregas'}
+            </p>
+          </Card>
         )}
 
         <div className="flex gap-3">
