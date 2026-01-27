@@ -622,7 +622,8 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         value={cierreData.precioFino || paq.precioFino || ''}
                         onChange={(e) => {
                           const precio = parseFloat(e.target.value) || 0;
-                          setCierreData({ precioFino: e.target.value, cierreJofisa: (precio - 0.25).toFixed(2) });
+                          const autoFill = !cierreData.cierreJofisa && !paq.cierreJofisa;
+                          setCierreData({ precioFino: e.target.value, cierreJofisa: autoFill ? (precio - 0.25).toFixed(2) : cierreData.cierreJofisa });
                         }}
                         className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none"
                         style={{ border: `1px solid ${clienteColor}50` }}
@@ -2650,25 +2651,43 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
   // Estado para modal de resultados
   const [showResultadosModal, setShowResultadosModal] = useState(false);
 
+  // Estado local para edición en modal de resultados (evita re-render de Firestore al escribir)
+  const [resultadosLocal, setResultadosLocal] = useState(null);
+
+  // Sincronizar estado local al abrir modal
+  useEffect(() => {
+    if (showResultadosModal && selectedExpedicion) {
+      const expInfo = expediciones.find(e => e.id === selectedExpedicion);
+      setResultadosLocal(expInfo?.resultados || {});
+    } else {
+      setResultadosLocal(null);
+    }
+  }, [showResultadosModal, selectedExpedicion]);
+
   // Modal de resultados por cliente
   const ResultadosModal = () => {
-    if (!showResultadosModal || !selectedExpedicion) return null;
+    if (!showResultadosModal || !selectedExpedicion || !resultadosLocal) return null;
     const totales = calcularTotalesExpedicion(selectedExpedicion);
     const expInfo = expediciones.find(e => e.id === selectedExpedicion);
-    const resultados = expInfo?.resultados || {};
-    const precioFinoSobra = resultados.precioFinoSobra ?? '';
-    const clientesResultados = resultados.clientes || {};
+    const precioFinoSobra = resultadosLocal.precioFinoSobra ?? '';
+    const clientesResultados = resultadosLocal.clientes || {};
+
+    const updateLocal = (newResultados) => {
+      setResultadosLocal(newResultados);
+    };
+
+    const saveToFirestore = () => {
+      fupdateResultados(selectedExpedicion, resultadosLocal);
+    };
 
     const handlePrecioChange = (val) => {
-      const nuevo = { ...resultados, precioFinoSobra: val === '' ? null : parseFloat(val), clientes: { ...clientesResultados } };
-      fupdateResultados(selectedExpedicion, nuevo);
+      updateLocal({ ...resultadosLocal, precioFinoSobra: val === '' ? null : parseFloat(val), clientes: { ...clientesResultados } });
     };
 
     const handleClienteField = (clienteId, field, val) => {
       const clienteData = { ...(clientesResultados[clienteId] || {}) };
       clienteData[field] = val === '' ? null : parseFloat(val);
-      const nuevo = { ...resultados, clientes: { ...clientesResultados, [clienteId]: clienteData } };
-      fupdateResultados(selectedExpedicion, nuevo);
+      updateLocal({ ...resultadosLocal, clientes: { ...clientesResultados, [clienteId]: clienteData } });
     };
 
     const clienteEntries = Object.entries(totales.porCliente).sort((a, b) => {
@@ -2687,44 +2706,73 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     const valorTotalSobra = totalFinoSobra * precioNum;
     const finoSobraNeto = totalFinoSobra - totalGramosDevueltos;
 
+    // Calcular totales para la tabla resumen
+    let sumMgFras = 0, sumEuroSobra = 0, sumMgTotal = 0, sumBruto = 0;
+    const clienteRows = clienteEntries.map(([clienteId, vals]) => {
+      const finoSobraRaw = clientesResultados[clienteId]?.finoSobra || 0;
+      const devueltos = clientesResultados[clienteId]?.gramosDevueltos || 0;
+      const finoSobraNeto = finoSobraRaw - devueltos;
+      const euroSobra = finoSobraNeto * precioNum;
+      const mgTotal = vals.margen + euroSobra;
+      const eurGBruto = vals.bruto > 0 ? mgTotal / vals.bruto : 0;
+      sumMgFras += vals.margen;
+      sumEuroSobra += euroSobra;
+      sumMgTotal += mgTotal;
+      sumBruto += vals.bruto;
+      return { clienteId, vals, finoSobraNeto, euroSobra, mgTotal, eurGBruto };
+    });
+    const totalEurGBruto = sumBruto > 0 ? sumMgTotal / sumBruto : 0;
+
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowResultadosModal(false)}>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { saveToFirestore(); setShowResultadosModal(false); }}>
         <div className="bg-white border border-amber-300 rounded-2xl p-5 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <h3 className="text-lg font-bold text-amber-800 mb-4">📊 {expInfo?.nombre} — Resultados</h3>
 
-          {/* Sección 1: Margen por Cliente */}
+          {/* Resumen por Cliente */}
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-stone-600 mb-2">Margen por Cliente</h4>
             <div className="space-y-2">
-              {clienteEntries.map(([clienteId, vals]) => {
+              {clienteRows.map(({ clienteId, vals, finoSobraNeto: fsn, euroSobra, mgTotal, eurGBruto }) => {
                 const cliente = getCliente(clienteId);
                 const color = cliente?.color || '#f59e0b';
                 return (
                   <div key={clienteId} className="rounded-lg p-3 border" style={{ backgroundColor: color + '10', borderColor: color + '40' }}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium text-sm" style={{ color }}>{cliente?.nombre || 'Sin cliente'}</span>
-                      <span className={`font-mono font-bold text-sm ${vals.margen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatNum(vals.margen)} €
+                      <span className={`font-mono font-bold text-sm ${mgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatNum(mgTotal)} €
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-1 text-xs text-stone-500">
-                      <div>Fino: <span className="text-stone-700 font-mono">{formatNum(vals.finoCalculo)}g</span></div>
-                      <div>Base: <span className="text-stone-700 font-mono">{formatNum(vals.baseCliente)}€</span></div>
-                      <div>Jofisa: <span className="text-stone-700 font-mono">{formatNum(vals.fraJofisa)}€</span></div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-stone-500">
+                      <div>Mg Fras: <span className={`font-mono ${vals.margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(vals.margen)}€</span></div>
+                      <div>Sobra: <span className="text-stone-700 font-mono">{formatNum(fsn)}g</span></div>
+                      <div>€ Sobra: <span className={`font-mono ${euroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(euroSobra)}€</span></div>
+                      <div>€/g Bruto: <span className="text-stone-700 font-mono">{formatNum(eurGBruto)}</span></div>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-2 flex justify-between items-center text-sm font-semibold border-t border-amber-200 pt-2">
-              <span className="text-stone-600">Total Margen Fras</span>
-              <span className={`font-mono ${totales.totalMargen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatNum(totales.totalMargen)} €
-              </span>
+            <div className="mt-2 border-t border-amber-200 pt-2 space-y-1">
+              <div className="flex justify-between items-center text-xs text-stone-500">
+                <span>Mg Fras</span>
+                <span className={`font-mono ${sumMgFras >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgFras)} €</span>
+              </div>
+              <div className="flex justify-between items-center text-xs text-stone-500">
+                <span>€ Sobra</span>
+                <span className={`font-mono ${sumEuroSobra >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumEuroSobra)} €</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-semibold">
+                <span className="text-stone-600">Mg Total</span>
+                <span className={`font-mono ${sumMgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgTotal)} €</span>
+              </div>
+              <div className="flex justify-between items-center text-xs text-stone-500">
+                <span>€/g Bruto</span>
+                <span className="font-mono text-stone-700">{formatNum(totalEurGBruto)} €</span>
+              </div>
             </div>
           </div>
 
-          {/* Sección 2: Fino Sobra por Cliente */}
+          {/* Fino Sobra por Cliente */}
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-stone-600 mb-2">Fino Sobra por Cliente</h4>
             <div className="space-y-2">
@@ -2741,6 +2789,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       placeholder="0.00"
                       value={finoSobra}
                       onChange={e => handleClienteField(clienteId, 'finoSobra', e.target.value)}
+                      onBlur={saveToFirestore}
                       className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
                     />
                     <span className="text-xs text-stone-400">g</span>
@@ -2750,7 +2799,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
             </div>
           </div>
 
-          {/* Sección 3: Valoración del Fino Sobrante */}
+          {/* Valoración Fino Sobra */}
           <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
             <h4 className="text-sm font-semibold text-stone-600 mb-2">Valoración Fino Sobra</h4>
             <div className="flex items-center gap-2 mb-2">
@@ -2761,16 +2810,17 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 placeholder="0.00"
                 value={precioFinoSobra}
                 onChange={e => handlePrecioChange(e.target.value)}
+                onBlur={saveToFirestore}
                 className="w-28 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
               />
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div><span className="text-stone-500">Total sobra:</span> <span className="text-stone-800 font-mono">{formatNum(totalFinoSobra)} g</span></div>
-              <div><span className="text-stone-500">Valor:</span> <span className="text-green-600 font-mono font-medium">{formatNum(valorTotalSobra)} €</span></div>
+              <div><span className="text-stone-500">Neto:</span> <span className="text-stone-800 font-mono">{formatNum(finoSobraNeto)} g</span></div>
             </div>
           </div>
 
-          {/* Sección 4: Gramos Devueltos */}
+          {/* Gramos Devueltos */}
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-stone-600 mb-2">Gramos Devueltos</h4>
             <div className="space-y-2">
@@ -2787,6 +2837,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       placeholder="0.00"
                       value={gramosDevueltos}
                       onChange={e => handleClienteField(clienteId, 'gramosDevueltos', e.target.value)}
+                      onBlur={saveToFirestore}
                       className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
                     />
                     <span className="text-xs text-stone-400">g</span>
@@ -2794,19 +2845,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 );
               })}
             </div>
-            <div className="mt-2 flex justify-between items-center text-sm border-t border-stone-200 pt-2">
-              <span className="text-stone-500">Fino sobra neto:</span>
-              <span className="text-stone-800 font-mono font-medium">{formatNum(finoSobraNeto)} g</span>
-            </div>
-            {precioNum > 0 && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-stone-500">Valor neto:</span>
-                <span className="text-green-600 font-mono font-medium">{formatNum(finoSobraNeto * precioNum)} €</span>
-              </div>
-            )}
           </div>
 
-          <Button className="w-full" onClick={() => setShowResultadosModal(false)}>Cerrar</Button>
+          <Button className="w-full" onClick={() => { saveToFirestore(); setShowResultadosModal(false); }}>Cerrar</Button>
         </div>
       </div>
     );
