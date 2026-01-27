@@ -68,22 +68,23 @@ export default function MadorTracker() {
   const [statsExpHasta, setStatsExpHasta] = useState(null);
   const [statsClienteId, setStatsClienteId] = useState(null);
 
-  // Usuario activo (local session state)
+  // Usuario activo from URL param (required)
   const [usuarioActivo, setUsuarioActivo] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const userParam = params.get('user');
-      if (userParam) return userParam;
+      return params.get('user') || null;
     }
     return null;
   });
 
-  // Set default user once loaded
+  // Sync URL when user changes
   useEffect(() => {
-    if (!loading && usuarios.length > 0 && !usuarioActivo) {
-      setUsuarioActivo(usuarios[0].id);
+    if (usuarioActivo) {
+      const url = new URL(window.location);
+      url.searchParams.set('user', usuarioActivo);
+      window.history.replaceState({}, '', url);
     }
-  }, [loading, usuarios, usuarioActivo]);
+  }, [usuarioActivo]);
 
   const getUsuario = (id) => usuarios.find(u => u.id === id);
   const usuarioActual = getUsuario(usuarioActivo);
@@ -2634,6 +2635,34 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         <div className="text-center">
           <div className="text-4xl mb-4">✋</div>
           <p className="text-amber-800 font-medium">Cargando Ma d'Or...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Gate: require valid ?user= param
+  if (!usuarioActivo || !usuarios.find(u => u.id === usuarioActivo)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4">
+        <div className="bg-white border border-amber-300 rounded-2xl p-8 shadow-xl max-w-sm w-full text-center">
+          <div className="text-4xl mb-4">✋</div>
+          <h1 className="text-xl font-bold text-amber-800 mb-2">Ma d'Or Tracker</h1>
+          {!usuarioActivo ? (
+            <p className="text-stone-600 mb-6">Selecciona tu usuario para acceder:</p>
+          ) : (
+            <p className="text-red-600 mb-6">Usuario no reconocido.</p>
+          )}
+          <div className="space-y-2">
+            {usuarios.map(u => (
+              <button
+                key={u.id}
+                onClick={() => setUsuarioActivo(u.id)}
+                className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium py-3 px-4 rounded-xl border border-amber-300 transition-colors"
+              >
+                {u.nombre}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
