@@ -363,6 +363,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
     const [cierreData, setCierreData] = useState({ precioFino: '', cierreJofisa: '' });
     const [verificandoFactura, setVerificandoFactura] = useState(false);
     const [showLogsModal, setShowLogsModal] = useState(false);
+    const [showFacturaViewer, setShowFacturaViewer] = useState(false);
     const [newComentario, setNewComentario] = useState('');
     
     // Función para verificar factura con IA
@@ -741,7 +742,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               <div className="flex justify-between"><span className="text-stone-500">Descuento ({paq.descuento}%):</span><span className="text-red-600 font-medium">-{formatNum(totales.descuento)} €</span></div>
               <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Base cliente:</span><span className={totales.esEstimado ? 'text-stone-400 font-medium italic' : 'text-stone-800 font-medium'}>{totales.esEstimado ? '~' : ''}{formatNum(totales.baseCliente)} €</span></div>
               <div className="flex justify-between"><span className="text-stone-500">IGI ({paq.igi}%):</span><span className="text-stone-800 font-medium">+{formatNum(totales.igi)} €</span></div>
-              <div className="flex justify-between pt-2 text-base" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}Total Fra:</span><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}{formatNum(totales.totalFra)} €</span></div>
+              <div className="flex justify-between pt-2 text-base" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}Total Fra (cl):</span><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}{formatNum(totales.totalFra)} €</span></div>
               <div className="flex justify-between mt-4 pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Fra a Jofisa:</span><span className="text-stone-800 font-medium">{formatNum(totales.fraJofisa)} €</span></div>
               <div className="flex justify-between"><span className="text-stone-500">Margen:</span><span className={totales.margen >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{formatNum(totales.margen)} €</span></div>
             </div>
@@ -768,28 +769,27 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             <h3 className="font-semibold mb-3" style={{ color: clienteColor }}>📄 Factura</h3>
             {paq.factura ? (
               <div className="space-y-2">
-                {paq.factura.tipo?.startsWith('image/') ? (
-                  <img 
-                    src={paq.factura.data} 
-                    alt="Factura" 
-                    className="w-full rounded-lg cursor-pointer"
-                    style={{ border: `1px solid ${clienteColor}30` }}
-                    onClick={() => {
-                      const w = window.open('');
-                      if (w) { w.document.write(`<img src="${paq.factura.data}" style="max-width:100%">`); w.document.title = paq.factura.nombre; }
-                    }}
-                  />
-                ) : (
-                  <div className="bg-white/50 rounded-lg p-3 flex items-center gap-3" style={{ border: `1px solid ${clienteColor}30` }}>
-                    <span className="text-2xl">📎</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-stone-800 font-medium truncate">{paq.factura.nombre}</p>
-                      <p className="text-stone-500 text-xs">PDF</p>
+                <div className="bg-white/50 rounded-lg p-3 flex items-center gap-3" style={{ border: `1px solid ${clienteColor}30` }}>
+                  <span className="text-2xl">{paq.factura.tipo?.startsWith('image/') ? '🖼️' : '📎'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-stone-800 font-medium truncate">{paq.factura.nombre}</p>
+                    <p className="text-stone-500 text-xs">{paq.factura.tipo?.startsWith('image/') ? 'Imagen' : 'PDF'}</p>
+                  </div>
+                  <Button size="sm" onClick={() => setShowFacturaViewer(true)}>Ver</Button>
+                </div>
+                {showFacturaViewer && (
+                  <div className="fixed inset-0 bg-black/90 z-50 flex flex-col" onClick={() => setShowFacturaViewer(false)}>
+                    <div className="flex justify-between items-center p-3 bg-black/50">
+                      <span className="text-white text-sm truncate">{paq.factura.nombre}</span>
+                      <button onClick={() => setShowFacturaViewer(false)} className="text-white text-2xl font-bold px-3 hover:text-red-400">✕</button>
                     </div>
-                    <Button size="sm" onClick={() => {
-                      const w = window.open('');
-                      if (w) { w.document.write(`<iframe src="${paq.factura.data}" style="width:100%;height:100vh;border:none"></iframe>`); w.document.title = paq.factura.nombre; }
-                    }}>Ver</Button>
+                    <div className="flex-1 overflow-auto p-2" onClick={e => e.stopPropagation()}>
+                      {paq.factura.tipo?.startsWith('image/') ? (
+                        <img src={paq.factura.data} alt="Factura" className="w-full h-auto" />
+                      ) : (
+                        <iframe src={paq.factura.data} className="w-full h-full min-h-[80vh]" style={{ border: 'none' }} />
+                      )}
+                    </div>
                   </div>
                 )}
                 
@@ -815,16 +815,23 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         <span className="text-stone-500">Total paquete:</span>
                         <span className="text-stone-800 font-mono font-medium">{formatNum(paq.verificacionIA.totalPaquete)} €</span>
                       </div>
-                      <div className="flex justify-between border-t border-current/10 pt-1 mt-1">
-                        <span className="font-medium">Diferencia:</span>
-                        <span className={`font-mono font-bold ${
-                          Math.abs(paq.verificacionIA.diferencia) < 0.5
-                            ? 'text-green-600'
-                            : 'text-orange-600'
-                        }`}>
-                          {paq.verificacionIA.diferencia >= 0 ? '+' : ''}{formatNum(paq.verificacionIA.diferencia)} €
-                        </span>
-                      </div>
+                      {(() => {
+                        const dif = paq.verificacionIA.diferencia;
+                        const difDisplay = -dif; // positivo = a favor nuestro (paq > fra)
+                        return (
+                          <div className="flex justify-between border-t border-current/10 pt-1 mt-1">
+                            <span className="font-medium">Diferencia:</span>
+                            <span className={`font-mono font-bold ${
+                              Math.abs(dif) < 0.5
+                                ? 'text-stone-500'
+                                : difDisplay > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {difDisplay > 0 ? '+' : ''}{formatNum(difDisplay)} €
+                              {Math.abs(dif) >= 0.5 && <span className="text-xs font-normal ml-1">{difDisplay > 0 ? '(a favor)' : '(en contra)'}</span>}
+                            </span>
+                          </div>
+                        );
+                      })()}
                       {/* Verificación de pesos */}
                       {paq.verificacionIA.pesosCuadran !== undefined && paq.verificacionIA.pesosCuadran !== null && (
                         <div className={`flex justify-between border-t border-current/10 pt-1 mt-1`}>
@@ -1069,7 +1076,26 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               </div>
             </div>
           </Card>
-          
+
+          {/* Barra de seguro */}
+          {exp.seguro > 0 && (
+            <div className="bg-white rounded-xl p-3 border border-stone-200">
+              <div className="flex justify-between items-center text-xs mb-1">
+                <span className="text-stone-500">Seguro</span>
+                <span className="text-stone-600 font-mono">{formatNum(totales.totalFra)} / {formatNum(exp.seguro)} €</span>
+              </div>
+              <div className="w-full bg-stone-200 rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    totales.totalFra / exp.seguro > 0.9 ? 'bg-red-500' : totales.totalFra / exp.seguro > 0.7 ? 'bg-amber-500' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${Math.min(100, (totales.totalFra / exp.seguro) * 100)}%` }}
+                />
+              </div>
+              <p className="text-right text-xs text-stone-400 mt-1">{formatNum((totales.totalFra / exp.seguro) * 100, 1)}%</p>
+            </div>
+          )}
+
           <div className="flex justify-between items-center">
             <h3 className="text-amber-600 font-semibold">📦 Paquetes ({expedicionPaquetes.length})</h3>
             <Button size="sm" onClick={() => openModal('paquete', null)}>+ Nuevo</Button>
@@ -1137,9 +1163,9 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   const catB = getCategoria(b.categoriaId)?.nombre || '';
                   if (catA !== catB) return catA.localeCompare(catB);
                 }
-                return a.numero - b.numero;
+                return b.numero - a.numero;
               });
-              
+
               const expPrecioPorDefecto = getExpedicionPrecioPorDefecto(selectedExpedicion);
 
               // Pre-calcular suma de bruto por cliente
@@ -1244,11 +1270,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex items-start gap-2">
-                          {validado ? (
-                            <span className="text-green-500 text-lg">✓</span>
-                          ) : tieneVerificacion ? (
-                            <span className="text-amber-500 text-lg">○</span>
-                          ) : null}
+                          {!paq.precioFino ? (
+                            <span className="w-3 h-3 rounded-full bg-red-500 inline-block mt-1 flex-shrink-0" title="Sin cerrar" />
+                          ) : !paq.factura ? (
+                            <span className="w-3 h-3 rounded-full bg-orange-400 inline-block mt-1 flex-shrink-0" title="Sin factura" />
+                          ) : validado ? (
+                            <span className="text-green-500 text-lg leading-none flex-shrink-0">✓</span>
+                          ) : (
+                            <span className="w-3 h-3 rounded-full bg-amber-300 inline-block mt-1 flex-shrink-0" title="Pendiente verificar" />
+                          )}
                           <div>
                             <div className="flex items-center gap-2">
                               {cliente?.abreviacion && (
@@ -1311,11 +1341,28 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             const totales = calcularTotalesExpedicion(exp.id);
             const esActual = exp.id === expedicionActualId;
             const precioRef = getPrecioRefExpedicion(exp.id);
+            const expPaqs = paquetes.filter(p => p.expedicionId === exp.id);
+            const sinCerrar = expPaqs.filter(p => !p.precioFino).length;
+            const sinFactura = expPaqs.filter(p => p.precioFino && !p.factura).length;
+            const sinVerificar = expPaqs.filter(p => p.precioFino && p.factura && !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length;
             return (
               <Card key={exp.id} onClick={() => setSelectedExpedicion(exp.id)} className={esActual ? 'ring-2 ring-amber-400' : ''}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-stone-800 font-bold text-lg">{exp.nombre} {esActual && <span className="text-amber-500">★</span>}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-stone-800 font-bold text-lg">{exp.nombre} {esActual && <span className="text-amber-500">★</span>}</h3>
+                      <div className="flex gap-1">
+                        {sinCerrar > 0 && (
+                          <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{sinCerrar}</span>
+                        )}
+                        {sinFactura > 0 && (
+                          <span className="bg-orange-400 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{sinFactura}</span>
+                        )}
+                        {sinVerificar > 0 && (
+                          <span className="bg-amber-300 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{sinVerificar}</span>
+                        )}
+                      </div>
+                    </div>
                     <p className="text-stone-500 text-sm">
                       {precioRef ? `Último precio: ${formatNum(precioRef)} €/g` : 'Sin precios aún'}
                     </p>
@@ -1933,7 +1980,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         // Get most recent precioFino across all expediciones as starting default
         const allPreciosFino = paquetes.filter(p => p.precioFino).map(p => p.precioFino);
         const defaultPrecio = allPreciosFino.length > 0 ? allPreciosFino[allPreciosFino.length - 1] : '';
-        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio };
+        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: 600000 };
       }
       if (modalType === 'paquete') {
         const defaultCliente = clientes[0];
@@ -2111,6 +2158,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 value={formData.fechaExportacion || ''}
                 onChange={(e) => setFormData({ ...formData, fechaExportacion: e.target.value || null })}
               />
+              <Input
+                label="Valor seguro (€)"
+                type="number"
+                step="1"
+                value={formData.seguro || ''}
+                onChange={(e) => setFormData({ ...formData, seguro: e.target.value ? parseFloat(e.target.value) : null })}
+                placeholder="Ej: 600000"
+              />
               <div className="mb-3">
                 <Checkbox
                   label="Expedición actual (para nuevos paquetes)"
@@ -2186,7 +2241,36 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               
               {/* Líneas de oro */}
               <div className="border-t border-amber-200 pt-3 mt-3">
-                <h4 className="text-amber-700 font-medium mb-2">📏 Líneas de Oro</h4>
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-amber-700 font-medium">📏 Líneas de Oro</h4>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        if (!text?.trim()) { alert('Portapapeles vacío'); return; }
+                        // Parse lines: look for patterns like "245.10 g" + "ley 712" or "bruto: 245.10, ley: 712"
+                        const nuevas = [];
+                        const lines = text.split('\n');
+                        for (const line of lines) {
+                          // Try patterns: "123.45g x 712" or "123.45 712" or "bruto 123.45 ley 712"
+                          const m = line.match(/([\d.,]+)\s*g?\s*[x×\s]+\s*([\d.,]+)/i)
+                            || line.match(/bruto[:\s]*([\d.,]+).*?ley[:\s]*([\d.,]+)/i);
+                          if (m) {
+                            const bruto = parseFloat(m[1].replace(',', '.'));
+                            const ley = parseFloat(m[2].replace(',', '.'));
+                            if (bruto && ley) nuevas.push({ id: Date.now() + nuevas.length, bruto, ley });
+                          }
+                        }
+                        if (nuevas.length === 0) { alert('No se encontraron líneas de peso en el portapapeles.\nFormato esperado: "245.10g x 712.5" (una por línea)'); return; }
+                        setFormData({ ...formData, lineas: [...(formData.lineas || []), ...nuevas] });
+                      } catch (e) {
+                        alert('No se pudo acceder al portapapeles. Permite el acceso en tu navegador.');
+                      }
+                    }}
+                    className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded hover:bg-stone-200 border border-stone-300"
+                  >📋 Pegar</button>
+                </div>
                 
                 {/* Lista de líneas añadidas */}
                 {formData.lineas && formData.lineas.length > 0 && (
@@ -2274,18 +2358,18 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <h4 className="text-amber-700 font-medium mb-2">🔒 Cierre (opcional)</h4>
                 <div className="flex gap-2">
                   <div className="flex-1 min-w-0">
-                    <label className="block text-amber-800 text-xs mb-1">Precio Fino €/g</label>
+                    <label className="block text-amber-800 text-xs mb-1">Base €/g</label>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.precioFino || ''}
                       onChange={(e) => {
                         const precio = parseFloat(e.target.value) || 0;
-                        setFormData({ 
-                          ...formData, 
-                          precioFino: e.target.value ? precio : null,
-                          cierreJofisa: precio ? precio - 0.25 : null
-                        });
+                        const updates = { precioFino: e.target.value ? precio : null };
+                        if (!formData.cierreJofisa) {
+                          updates.cierreJofisa = precio ? precio - 0.25 : null;
+                        }
+                        setFormData({ ...formData, ...updates });
                       }}
                       className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
                     />
@@ -2437,7 +2521,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.5.1</span>
+              <span className="text-xs text-white/50 font-mono">v0.6</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
