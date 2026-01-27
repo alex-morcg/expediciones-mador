@@ -1380,6 +1380,22 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); openModal('expedicion', exp); }}>Editar</Button>
                   <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); deleteExpedicion(exp.id); }}>Eliminar</Button>
                 </div>
+                {exp.seguro > 0 && (
+                  <div className="mt-3 pt-2 border-t border-stone-200">
+                    <div className="flex justify-between items-center text-xs mb-1">
+                      <span className="text-stone-400">Seguro</span>
+                      <span className="text-stone-500 font-mono">{formatNum((totales.totalFra / exp.seguro) * 100, 1)}%</span>
+                    </div>
+                    <div className="w-full bg-stone-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          totales.totalFra / exp.seguro > 0.9 ? 'bg-red-500' : totales.totalFra / exp.seguro > 0.7 ? 'bg-amber-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(100, (totales.totalFra / exp.seguro) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </Card>
             );
           })}
