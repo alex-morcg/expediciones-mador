@@ -7,6 +7,15 @@ const formatNum = (num, decimals = 2) => {
 
 const formatEur = (num) => formatNum(num, 2) + ' €';
 
+// Helper: sum all lingotes peso in an entrega
+const pesoEntrega = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.peso || 0), 0);
+const pesoCerrado = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado').reduce((s, l) => s + (l.peso || 0) - (l.pesoDevuelto || 0), 0);
+const pesoDevuelto = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.pesoDevuelto || 0), 0);
+const importeEntrega = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado').reduce((s, l) => s + (l.importe || 0), 0);
+const numLingotes = (entrega) => (entrega.lingotes || []).length;
+const lingotesEnCurso = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'en_curso');
+const lingotesFinalizados = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado');
+
 export default function LingotesTracker({
   clientes,
   exportaciones,
@@ -25,6 +34,7 @@ export default function LingotesTracker({
   const [showEntregaModal, setShowEntregaModal] = useState(false);
   const [showCierreModal, setShowCierreModal] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState(null);
+  const [selectedLingoteIdx, setSelectedLingoteIdx] = useState(null);
   const [editingEntregaClienteId, setEditingEntregaClienteId] = useState(null);
 
   const stockMador = config.stockMador || 0;
@@ -37,62 +47,83 @@ export default function LingotesTracker({
   const getCliente = (id) => clientes.find(c => c.id === id);
   const getExportacion = (id) => exportaciones.find(e => e.id === id);
 
-  const calcularImporte = (peso, precioOnza) => {
-    if (!precioOnza) return 0;
-    return peso * precioOnza;
-  };
-
-  const calcularPrecioCliente = (precioBase) => {
-    if (!precioBase) return 0;
-    return precioBase * 1.06;
-  };
-
   // Stats por cliente
   const statsClientes = useMemo(() => {
     return clientes.map(cliente => {
       const entregasCliente = entregas.filter(e => e.clienteId === cliente.id);
-      const entregado = entregasCliente.reduce((sum, e) => sum + (e.peso || 0), 0);
-      const cerrado = entregasCliente.filter(e => e.estado === 'finalizado').reduce((sum, e) => sum + (e.peso || 0) - (e.devolucion || 0), 0);
-      const devuelto = entregasCliente.reduce((sum, e) => sum + (e.devolucion || 0), 0);
+      const entregado = entregasCliente.reduce((sum, e) => sum + pesoEntrega(e), 0);
+      const cerrado = entregasCliente.reduce((sum, e) => sum + pesoCerrado(e), 0);
+      const devuelto = entregasCliente.reduce((sum, e) => sum + pesoDevuelto(e), 0);
       const pendiente = entregado - cerrado - devuelto;
-      const enCurso = entregasCliente.filter(e => e.estado === 'en_curso').length;
-      const importeTotal = entregasCliente.filter(e => e.estado === 'finalizado').reduce((sum, e) => sum + calcularImporte((e.peso || 0) - (e.devolucion || 0), e.precioOnza), 0);
+      const enCurso = entregasCliente.reduce((sum, e) => sum + lingotesEnCurso(e).length, 0);
+      const importeTotal = entregasCliente.reduce((sum, e) => sum + importeEntrega(e), 0);
       return { ...cliente, entregado, cerrado, devuelto, pendiente, enCurso, importeTotal };
     }).filter(c => c.entregado > 0 || c.enCurso > 0);
   }, [clientes, entregas]);
 
   const stockTotal = useMemo(() => {
-    const totalEntregado = entregas.reduce((sum, e) => sum + (e.peso || 0), 0);
-    const totalCerrado = entregas.filter(e => e.estado === 'finalizado').reduce((sum, e) => sum + (e.peso || 0) - (e.devolucion || 0), 0);
-    const totalDevuelto = entregas.reduce((sum, e) => sum + (e.devolucion || 0), 0);
+    const totalEntregado = entregas.reduce((sum, e) => sum + pesoEntrega(e), 0);
+    const totalCerrado = entregas.reduce((sum, e) => sum + pesoCerrado(e), 0);
+    const totalDevuelto = entregas.reduce((sum, e) => sum + pesoDevuelto(e), 0);
     const stockClientes = totalEntregado - totalCerrado - totalDevuelto;
     return { totalEntregado, totalCerrado, totalDevuelto, stockClientes };
   }, [entregas]);
 
   // CRUD
   const addEntrega = async (data) => {
+    // data: { clienteId, exportacionId, fechaEntrega, cantidad, pesoUnitario }
+    const lingotes = [];
+    for (let i = 0; i < data.cantidad; i++) {
+      lingotes.push({
+        peso: data.pesoUnitario,
+        precio: null,
+        importe: 0,
+        nFactura: null,
+        fechaCierre: null,
+        pesoCerrado: 0,
+        pesoDevuelto: 0,
+        estado: 'en_curso',
+        pagado: false,
+        esDevolucion: false,
+      });
+    }
     await onSaveEntrega({
-      ...data,
-      estado: 'en_curso',
-      pagado: false,
-      fechaCierre: null,
-      nFactura: null,
-      devolucion: 0,
+      clienteId: data.clienteId,
+      exportacionId: data.exportacionId,
+      fechaEntrega: data.fechaEntrega,
+      lingotes,
     });
     setShowEntregaModal(false);
+    setEditingEntregaClienteId(null);
   };
 
-  const cerrarEntrega = async (entregaId, data) => {
-    await onUpdateEntrega(entregaId, { ...data, estado: 'finalizado' });
+  const cerrarLingote = async (entregaId, lingoteIdx, data) => {
+    const entrega = entregas.find(e => e.id === entregaId);
+    if (!entrega) return;
+    const lingotes = [...entrega.lingotes];
+    lingotes[lingoteIdx] = {
+      ...lingotes[lingoteIdx],
+      precio: data.precio,
+      importe: data.precio * ((lingotes[lingoteIdx].peso || 0) - (data.devolucion || 0)),
+      nFactura: data.nFactura,
+      fechaCierre: data.fechaCierre,
+      pesoCerrado: lingotes[lingoteIdx].peso,
+      pesoDevuelto: data.devolucion || 0,
+      estado: 'finalizado',
+      pagado: data.pagado || false,
+    };
+    await onUpdateEntrega(entregaId, { lingotes });
     setShowCierreModal(false);
     setSelectedEntrega(null);
+    setSelectedLingoteIdx(null);
   };
 
-  const marcarPagado = async (entregaId) => {
+  const marcarPagado = async (entregaId, lingoteIdx) => {
     const entrega = entregas.find(e => e.id === entregaId);
-    if (entrega) {
-      await onUpdateEntrega(entregaId, { pagado: !entrega.pagado });
-    }
+    if (!entrega) return;
+    const lingotes = [...entrega.lingotes];
+    lingotes[lingoteIdx] = { ...lingotes[lingoteIdx], pagado: !lingotes[lingoteIdx].pagado };
+    await onUpdateEntrega(entregaId, { lingotes });
   };
 
   const deleteEntrega = async (entregaId) => {
@@ -186,7 +217,7 @@ export default function LingotesTracker({
 
         {statsClientes.length === 0 && (
           <Card>
-            <p className="text-stone-400 text-center py-6">No hay entregas registradas. Selecciona un cliente y crea una entrega.</p>
+            <p className="text-stone-400 text-center py-6">No hay entregas registradas.</p>
           </Card>
         )}
 
@@ -204,8 +235,12 @@ export default function LingotesTracker({
     const entregasCliente = entregas.filter(e => e.clienteId === cliente.id);
     const stats = statsClientes.find(s => s.id === cliente.id);
 
-    const entregasEnCurso = entregasCliente.filter(e => e.estado === 'en_curso');
-    const entregasFinalizadas = entregasCliente.filter(e => e.estado === 'finalizado');
+    // Separate entregas that have any en_curso lingotes
+    const entregasConEnCurso = entregasCliente.filter(e => lingotesEnCurso(e).length > 0);
+    // All lingotes finalizados across all entregas
+    const allLingotesFinalizados = entregasCliente.flatMap(e =>
+      (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx, fechaEntrega: e.fechaEntrega }))
+    ).filter(l => l.estado === 'finalizado');
 
     return (
       <div className="space-y-5">
@@ -236,30 +271,42 @@ export default function LingotesTracker({
           </div>
         </div>
 
-        {entregasEnCurso.length > 0 && (
+        {entregasConEnCurso.length > 0 && (
           <Card>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-stone-800">En Curso ({entregasEnCurso.length})</h3>
+              <h3 className="font-bold text-stone-800">En Curso</h3>
               <div className="text-sm text-stone-500">
-                Total: <span className="font-semibold text-amber-600">{formatNum(entregasEnCurso.reduce((s, e) => s + (e.peso || 0), 0), 0)}g</span>
+                {entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0)} lingotes
               </div>
             </div>
-            <div className="space-y-2">
-              {entregasEnCurso.map(entrega => {
+            <div className="space-y-3">
+              {entregasConEnCurso.map(entrega => {
                 const exportacion = getExportacion(entrega.exportacionId);
+                const enCursoList = lingotesEnCurso(entrega);
+                const totalPeso = enCursoList.reduce((s, l) => s + (l.peso || 0), 0);
                 return (
-                  <div key={entrega.id} className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200">
-                    <div>
-                      <div className="font-semibold text-stone-800">{entrega.peso}g</div>
-                      <div className="text-xs text-stone-500">{entrega.fechaEntrega} {exportacion ? `• Exp: ${exportacion.nombre}` : ''}</div>
+                  <div key={entrega.id} className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <div className="font-semibold text-stone-800">{enCursoList.length} x {enCursoList[0]?.peso || '?'}g = {totalPeso}g</div>
+                        <div className="text-xs text-stone-500">{entrega.fechaEntrega} {exportacion ? `• Exp: ${exportacion.nombre}` : ''}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>x</Button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="success" onClick={() => { setSelectedEntrega(entrega); setShowCierreModal(true); }}>
-                        Cerrar
-                      </Button>
-                      <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>
-                        x
-                      </Button>
+                    <div className="space-y-1">
+                      {entrega.lingotes.map((l, idx) => {
+                        if (l.estado !== 'en_curso') return null;
+                        return (
+                          <div key={idx} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-white/60">
+                            <span className="font-mono text-stone-700">{l.peso}g</span>
+                            <Button size="sm" variant="success" onClick={() => { setSelectedEntrega(entrega); setSelectedLingoteIdx(idx); setShowCierreModal(true); }}>
+                              Cerrar
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -270,7 +317,7 @@ export default function LingotesTracker({
 
         <Card>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-stone-800">Finalizadas ({entregasFinalizadas.length})</h3>
+            <h3 className="font-bold text-stone-800">Finalizados ({allLingotesFinalizados.length})</h3>
             <div className="text-sm text-stone-500">
               Importe: <span className="font-semibold text-emerald-600">{formatEur(stats?.importeTotal || 0)}</span>
             </div>
@@ -279,7 +326,7 @@ export default function LingotesTracker({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-200">
-                  <th className="text-left py-2 px-1 text-stone-500 font-medium text-xs">Fecha</th>
+                  <th className="text-left py-2 px-1 text-stone-500 font-medium text-xs">Cierre</th>
                   <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Peso</th>
                   <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">€/g</th>
                   <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Importe</th>
@@ -287,32 +334,29 @@ export default function LingotesTracker({
                 </tr>
               </thead>
               <tbody>
-                {entregasFinalizadas.map(entrega => {
-                  const importe = calcularImporte((entrega.peso || 0) - (entrega.devolucion || 0), entrega.precioOnza);
-                  return (
-                    <tr key={entrega.id} className="border-b border-stone-100 hover:bg-stone-50">
-                      <td className="py-2 px-1 text-xs">{entrega.fechaCierre}</td>
-                      <td className="py-2 px-1 text-right font-mono text-xs">{entrega.peso}g</td>
-                      <td className="py-2 px-1 text-right font-mono text-xs">{formatNum(entrega.precioOnza)}</td>
-                      <td className="py-2 px-1 text-right font-mono font-semibold text-xs">{formatEur(importe)}</td>
-                      <td className="py-2 px-1 text-center">
-                        <button
-                          onClick={() => marcarPagado(entrega.id)}
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
-                            entrega.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
-                          }`}
-                        >
-                          {entrega.pagado && '✓'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {allLingotesFinalizados.map((l, i) => (
+                  <tr key={i} className="border-b border-stone-100 hover:bg-stone-50">
+                    <td className="py-2 px-1 text-xs">{l.fechaCierre || '-'}</td>
+                    <td className="py-2 px-1 text-right font-mono text-xs">{l.peso}g</td>
+                    <td className="py-2 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
+                    <td className="py-2 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
+                    <td className="py-2 px-1 text-center">
+                      <button
+                        onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
+                          l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
+                        }`}
+                      >
+                        {l.pagado && '✓'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          {entregasFinalizadas.length === 0 && (
-            <p className="text-stone-400 text-center py-6 text-sm">No hay entregas finalizadas</p>
+          {allLingotesFinalizados.length === 0 && (
+            <p className="text-stone-400 text-center py-6 text-sm">No hay lingotes finalizados</p>
           )}
         </Card>
 
@@ -331,22 +375,25 @@ export default function LingotesTracker({
     const exportacionesStats = useMemo(() => {
       return exportaciones.map(exp => {
         const entregasExp = entregas.filter(e => e.exportacionId === exp.id);
-        const totalEntregado = entregasExp.reduce((sum, e) => sum + (e.peso || 0), 0);
-        const totalCerrado = entregasExp.filter(e => e.estado === 'finalizado').reduce((sum, e) => sum + (e.peso || 0) - (e.devolucion || 0), 0);
-        const totalPendiente = totalEntregado - totalCerrado;
-        const importeTotal = entregasExp.filter(e => e.estado === 'finalizado').reduce((sum, e) => sum + calcularImporte((e.peso || 0) - (e.devolucion || 0), e.precioOnza), 0);
+        const totalEntregado = entregasExp.reduce((sum, e) => sum + pesoEntrega(e), 0);
+        const totalCerrado = entregasExp.reduce((sum, e) => sum + pesoCerrado(e), 0);
+        const totalDevuelto = entregasExp.reduce((sum, e) => sum + pesoDevuelto(e), 0);
+        const totalPendiente = totalEntregado - totalCerrado - totalDevuelto;
+        const totalImporte = entregasExp.reduce((sum, e) => sum + importeEntrega(e), 0);
+        const totalLingotes = entregasExp.reduce((sum, e) => sum + numLingotes(e), 0);
 
         const porCliente = clientes.map(c => {
           const ec = entregasExp.filter(e => e.clienteId === c.id);
           return {
             ...c,
-            entregado: ec.reduce((sum, e) => sum + (e.peso || 0), 0),
-            cerrado: ec.filter(e => e.estado === 'finalizado').reduce((sum, e) => sum + (e.peso || 0) - (e.devolucion || 0), 0),
-            pendiente: ec.filter(e => e.estado === 'en_curso').reduce((sum, e) => sum + (e.peso || 0), 0),
+            entregado: ec.reduce((sum, e) => sum + pesoEntrega(e), 0),
+            cerrado: ec.reduce((sum, e) => sum + pesoCerrado(e), 0),
+            devuelto: ec.reduce((sum, e) => sum + pesoDevuelto(e), 0),
+            pendiente: ec.reduce((sum, e) => sum + pesoEntrega(e), 0) - ec.reduce((sum, e) => sum + pesoCerrado(e), 0) - ec.reduce((sum, e) => sum + pesoDevuelto(e), 0),
           };
         }).filter(c => c.entregado > 0);
 
-        return { ...exp, totalEntregado, totalCerrado, totalPendiente, importeTotal, porCliente, numEntregas: entregasExp.length };
+        return { ...exp, totalEntregado, totalCerrado, totalDevuelto, totalPendiente, totalImporte, totalLingotes, porCliente };
       });
     }, [exportaciones, entregas, clientes]);
 
@@ -398,8 +445,8 @@ export default function LingotesTracker({
                   <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'} • {formatNum(exp.grExport, 0)}g exportados</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold text-emerald-600">{formatEur(exp.importeTotal)}</div>
-                  <div className="text-xs text-stone-500">{exp.numEntregas} entregas</div>
+                  <div className="text-lg font-bold text-emerald-600">{formatEur(exp.totalImporte)}</div>
+                  <div className="text-xs text-stone-500">{exp.totalLingotes} lingotes</div>
                 </div>
               </div>
 
@@ -552,14 +599,14 @@ export default function LingotesTracker({
     );
   };
 
-  // Entrega Modal
+  // Entrega Modal - creates N lingotes at once
   const EntregaModal = () => {
     const [formData, setFormData] = useState({
       clienteId: editingEntregaClienteId || clientes[0]?.id || '',
       exportacionId: exportaciones[0]?.id || '',
       fechaEntrega: new Date().toISOString().split('T')[0],
-      peso: 50,
-      precioOnza: '',
+      cantidad: 1,
+      pesoUnitario: 50,
     });
 
     return (
@@ -589,24 +636,35 @@ export default function LingotesTracker({
               <input type="date" value={formData.fechaEntrega} onChange={(e) => setFormData({ ...formData, fechaEntrega: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Peso (gramos)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Cantidad de lingotes</label>
               <div className="flex gap-2">
-                {[50, 100, 200, 500].map(p => (
-                  <button key={p} onClick={() => setFormData({ ...formData, peso: p })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.peso === p ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
+                {[1, 2, 4, 6, 10].map(q => (
+                  <button key={q} onClick={() => setFormData({ ...formData, cantidad: q })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.cantidad === q ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
+                    {q}
+                  </button>
+                ))}
+              </div>
+              <input type="number" value={formData.cantidad} onChange={(e) => setFormData({ ...formData, cantidad: parseInt(e.target.value) || 1 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Otra cantidad..." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Peso por lingote (gramos)</label>
+              <div className="flex gap-2">
+                {[50, 100].map(p => (
+                  <button key={p} onClick={() => setFormData({ ...formData, pesoUnitario: p })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.pesoUnitario === p ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
                     {p}g
                   </button>
                 ))}
               </div>
-              <input type="number" value={formData.peso} onChange={(e) => setFormData({ ...formData, peso: parseFloat(e.target.value) || 0 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Otro peso..." />
+              <input type="number" value={formData.pesoUnitario} onChange={(e) => setFormData({ ...formData, pesoUnitario: parseFloat(e.target.value) || 50 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Otro peso..." />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Precio €/g (opcional)</label>
-              <input type="number" step="0.01" value={formData.precioOnza} onChange={(e) => setFormData({ ...formData, precioOnza: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Dejar vacio si aun no se sabe" />
+            <div className="bg-stone-50 rounded-xl p-3 text-center">
+              <span className="text-stone-500 text-sm">Total: </span>
+              <span className="font-bold text-stone-800">{formData.cantidad} x {formData.pesoUnitario}g = {formData.cantidad * formData.pesoUnitario}g</span>
             </div>
           </div>
           <div className="flex gap-3 mt-6">
             <Button variant="secondary" className="flex-1" onClick={() => { setShowEntregaModal(false); setEditingEntregaClienteId(null); }}>Cancelar</Button>
-            <Button className="flex-1" onClick={() => addEntrega({ clienteId: formData.clienteId, exportacionId: formData.exportacionId, fechaEntrega: formData.fechaEntrega, peso: formData.peso, precioOnza: formData.precioOnza ? parseFloat(formData.precioOnza) : null })}>
+            <Button className="flex-1" onClick={() => addEntrega(formData)}>
               Registrar
             </Button>
           </div>
@@ -615,38 +673,30 @@ export default function LingotesTracker({
     );
   };
 
-  // Cierre Modal
+  // Cierre Modal - close a single lingote
   const CierreModal = () => {
+    const lingote = selectedEntrega?.lingotes?.[selectedLingoteIdx];
     const [formData, setFormData] = useState({
-      precioOnza: selectedEntrega?.precioOnza || '',
+      precio: lingote?.precio || '',
       fechaCierre: new Date().toISOString().split('T')[0],
       nFactura: '',
       devolucion: 0,
     });
 
-    if (!selectedEntrega) return null;
+    if (!selectedEntrega || selectedLingoteIdx === null || !lingote) return null;
     const cliente = getCliente(selectedEntrega.clienteId);
-    const precioCliente = formData.precioOnza ? calcularPrecioCliente(parseFloat(formData.precioOnza)) : 0;
-    const pesoNeto = (selectedEntrega.peso || 0) - formData.devolucion;
-    const importe = formData.precioOnza ? calcularImporte(pesoNeto, parseFloat(formData.precioOnza)) : 0;
+    const pesoNeto = (lingote.peso || 0) - formData.devolucion;
+    const importe = formData.precio ? pesoNeto * parseFloat(formData.precio) : 0;
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowCierreModal(false); setSelectedEntrega(null); }}>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowCierreModal(false); setSelectedEntrega(null); setSelectedLingoteIdx(null); }}>
         <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-stone-800 mb-2">Cerrar Entrega</h3>
-          <p className="text-stone-500 text-sm mb-6">{cliente?.nombre} • {selectedEntrega.peso}g</p>
+          <h3 className="text-xl font-bold text-stone-800 mb-2">Cerrar Lingote</h3>
+          <p className="text-stone-500 text-sm mb-6">{cliente?.nombre} • {lingote.peso}g</p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Precio €/g (Base)</label>
-              <input type="number" step="0.01" value={formData.precioOnza} onChange={(e) => setFormData({ ...formData, precioOnza: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ej: 126.83" />
-              {formData.precioOnza && (
-                <div className="mt-2 p-3 bg-amber-50 rounded-xl">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-stone-600">Precio Cliente (+6%):</span>
-                    <span className="font-semibold text-amber-700">{formatNum(precioCliente)} €/g</span>
-                  </div>
-                </div>
-              )}
+              <label className="block text-sm font-medium text-stone-700 mb-1">Precio €/g</label>
+              <input type="number" step="0.01" value={formData.precio} onChange={(e) => setFormData({ ...formData, precio: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ej: 126.83" />
             </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Cierre</label>
@@ -660,15 +710,14 @@ export default function LingotesTracker({
               <label className="block text-sm font-medium text-stone-700 mb-1">Devolucion (gramos)</label>
               <input type="number" value={formData.devolucion} onChange={(e) => setFormData({ ...formData, devolucion: parseFloat(e.target.value) || 0 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="0" />
             </div>
-            {formData.precioOnza && (
+            {formData.precio && (
               <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-4">
                 <h4 className="font-semibold text-emerald-800 mb-3">Resumen</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-stone-600">Peso neto:</span><span className="font-mono">{pesoNeto}g</span></div>
-                  <div className="flex justify-between"><span className="text-stone-600">Precio base:</span><span className="font-mono">{formatNum(formData.precioOnza)} €/g</span></div>
-                  <div className="flex justify-between"><span className="text-stone-600">Precio cliente:</span><span className="font-mono text-amber-600">{formatNum(precioCliente)} €/g</span></div>
+                  <div className="flex justify-between"><span className="text-stone-600">Precio:</span><span className="font-mono">{formatNum(parseFloat(formData.precio))} €/g</span></div>
                   <div className="flex justify-between pt-2 border-t border-emerald-200">
-                    <span className="font-semibold text-emerald-800">IMPORTE TOTAL:</span>
+                    <span className="font-semibold text-emerald-800">IMPORTE:</span>
                     <span className="font-bold text-emerald-700 text-lg">{formatEur(importe)}</span>
                   </div>
                 </div>
@@ -676,8 +725,8 @@ export default function LingotesTracker({
             )}
           </div>
           <div className="flex gap-3 mt-6">
-            <Button variant="secondary" className="flex-1" onClick={() => { setShowCierreModal(false); setSelectedEntrega(null); }}>Cancelar</Button>
-            <Button variant="success" className="flex-1" disabled={!formData.precioOnza} onClick={() => cerrarEntrega(selectedEntrega.id, { precioOnza: parseFloat(formData.precioOnza), fechaCierre: formData.fechaCierre, nFactura: formData.nFactura, devolucion: formData.devolucion })}>
+            <Button variant="secondary" className="flex-1" onClick={() => { setShowCierreModal(false); setSelectedEntrega(null); setSelectedLingoteIdx(null); }}>Cancelar</Button>
+            <Button variant="success" className="flex-1" disabled={!formData.precio} onClick={() => cerrarLingote(selectedEntrega.id, selectedLingoteIdx, { precio: parseFloat(formData.precio), fechaCierre: formData.fechaCierre, nFactura: formData.nFactura, devolucion: formData.devolucion })}>
               Confirmar Cierre
             </Button>
           </div>
