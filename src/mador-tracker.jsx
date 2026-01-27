@@ -2179,8 +2179,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
         <div className="bg-white border border-amber-300 rounded-2xl w-full max-w-md shadow-xl flex flex-col my-auto" style={{ maxHeight: 'calc(100vh - 32px)' }}>
           <div className="p-4 border-b border-amber-200 flex-shrink-0">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold text-amber-800">
+            <div className="flex justify-between items-center gap-2">
+              <h3 className="text-xl font-bold text-amber-800 truncate min-w-0">
                 {modalType === 'paquete'
                   ? `Paquete ${getPaqueteTitulo()}`
                   : `${editingItem ? 'Editar' : 'Nueva'} ${modalType}`
@@ -2199,9 +2199,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     type="button"
                     disabled={leyendoFactura}
                     onClick={() => document.getElementById('leer-factura-input').click()}
-                    className="text-sm bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-200 border border-amber-300 disabled:opacity-50"
+                    className="flex-shrink-0 text-sm bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-200 border border-amber-300 disabled:opacity-50"
                   >
-                    {leyendoFactura ? '⏳ Leyendo...' : '📷 Leer factura'}
+                    {leyendoFactura ? '⏳ Leyendo...' : '🤖 Leer factura'}
                   </button>
                 </>
               )}
@@ -2387,36 +2387,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               
               {/* Líneas de oro */}
               <div className="border-t border-amber-200 pt-3 mt-3">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="text-amber-700 font-medium">📏 Líneas de Oro</h4>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const text = await navigator.clipboard.readText();
-                        if (!text?.trim()) { alert('Portapapeles vacío'); return; }
-                        // Parse lines: look for patterns like "245.10 g" + "ley 712" or "bruto: 245.10, ley: 712"
-                        const nuevas = [];
-                        const lines = text.split('\n');
-                        for (const line of lines) {
-                          // Try patterns: "123.45g x 712" or "123.45 712" or "bruto 123.45 ley 712"
-                          const m = line.match(/([\d.,]+)\s*g?\s*[x×\s]+\s*([\d.,]+)/i)
-                            || line.match(/bruto[:\s]*([\d.,]+).*?ley[:\s]*([\d.,]+)/i);
-                          if (m) {
-                            const bruto = parseFloat(m[1].replace(',', '.'));
-                            const ley = parseFloat(m[2].replace(',', '.'));
-                            if (bruto && ley) nuevas.push({ id: Date.now() + nuevas.length, bruto, ley });
-                          }
-                        }
-                        if (nuevas.length === 0) { alert('No se encontraron líneas de peso en el portapapeles.\nFormato esperado: "245.10g x 712.5" (una por línea)'); return; }
-                        setFormData({ ...formData, lineas: [...(formData.lineas || []), ...nuevas] });
-                      } catch (e) {
-                        alert('No se pudo acceder al portapapeles. Permite el acceso en tu navegador.');
-                      }
-                    }}
-                    className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded hover:bg-stone-200 border border-stone-300"
-                  >📋 Pegar</button>
-                </div>
+                <h4 className="text-amber-700 font-medium mb-2">📏 Líneas de Oro</h4>
                 
                 {/* Lista de líneas añadidas */}
                 {formData.lineas && formData.lineas.length > 0 && (
