@@ -768,7 +768,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               setShowTextModal(true);
             }}
           >
-            📋 Generar Texto OrCash
+            📋 Generar Texto
           </button>
           
           <Card style={{ backgroundColor: clienteColor + '10', borderColor: clienteColor + '40' }}>
@@ -2574,7 +2574,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
   const TextModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white border border-amber-300 rounded-2xl p-6 w-full max-w-lg shadow-xl">
-        <h3 className="text-xl font-bold text-amber-800 mb-4">📋 Texto OrCash</h3>
+        <h3 className="text-xl font-bold text-amber-800 mb-4">📋 Texto Generado</h3>
         <textarea 
           readOnly 
           value={textModalContent}
