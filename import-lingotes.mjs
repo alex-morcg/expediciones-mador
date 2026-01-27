@@ -127,8 +127,7 @@ async function main() {
     if (fechaStr.length > 20) continue;
 
     const precio = parseNumES(cols[3]);
-    // FUTURA without precio = "vendido sin stock" → import with estado "futura"
-    const isFuturaWithoutPrecio = (fechaStr === 'FUTURA' && precio === null);
+    const isFutura = fechaStr === 'FUTURA';
 
     const importe = parseNumES(cols[4]);
     const nFactura = (cols[5] || '').trim() || null;
@@ -145,8 +144,9 @@ async function main() {
 
     dataRows.push({
       clienteCSV,
-      fechaEntrega: fechaStr === 'stock' ? 'stock' : fechaStr === 'FUTURA' ? 'FUTURA' : parseDate(fechaStr),
+      fechaEntrega: fechaStr === 'stock' ? 'stock' : isFutura ? 'FUTURA' : parseDate(fechaStr),
       fechaEntregaRaw: fechaStr,
+      isFutura,
       peso,
       precio,
       importe,
@@ -155,7 +155,7 @@ async function main() {
       pesoCerrado,
       pesoDevuelto,
       exportacion,
-      estado: isFuturaWithoutPrecio ? 'futura' : (estado.includes('finalizado') ? 'finalizado' : 'en_curso'),
+      estado: estado.includes('finalizado') ? 'finalizado' : 'en_curso',
       pagado,
       esDevolucion: isPureDevolucion,
     });
@@ -196,7 +196,7 @@ async function main() {
 
   // 3. Clear existing lingotes data
   console.log('\nClearing existing lingotes data...');
-  for (const collName of ['lingotes_exportaciones', 'lingotes_entregas']) {
+  for (const collName of ['lingotes_exportaciones', 'lingotes_entregas', 'lingotes_futura']) {
     const snap = await getDocs(collection(db, collName));
     let count = 0;
     for (const d of snap.docs) {
@@ -230,10 +230,15 @@ async function main() {
   exportIdMap[null] = null;
   exportIdMap[''] = null;
 
-  // 5. Group rows into entregas: (clienteCSV + fechaEntregaRaw) = 1 entrega
-  console.log('\nGrouping into entregas...');
+  // 5. Separate FUTURA rows from regular rows
+  const futuraRows = dataRows.filter(r => r.isFutura);
+  const regularRows = dataRows.filter(r => !r.isFutura);
+  console.log(`\nFUTURA rows: ${futuraRows.length}, Regular rows: ${regularRows.length}`);
+
+  // 5a. Group regular rows into entregas: (clienteCSV + fechaEntregaRaw) = 1 entrega
+  console.log('\nGrouping regular rows into entregas...');
   const entregaGroups = {};
-  for (const row of dataRows) {
+  for (const row of regularRows) {
     const key = `${row.clienteCSV}|||${row.fechaEntregaRaw}`;
     if (!entregaGroups[key]) {
       entregaGroups[key] = {
@@ -288,6 +293,29 @@ async function main() {
 
   console.log(`Uploaded ${entregaCount} entregas with ${totalLingotes} lingotes total`);
 
+  // 6b. Upload FUTURA rows as standalone docs in lingotes_futura
+  console.log('\nUploading FUTURA lingotes...');
+  let futuraCount = 0;
+  for (const row of futuraRows) {
+    const clienteId = clienteIdMap[row.clienteCSV];
+    if (!clienteId) {
+      console.log(`  SKIP FUTURA: client "${row.clienteCSV}" not mapped`);
+      continue;
+    }
+
+    await addDoc(collection(db, 'lingotes_futura'), {
+      clienteId,
+      peso: row.peso,
+      precio: row.precio || null,
+      importe: row.importe || 0,
+      nFactura: row.nFactura || null,
+      fechaCierre: row.fechaCierre || null,
+      pagado: row.pagado || false,
+    });
+    futuraCount++;
+  }
+  console.log(`Uploaded ${futuraCount} FUTURA standalone lingotes`);
+
   // 7. Upload config
   console.log('\nUploading config...');
   await setDoc(doc(db, 'lingotes_config', 'settings'), {
@@ -302,7 +330,8 @@ async function main() {
   console.log('\n=== Summary ===');
   console.log(`Exportaciones: ${uniqueExports.length}`);
   console.log(`Entregas: ${entregaCount}`);
-  console.log(`Lingotes: ${totalLingotes}`);
+  console.log(`Lingotes (in entregas): ${totalLingotes}`);
+  console.log(`FUTURA (standalone): ${futuraCount}`);
 
   // Count per client
   const perClient = {};

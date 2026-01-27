@@ -63,10 +63,11 @@ export default function MadorTracker() {
     agregarEstado: fagregarEstado, eliminarEstado: feliminarEstado,
     guardarEdicionEstado: fguardarEdicionEstado,
     updateExpedicionResultados: fupdateResultados,
-    lingotesExportaciones, lingotesEntregas, lingotesConfig,
+    lingotesExportaciones, lingotesEntregas, lingotesConfig, lingotesFutura,
     saveLingoteExportacion, deleteLingoteExportacion,
     saveLingoteEntrega, deleteLingoteEntrega, updateLingoteEntrega,
     updateLingotesConfig,
+    saveLingoteFutura, deleteLingoteFutura, updateLingoteFutura,
   } = useFirestore();
 
   // Local UI state
@@ -2979,6 +2980,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         clientes={clientes}
         exportaciones={lingotesExportaciones}
         entregas={lingotesEntregas}
+        futuraLingotes={lingotesFutura}
         config={lingotesConfig}
         onBack={() => setShowLingotes(false)}
         onSaveExportacion={saveLingoteExportacion}
@@ -2987,6 +2989,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         onDeleteEntrega={deleteLingoteEntrega}
         onUpdateEntrega={updateLingoteEntrega}
         onUpdateConfig={updateLingotesConfig}
+        onSaveFutura={saveLingoteFutura}
+        onDeleteFutura={deleteLingoteFutura}
+        onUpdateFutura={updateLingoteFutura}
       />
     );
   }

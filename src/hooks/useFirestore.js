@@ -215,6 +215,7 @@ export function useFirestore() {
   const [lingotesExportaciones, setLingotesExportaciones] = useState([]);
   const [lingotesEntregas, setLingotesEntregas] = useState([]);
   const [lingotesConfig, setLingotesConfig] = useState({ stockMador: 0, umbralRojo: 200, umbralNaranja: 500, umbralAmarillo: 1000 });
+  const [lingotesFutura, setLingotesFutura] = useState([]);
   const [loading, setLoading] = useState(true);
   const seedTriggered = useRef(false);
 
@@ -230,7 +231,7 @@ export function useFirestore() {
     let cancelled = false;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 10;
+    const totalCollections = 11;
 
     const checkLoaded = () => {
       loadedCount++;
@@ -349,6 +350,16 @@ export function useFirestore() {
         checkLoaded();
       }, (error) => {
         console.error('Firestore error (lingotes_config):', error);
+        checkLoaded();
+      })
+    );
+
+    unsubscribers.push(
+      onSnapshot(collection(db, 'lingotes_futura'), (snap) => {
+        if (!cancelled) setLingotesFutura(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (lingotes_futura):', error);
         checkLoaded();
       })
     );
@@ -760,6 +771,19 @@ export function useFirestore() {
     await setDoc(doc(db, 'lingotes_config', 'settings'), data, { merge: true });
   };
 
+  // Lingotes Futura CRUD
+  const saveLingoteFutura = async (data) => {
+    await addDoc(collection(db, 'lingotes_futura'), data);
+  };
+
+  const deleteLingoteFutura = async (id) => {
+    await deleteDoc(doc(db, 'lingotes_futura', id));
+  };
+
+  const updateLingoteFutura = async (id, data) => {
+    await updateDoc(doc(db, 'lingotes_futura', id), data);
+  };
+
   return {
     // Data
     categorias,
@@ -806,11 +830,15 @@ export function useFirestore() {
     lingotesExportaciones,
     lingotesEntregas,
     lingotesConfig,
+    lingotesFutura,
     saveLingoteExportacion,
     deleteLingoteExportacion,
     saveLingoteEntrega,
     deleteLingoteEntrega,
     updateLingoteEntrega,
     updateLingotesConfig,
+    saveLingoteFutura,
+    deleteLingoteFutura,
+    updateLingoteFutura,
   };
 }
