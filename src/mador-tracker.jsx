@@ -2803,15 +2803,15 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       <span className="font-mono text-stone-400 text-center">{formatNum(eurGFras)}</span>
                       <span className={`font-mono text-right ${vals.margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(vals.margen, 0)}€</span>
                     </div>
-                    {/* Fila 2: grs bruto | €/g Sobra | € Sobra */}
+                    {/* Fila 2: grs extra | €/g Sobra | € Sobra */}
                     <div className="grid grid-cols-3 items-center text-xs mt-0.5">
-                      <span className="text-stone-400 font-mono">{formatNum(vals.bruto)}g</span>
+                      <span className="text-stone-400 font-mono">{formatNum(fsn)}g extra</span>
                       <span className="font-mono text-stone-400 text-center">{formatNum(eurGSobra)}</span>
                       <span className={`font-mono text-right ${euroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(euroSobra, 0)}€</span>
                     </div>
-                    {/* Fila 3: — | €/g Total | Mg Total */}
+                    {/* Fila 3: grs bruto | €/g Total | Mg Total */}
                     <div className="grid grid-cols-3 items-center mt-1 pt-1" style={{ borderTop: `1px solid ${color}20` }}>
-                      <span></span>
+                      <span className="text-stone-400 font-mono text-xs">{formatNum(vals.bruto)}g</span>
                       <span className={`font-mono font-bold text-sm text-center ${eurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(eurGBruto)}</span>
                       <span className={`font-mono font-bold text-sm text-right ${mgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(mgTotal, 0)}€</span>
                     </div>
@@ -2827,12 +2827,12 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 <span className={`font-mono text-right ${sumMgFras >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumMgFras, 0)}€</span>
               </div>
               <div className="grid grid-cols-3 items-center text-xs mt-0.5">
-                <span className="text-stone-400 font-mono">{formatNum(sumBruto)}g</span>
+                <span className="text-stone-400 font-mono">{formatNum(finoSobraNeto)}g extra</span>
                 <span className="font-mono text-stone-400 text-center">{formatNum(sumBruto > 0 ? sumEuroSobra / sumBruto : 0)}</span>
                 <span className={`font-mono text-right ${sumEuroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumEuroSobra, 0)}€</span>
               </div>
               <div className="grid grid-cols-3 items-center mt-1 pt-1 border-t border-amber-200">
-                <span></span>
+                <span className="text-stone-400 font-mono text-xs">{formatNum(sumBruto)}g</span>
                 <span className={`font-mono font-bold text-sm text-center ${totalEurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(totalEurGBruto)}</span>
                 <span className={`font-mono font-bold text-sm text-right ${sumMgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgTotal, 0)}€</span>
               </div>
