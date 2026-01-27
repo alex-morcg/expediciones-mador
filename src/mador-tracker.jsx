@@ -2719,7 +2719,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
       sumEuroSobra += euroSobra;
       sumMgTotal += mgTotal;
       sumBruto += vals.bruto;
-      return { clienteId, vals, finoSobraNeto, euroSobra, mgTotal, eurGBruto };
+      const eurGFras = vals.bruto > 0 ? vals.margen / vals.bruto : 0;
+      const eurGSobra = vals.bruto > 0 ? euroSobra / vals.bruto : 0;
+      return { clienteId, vals, finoSobraNeto, euroSobra, mgTotal, eurGBruto, eurGFras, eurGSobra };
     });
     const totalEurGBruto = sumBruto > 0 ? sumMgTotal / sumBruto : 0;
 
@@ -2731,43 +2733,49 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           {/* Resumen por Cliente */}
           <div className="mb-4">
             <div className="space-y-2">
-              {clienteRows.map(({ clienteId, vals, finoSobraNeto: fsn, euroSobra, mgTotal, eurGBruto }) => {
+              {clienteRows.map(({ clienteId, vals, finoSobraNeto: fsn, euroSobra, mgTotal, eurGBruto, eurGFras, eurGSobra }) => {
                 const cliente = getCliente(clienteId);
                 const color = cliente?.color || '#f59e0b';
                 return (
                   <div key={clienteId} className="rounded-lg p-3 border" style={{ backgroundColor: color + '10', borderColor: color + '40' }}>
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="flex justify-between items-center mb-1">
                       <span className="font-medium text-sm" style={{ color }}>{cliente?.nombre || 'Sin cliente'}</span>
                       <span className={`font-mono font-bold text-sm ${mgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatNum(mgTotal)} €
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-stone-500">
-                      <div>Mg Fras: <span className={`font-mono ${vals.margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(vals.margen)}€</span></div>
-                      <div>Sobra: <span className="text-stone-700 font-mono">{formatNum(fsn)}g</span></div>
-                      <div>€ Sobra: <span className={`font-mono ${euroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(euroSobra)}€</span></div>
-                      <div>€/g Bruto: <span className="text-stone-700 font-mono">{formatNum(eurGBruto)}</span></div>
+                    <div className="flex justify-between text-xs text-stone-500 mb-0.5">
+                      <span>Mg Fras: <span className={`font-mono ${vals.margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(vals.margen)}€</span></span>
+                      <span>€ Sobra: <span className={`font-mono ${euroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(euroSobra)}€</span></span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-stone-400 mb-1">
+                      <span>€/g Fras: <span className="font-mono">{formatNum(eurGFras)}</span></span>
+                      <span>€/g Sobra: <span className="font-mono">{formatNum(eurGSobra)}</span></span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-stone-500">€/g Bruto: </span>
+                      <span className={`font-mono font-bold text-sm ${eurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(eurGBruto)}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
             <div className="mt-2 border-t border-amber-200 pt-2 space-y-1">
-              <div className="flex justify-between items-center text-xs text-stone-500">
-                <span>Mg Fras</span>
-                <span className={`font-mono ${sumMgFras >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgFras)} €</span>
-              </div>
-              <div className="flex justify-between items-center text-xs text-stone-500">
-                <span>€ Sobra</span>
-                <span className={`font-mono ${sumEuroSobra >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumEuroSobra)} €</span>
-              </div>
               <div className="flex justify-between items-center text-sm font-semibold">
                 <span className="text-stone-600">Mg Total</span>
                 <span className={`font-mono ${sumMgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgTotal)} €</span>
               </div>
-              <div className="flex justify-between items-center text-xs text-stone-500">
-                <span>€/g Bruto</span>
-                <span className="font-mono text-stone-700">{formatNum(totalEurGBruto)} €</span>
+              <div className="flex justify-between text-xs text-stone-500">
+                <span>Mg Fras: <span className={`font-mono ${sumMgFras >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumMgFras)}€</span></span>
+                <span>€ Sobra: <span className={`font-mono ${sumEuroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumEuroSobra)}€</span></span>
+              </div>
+              <div className="flex justify-between text-[10px] text-stone-400">
+                <span>€/g Fras: <span className="font-mono">{formatNum(sumBruto > 0 ? sumMgFras / sumBruto : 0)}</span></span>
+                <span>€/g Sobra: <span className="font-mono">{formatNum(sumBruto > 0 ? sumEuroSobra / sumBruto : 0)}</span></span>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-stone-500">€/g Bruto: </span>
+                <span className={`font-mono font-bold text-sm ${totalEurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(totalEurGBruto)}</span>
               </div>
             </div>
           </div>
