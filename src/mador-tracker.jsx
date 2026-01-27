@@ -276,17 +276,22 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const deleteComentarioFromPaquete = (paqueteId, comentarioId) => fdeleteComentario(paqueteId, comentarioId, usuarioActivo);
 
   // Tab content components
-  const TabButton = ({ id, label, icon }) => (
+  const TabButton = ({ id, label, icon, badge }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex-1 py-3 px-2 text-xs sm:text-sm font-medium transition-all duration-300 ${
-        activeTab === id 
-          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-md' 
+      className={`flex-1 py-3 px-2 text-xs sm:text-sm font-medium transition-all duration-300 relative ${
+        activeTab === id
+          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-md'
           : 'text-amber-700 hover:text-amber-900 hover:bg-amber-100'
       }`}
       style={{ borderRadius: activeTab === id ? '8px' : '0' }}
     >
-      <span className="block">{icon}</span>
+      <span className="block relative inline-block">
+        {icon}
+        {badge > 0 && (
+          <span className="absolute -top-1 -right-3 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{badge}</span>
+        )}
+      </span>
       <span className="block mt-1">{label}</span>
     </button>
   );
@@ -1159,7 +1164,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           
           <div className="space-y-2">
             {(() => {
-              const sortedPaquetes = [...expedicionPaquetes].sort((a, b) => {
+              const basePaquetes = ordenVista === 'pendientes'
+                ? expedicionPaquetes.filter(p => !p.precioFino || !p.factura || !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre))
+                : expedicionPaquetes;
+              const sortedPaquetes = [...basePaquetes].sort((a, b) => {
                 if (ordenVista === 'cliente') {
                   const clienteA = getCliente(a.clienteId)?.nombre || '';
                   const clienteB = getCliente(b.clienteId)?.nombre || '';
@@ -1354,9 +1362,11 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             const esActual = exp.id === expedicionActualId;
             const precioRef = getPrecioRefExpedicion(exp.id);
             const expPaqs = paquetes.filter(p => p.expedicionId === exp.id);
-            const sinCerrar = expPaqs.filter(p => !p.precioFino).length;
-            const sinFactura = expPaqs.filter(p => p.precioFino && !p.factura).length;
-            const sinVerificar = expPaqs.filter(p => p.precioFino && p.factura && !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length;
+            const expNum = getExpNum(exp.nombre);
+            const showBadges = expNum > 52;
+            const sinCerrar = showBadges ? expPaqs.filter(p => !p.precioFino).length : 0;
+            const sinFactura = showBadges ? expPaqs.filter(p => p.precioFino && !p.factura).length : 0;
+            const sinVerificar = showBadges ? expPaqs.filter(p => p.precioFino && p.factura && !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length : 0;
             return (
               <Card key={exp.id} onClick={() => setSelectedExpedicion(exp.id)} className={esActual ? 'ring-2 ring-amber-400' : ''}>
                 <div className="flex justify-between items-start">
@@ -2629,6 +2639,13 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     );
   }
 
+  // Total pendientes across E53+ expeditions for tab badge
+  const totalPendientes = expediciones.reduce((sum, exp) => {
+    if (getExpNum(exp.nombre) <= 52) return sum;
+    const expPaqs = paquetes.filter(p => p.expedicionId === exp.id);
+    return sum + expPaqs.filter(p => !p.precioFino || !p.factura || !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length;
+  }, 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 text-stone-800">
       {/* Header + Nav sticky */}
@@ -2655,7 +2672,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         
         {/* Navigation */}
         <nav className="bg-white border-b border-amber-200 flex shadow-sm">
-          <TabButton id="expediciones" label="Expediciones" icon="📦" />
+          <TabButton id="expediciones" label="Expediciones" icon="📦" badge={totalPendientes} />
           <TabButton id="clientes" label="Clientes" icon="👥" />
           <TabButton id="parametros" label="Parámetros" icon="⚙️" />
           <TabButton id="estadisticas" label="Stats" icon="📊" />
@@ -2703,6 +2720,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     className="bg-amber-100 border border-amber-300 rounded-lg px-2 py-1 text-sm text-amber-800 font-medium focus:outline-none focus:border-amber-500"
                   >
                     <option value="normal">📋 Normal</option>
+                    <option value="pendientes">⚠️ Pendientes</option>
                     <option value="cliente">👥 Por cliente</option>
                     <option value="estado">📍 Por estado</option>
                     <option value="categoria">🏷️ Por categoría</option>
