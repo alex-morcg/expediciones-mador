@@ -1078,8 +1078,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           </Card>
 
           {/* Barra de seguro */}
-          {exp.seguro > 0 && (
-            {(() => {
+          {exp.seguro > 0 && (() => {
               const pct = (totales.totalFra / exp.seguro) * 100;
               const over = pct > 100;
               const maxPct = over ? pct : 100;
@@ -1108,7 +1107,6 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 </div>
               );
             })()}
-          )}
 
           <div className="flex justify-between items-center">
             <h3 className="text-amber-600 font-semibold">📦 Paquetes ({expedicionPaquetes.length})</h3>
