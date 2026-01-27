@@ -372,12 +372,6 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
         return;
       }
 
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-      if (!apiKey) {
-        alert('Falta configurar VITE_ANTHROPIC_API_KEY en las variables de entorno');
-        return;
-      }
-
       const esImagen = paq.factura.tipo?.startsWith('image/');
       const esPDF = paq.factura.tipo === 'application/pdf';
 
@@ -420,16 +414,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } };
 
       try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetch('/api/verify', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
             max_tokens: 500,
             messages: [{
               role: 'user',
@@ -2448,7 +2436,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.5</span>
+              <span className="text-xs text-white/50 font-mono">v0.5.1</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
