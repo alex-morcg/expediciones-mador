@@ -2997,7 +2997,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
       {modalOpen && <ModalForm />}
       {showTextModal && <TextModal />}
       <CategoriasResumenModal />
-      <ResultadosModal />
+      {ResultadosModal()}
     </div>
   );
 }
