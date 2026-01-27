@@ -391,20 +391,21 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
 
       const prompt = `Analiza esta factura/albarán y extrae:
 1. El importe TOTAL final (lo que paga el cliente)
-2. Todos los pesos brutos que aparezcan, con su ley/kilataje si se indica
+2. Cada línea de peso bruto con su ley/kilataje
 
 Nuestros datos del paquete son:
 - Total calculado: ${totales.totalFra.toFixed(2)} €
 - Líneas: ${lineasResumen}
 - Bruto total: ${totales.brutoTotal.toFixed(2)} g
-- Fino total: ${totales.finoTotal.toFixed(2)} g
+
+Compara CADA línea de peso de la factura con nuestras líneas. Indica discrepancias por línea de gramos (ej: "Línea 244.98g ley 712.5 en factura vs 245.10g ley 712.5 en datos"). NO menciones el total ni la diferencia de importes en las observaciones.
 
 Responde SOLO con JSON, sin texto adicional:
 {
   "total": número_o_null,
   "pesos": [{"bruto": número, "ley": número_o_null}],
   "pesosCuadran": true/false,
-  "observaciones": "texto breve si hay discrepancias"
+  "observaciones": "discrepancias por línea de gramos, o null si todo cuadra"
 }
 
 Usa punto decimal. Si no encuentras algo, pon null.`;
