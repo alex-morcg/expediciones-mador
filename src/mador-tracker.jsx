@@ -2976,7 +2976,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.8</span>
+              <span className="text-xs text-white/50 font-mono">v0.9</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
