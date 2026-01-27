@@ -1091,15 +1091,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     <span className="text-stone-500">Seguro</span>
                     <span className="text-stone-600 font-mono">{formatNum(totales.totalFra)} / {formatNum(exp.seguro)} €</span>
                   </div>
-                  <div className="relative w-full bg-stone-200 rounded-full h-3">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        pct > 100 ? 'bg-red-500' : pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
-                      }`}
-                      style={{ width: `${Math.min(100, barPct)}%` }}
-                    />
+                  <div className="relative w-full h-5">
+                    <div className="absolute top-1 w-full bg-stone-200 rounded-full h-3 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(100, barPct)}%` }}
+                      />
+                    </div>
                     {markPct && (
-                      <div className="absolute top-0 h-full w-0.5 bg-stone-800" style={{ left: `${markPct}%` }} title="Límite seguro" />
+                      <div className="absolute top-0 w-0.5 h-full bg-stone-800 rounded" style={{ left: `${markPct}%` }} title="Límite seguro" />
                     )}
                   </div>
                   <p className="text-right text-xs text-stone-400 mt-1">{formatNum(pct, 1)}%</p>
@@ -1403,15 +1405,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         <span className="text-stone-400">Seguro</span>
                         <span className="text-stone-500 font-mono">{formatNum(pct, 1)}%</span>
                       </div>
-                      <div className="relative w-full bg-stone-200 rounded-full h-2">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
-                          }`}
-                          style={{ width: `${barPct}%` }}
-                        />
+                      <div className="relative w-full h-4">
+                        <div className="absolute top-1 w-full bg-stone-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${barPct}%` }}
+                          />
+                        </div>
                         {markPct && (
-                          <div className="absolute top-0 h-full w-0.5 bg-stone-800" style={{ left: `${markPct}%` }} />
+                          <div className="absolute top-0 w-0.5 h-full bg-stone-800 rounded" style={{ left: `${markPct}%` }} />
                         )}
                       </div>
                     </div>
