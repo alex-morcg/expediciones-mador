@@ -155,7 +155,7 @@ async function main() {
       pesoCerrado,
       pesoDevuelto,
       exportacion,
-      estado: estado.includes('finalizado') ? 'finalizado' : 'en_curso',
+      estado: precio !== null ? (pagado ? 'finalizado' : 'pendiente_pago') : 'en_curso',
       pagado,
       esDevolucion: isPureDevolucion,
     });

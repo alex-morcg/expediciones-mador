@@ -30,18 +30,23 @@ const getEntregaColor = (fecha) => {
   return ENTREGA_COLORS[Math.abs(hash) % ENTREGA_COLORS.length];
 };
 
+// Lingote is "cerrado" when it has been closed (pendiente_pago or finalizado)
+const isCerrado = (l) => l.estado === 'pendiente_pago' || l.estado === 'finalizado';
+
 // Helper: sum all lingotes peso in an entrega
 const pesoEntrega = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.peso || 0), 0);
-const pesoCerrado = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado').reduce((s, l) => s + (l.peso || 0) - (l.pesoDevuelto || 0), 0);
+const pesoCerrado = (entrega) => (entrega.lingotes || []).filter(l => isCerrado(l)).reduce((s, l) => s + (l.peso || 0) - (l.pesoDevuelto || 0), 0);
 const pesoDevuelto = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.pesoDevuelto || 0), 0);
-const importeEntrega = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado').reduce((s, l) => s + (l.importe || 0), 0);
+const importeEntrega = (entrega) => (entrega.lingotes || []).filter(l => isCerrado(l)).reduce((s, l) => s + (l.importe || 0), 0);
 const numLingotes = (entrega) => (entrega.lingotes || []).length;
 const lingotesEnCurso = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'en_curso');
+const lingotesPendientePago = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'pendiente_pago');
 const lingotesFinalizados = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado');
-// An entrega is "finalizada" when ALL lingotes are finalizados
+const lingotesCerrados = (entrega) => (entrega.lingotes || []).filter(l => isCerrado(l));
+// An entrega is "finalizada" when ALL lingotes are cerrados (pendiente_pago or finalizado)
 const isEntregaFinalizada = (entrega) => {
   const all = entrega.lingotes || [];
-  return all.length > 0 && all.every(l => l.estado === 'finalizado');
+  return all.length > 0 && all.every(l => isCerrado(l));
 };
 const isEntregaEnCurso = (entrega) => !isEntregaFinalizada(entrega);
 
@@ -72,6 +77,7 @@ export default function LingotesTracker({
   const [entregaFilter, setEntregaFilter] = useState('en_curso');
   const [showFuturaModal, setShowFuturaModal] = useState(false);
   const [showAssignFuturaModal, setShowAssignFuturaModal] = useState(false);
+  const [selectedFuturaId, setSelectedFuturaId] = useState(null);
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -169,15 +175,16 @@ export default function LingotesTracker({
     for (const fId of futuraIds) {
       const f = (futuraLingotes || []).find(fl => fl.id === fId);
       if (!f) continue;
+      const hasPrecio = !!f.precio;
       newLingotes.push({
         peso: f.peso,
         precio: f.precio || null,
         importe: f.importe || 0,
         nFactura: f.nFactura || null,
         fechaCierre: f.fechaCierre || null,
-        pesoCerrado: f.precio ? f.peso : 0,
+        pesoCerrado: hasPrecio ? f.peso : 0,
         pesoDevuelto: 0,
-        estado: f.precio ? 'finalizado' : 'en_curso',
+        estado: hasPrecio ? (f.pagado ? 'finalizado' : 'pendiente_pago') : 'en_curso',
         pagado: f.pagado || false,
         esDevolucion: false,
       });
@@ -208,11 +215,28 @@ export default function LingotesTracker({
       fechaCierre: data.fechaCierre,
       pesoCerrado: lingotes[lingoteIdx].peso,
       pesoDevuelto: data.devolucion || 0,
-      estado: 'finalizado',
-      pagado: data.pagado || false,
+      estado: 'pendiente_pago',
+      pagado: false,
     };
     await onUpdateEntrega(entregaId, { lingotes });
     setShowCierreModal(false);
+    setSelectedEntrega(null);
+    setSelectedLingoteIdx(null);
+    setSelectedFuturaId(null);
+  };
+
+  const cerrarFutura = async (futuraId, data) => {
+    const f = (futuraLingotes || []).find(fl => fl.id === futuraId);
+    if (!f) return;
+    const pesoNeto = (f.peso || 0) - (data.devolucion || 0);
+    await onUpdateFutura(futuraId, {
+      precio: data.precio,
+      importe: data.precio * pesoNeto,
+      nFactura: data.nFactura || null,
+      fechaCierre: data.fechaCierre || null,
+    });
+    setShowCierreModal(false);
+    setSelectedFuturaId(null);
     setSelectedEntrega(null);
     setSelectedLingoteIdx(null);
   };
@@ -221,7 +245,14 @@ export default function LingotesTracker({
     const entrega = entregas.find(e => e.id === entregaId);
     if (!entrega) return;
     const lingotes = [...entrega.lingotes];
-    lingotes[lingoteIdx] = { ...lingotes[lingoteIdx], pagado: !lingotes[lingoteIdx].pagado };
+    const l = lingotes[lingoteIdx];
+    if (l.estado === 'pendiente_pago') {
+      // Mark as paid → finalizado
+      lingotes[lingoteIdx] = { ...l, pagado: true, estado: 'finalizado' };
+    } else if (l.estado === 'finalizado') {
+      // Unmark paid → back to pendiente_pago
+      lingotes[lingoteIdx] = { ...l, pagado: false, estado: 'pendiente_pago' };
+    }
     await onUpdateEntrega(entregaId, { lingotes });
   };
 
@@ -367,12 +398,12 @@ export default function LingotesTracker({
     // Entregas with en_curso lingotes
     const entregasConEnCurso = entregasFiltered.filter(e => lingotesEnCurso(e).length > 0);
 
-    // All finalizados as flat list with entrega info, sorted by entrega date desc
-    const allLingotesFinalizados = [...entregasFiltered]
+    // All cerrados (pendiente_pago + finalizado) as flat list with entrega info, sorted by entrega date desc
+    const allLingotesCerrados = [...entregasFiltered]
       .sort((a, b) => (b.fechaEntrega || '').localeCompare(a.fechaEntrega || ''))
       .flatMap(e =>
         (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx, fechaEntrega: e.fechaEntrega }))
-      ).filter(l => l.estado === 'finalizado');
+      ).filter(l => l.estado === 'pendiente_pago' || l.estado === 'finalizado');
 
     // FUTURA orphan lingotes for this client
     const clienteFutura = (futuraLingotes || []).filter(f => f.clienteId === cliente.id);
@@ -444,7 +475,12 @@ export default function LingotesTracker({
                     {f.precio ? (
                       <span className="text-xs text-stone-500">{formatNum(f.precio)} €/g &bull; {f.nFactura || '-'}</span>
                     ) : (
-                      <span className="text-xs text-red-400">sin precio</span>
+                      <>
+                        <span className="text-xs text-red-400">sin precio</span>
+                        <Button size="sm" variant="success" onClick={() => { setSelectedFuturaId(f.id); setShowCierreModal(true); }}>
+                          Cerrar
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -506,10 +542,10 @@ export default function LingotesTracker({
         )}
 
         {/* Finalizados table with Entrega column */}
-        {allLingotesFinalizados.length > 0 && (
+        {allLingotesCerrados.length > 0 && (
           <Card>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-stone-800">Finalizados ({allLingotesFinalizados.length})</h3>
+              <h3 className="font-bold text-stone-800">Cerrados ({allLingotesCerrados.length})</h3>
               <div className="text-sm text-stone-500">
                 Importe: <span className="font-semibold text-emerald-600">{formatEur(filteredImporte)}</span>
               </div>
@@ -527,8 +563,8 @@ export default function LingotesTracker({
                   </tr>
                 </thead>
                 <tbody>
-                  {allLingotesFinalizados.map((l, i) => (
-                    <tr key={i} className="border-b border-stone-100 hover:bg-stone-50">
+                  {allLingotesCerrados.map((l, i) => (
+                    <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-amber-50/50' : 'hover:bg-stone-50'}`}>
                       <td className="py-2 px-1">
                         {l.fechaEntrega ? (
                           <span
@@ -885,26 +921,41 @@ export default function LingotesTracker({
     );
   };
 
-  // Cierre Modal - close a single lingote
+  // Cierre Modal - close a single lingote (entrega or futura standalone)
   const CierreModal = () => {
-    const lingote = selectedEntrega?.lingotes?.[selectedLingoteIdx];
+    const isFuturaCierre = !!selectedFuturaId;
+    const futuraDoc = isFuturaCierre ? (futuraLingotes || []).find(f => f.id === selectedFuturaId) : null;
+    const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
     const [formData, setFormData] = useState({
       precio: lingote?.precio || '',
       fechaCierre: new Date().toISOString().split('T')[0],
-      nFactura: '',
+      nFactura: lingote?.nFactura || '',
       devolucion: 0,
     });
 
-    if (!selectedEntrega || selectedLingoteIdx === null || !lingote) return null;
-    const cliente = getCliente(selectedEntrega.clienteId);
+    const closeCierreModal = () => { setShowCierreModal(false); setSelectedEntrega(null); setSelectedLingoteIdx(null); setSelectedFuturaId(null); };
+
+    if (!lingote) return null;
+    if (!isFuturaCierre && (!selectedEntrega || selectedLingoteIdx === null)) return null;
+
+    const clienteId = isFuturaCierre ? futuraDoc.clienteId : selectedEntrega.clienteId;
+    const cliente = getCliente(clienteId);
     const pesoNeto = (lingote.peso || 0) - formData.devolucion;
     const importe = formData.precio ? pesoNeto * parseFloat(formData.precio) : 0;
 
+    const handleConfirm = () => {
+      if (isFuturaCierre) {
+        cerrarFutura(selectedFuturaId, { precio: parseFloat(formData.precio), fechaCierre: formData.fechaCierre, nFactura: formData.nFactura, devolucion: formData.devolucion });
+      } else {
+        cerrarLingote(selectedEntrega.id, selectedLingoteIdx, { precio: parseFloat(formData.precio), fechaCierre: formData.fechaCierre, nFactura: formData.nFactura, devolucion: formData.devolucion });
+      }
+    };
+
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowCierreModal(false); setSelectedEntrega(null); setSelectedLingoteIdx(null); }}>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeCierreModal}>
         <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <h3 className="text-xl font-bold text-stone-800 mb-2">Cerrar Lingote</h3>
-          <p className="text-stone-500 text-sm mb-6">{cliente?.nombre} • {lingote.peso}g</p>
+          <p className="text-stone-500 text-sm mb-6">{cliente?.nombre} • {lingote.peso}g{isFuturaCierre ? ' (FUTURA)' : ''}</p>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Precio €/g</label>
@@ -918,10 +969,12 @@ export default function LingotesTracker({
               <label className="block text-sm font-medium text-stone-700 mb-1">N Factura</label>
               <input type="text" value={formData.nFactura} onChange={(e) => setFormData({ ...formData, nFactura: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ej: 2026-1.pdf" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Devolucion (gramos)</label>
-              <input type="number" value={formData.devolucion} onChange={(e) => setFormData({ ...formData, devolucion: parseFloat(e.target.value) || 0 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="0" />
-            </div>
+            {!isFuturaCierre && (
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Devolucion (gramos)</label>
+                <input type="number" value={formData.devolucion} onChange={(e) => setFormData({ ...formData, devolucion: parseFloat(e.target.value) || 0 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="0" />
+              </div>
+            )}
             {formData.precio && (
               <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-4">
                 <h4 className="font-semibold text-emerald-800 mb-3">Resumen</h4>
@@ -937,8 +990,8 @@ export default function LingotesTracker({
             )}
           </div>
           <div className="flex gap-3 mt-6">
-            <Button variant="secondary" className="flex-1" onClick={() => { setShowCierreModal(false); setSelectedEntrega(null); setSelectedLingoteIdx(null); }}>Cancelar</Button>
-            <Button variant="success" className="flex-1" disabled={!formData.precio} onClick={() => cerrarLingote(selectedEntrega.id, selectedLingoteIdx, { precio: parseFloat(formData.precio), fechaCierre: formData.fechaCierre, nFactura: formData.nFactura, devolucion: formData.devolucion })}>
+            <Button variant="secondary" className="flex-1" onClick={closeCierreModal}>Cancelar</Button>
+            <Button variant="success" className="flex-1" disabled={!formData.precio} onClick={handleConfirm}>
               Confirmar Cierre
             </Button>
           </div>
