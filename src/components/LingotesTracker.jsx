@@ -18,6 +18,12 @@ const lingotesFinalizados = (entrega) => (entrega.lingotes || []).filter(l => l.
 const lingotesFutura = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'futura');
 const pesoFutura = (entrega) => lingotesFutura(entrega).reduce((s, l) => s + (l.peso || 0), 0);
 const isFuturaEntrega = (entrega) => entrega.fechaEntrega === 'FUTURA';
+// An entrega is "finalizada" when ALL non-futura lingotes are finalizados
+const isEntregaFinalizada = (entrega) => {
+  const nonFutura = (entrega.lingotes || []).filter(l => l.estado !== 'futura');
+  return nonFutura.length > 0 && nonFutura.every(l => l.estado === 'finalizado');
+};
+const isEntregaEnCurso = (entrega) => !isFuturaEntrega(entrega) && !isEntregaFinalizada(entrega);
 
 export default function LingotesTracker({
   clientes,
@@ -39,6 +45,7 @@ export default function LingotesTracker({
   const [selectedEntrega, setSelectedEntrega] = useState(null);
   const [selectedLingoteIdx, setSelectedLingoteIdx] = useState(null);
   const [editingEntregaClienteId, setEditingEntregaClienteId] = useState(null);
+  const [entregaFilter, setEntregaFilter] = useState('en_curso'); // 'en_curso' | 'finalizada' | 'todas'
   const [showFuturaModal, setShowFuturaModal] = useState(false);
   const [showAssignFuturaModal, setShowAssignFuturaModal] = useState(false);
   const [assignFuturaTarget, setAssignFuturaTarget] = useState(null);
@@ -322,22 +329,54 @@ export default function LingotesTracker({
   const ClienteDetalle = () => {
     const cliente = getCliente(selectedCliente);
     if (!cliente) return null;
-    const entregasCliente = entregas.filter(e => e.clienteId === cliente.id);
-    const stats = statsClientes.find(s => s.id === cliente.id);
+    const allEntregasCliente = entregas.filter(e => e.clienteId === cliente.id && !isFuturaEntrega(e));
 
-    // Separate entregas that have any en_curso lingotes (exclude FUTURA entregas)
-    const entregasConEnCurso = entregasCliente.filter(e => !isFuturaEntrega(e) && lingotesEnCurso(e).length > 0);
-    // All lingotes finalizados across all entregas
-    const allLingotesFinalizados = entregasCliente.flatMap(e =>
+    // Count entregas by status (for filter badges)
+    const countEnCurso = allEntregasCliente.filter(e => isEntregaEnCurso(e)).length;
+    const countFinalizadas = allEntregasCliente.filter(e => isEntregaFinalizada(e)).length;
+
+    // Apply filter
+    const entregasFiltered = entregaFilter === 'en_curso'
+      ? allEntregasCliente.filter(e => isEntregaEnCurso(e))
+      : entregaFilter === 'finalizada'
+        ? allEntregasCliente.filter(e => isEntregaFinalizada(e))
+        : allEntregasCliente;
+
+    // Stats from filtered entregas
+    const filteredEntregado = entregasFiltered.reduce((sum, e) => sum + pesoEntrega(e), 0);
+    const filteredCerrado = entregasFiltered.reduce((sum, e) => sum + pesoCerrado(e), 0);
+    const filteredDevuelto = entregasFiltered.reduce((sum, e) => sum + pesoDevuelto(e), 0);
+    const filteredPendiente = filteredEntregado - filteredCerrado - filteredDevuelto;
+    const filteredImporte = entregasFiltered.reduce((sum, e) => sum + importeEntrega(e), 0);
+
+    // Entregas with en_curso lingotes (for the "En Curso" section)
+    const entregasConEnCurso = entregasFiltered.filter(e => lingotesEnCurso(e).length > 0);
+    // All finalizados lingotes from filtered entregas
+    const allLingotesFinalizados = entregasFiltered.flatMap(e =>
       (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx, fechaEntrega: e.fechaEntrega }))
     ).filter(l => l.estado === 'finalizado');
-    // FUTURA lingotes
-    const futuraEntregasCliente = entregasCliente.filter(e => isFuturaEntrega(e));
+
+    // FUTURA lingotes (always shown, not affected by filter)
+    const futuraEntregasCliente = entregas.filter(e => e.clienteId === cliente.id && isFuturaEntrega(e));
     const allFuturaLingotes = futuraEntregasCliente.flatMap(e =>
       (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx }))
     ).filter(l => l.estado === 'futura');
+    const futuraWeight = futuraEntregasCliente.reduce((sum, e) => sum + pesoFutura(e), 0);
     // Potential targets for assigning futura
-    const targetEntregasForAssign = entregasCliente.filter(e => !isFuturaEntrega(e) && lingotesEnCurso(e).length > 0);
+    const targetEntregasForAssign = entregas.filter(e => e.clienteId === cliente.id && !isFuturaEntrega(e) && lingotesEnCurso(e).length > 0);
+
+    const FilterBtn = ({ id, label, count }) => (
+      <button
+        onClick={() => setEntregaFilter(id)}
+        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+          entregaFilter === id
+            ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-sm'
+            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+        }`}
+      >
+        {label} {count > 0 ? `(${count})` : ''}
+      </button>
+    );
 
     return (
       <div className="space-y-5">
@@ -349,23 +388,30 @@ export default function LingotesTracker({
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
             <div className="grid grid-cols-4 gap-3 mt-4">
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(stats?.entregado || 0, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(filteredEntregado, 0)}</div>
                 <div className="text-xs text-white/70">Entregado</div>
               </div>
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(stats?.cerrado || 0, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(filteredCerrado, 0)}</div>
                 <div className="text-xs text-white/70">Cerrado</div>
               </div>
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(stats?.devuelto || 0, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(filteredDevuelto, 0)}</div>
                 <div className="text-xs text-white/70">Devuelto</div>
               </div>
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(stats?.pendiente || 0, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(filteredPendiente, 0)}</div>
                 <div className="text-xs text-white/70">Pendiente</div>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Filter buttons */}
+        <div className="flex gap-2">
+          <FilterBtn id="en_curso" label="En Curso" count={countEnCurso} />
+          <FilterBtn id="finalizada" label="Finalizadas" count={countFinalizadas} />
+          <FilterBtn id="todas" label="Todas" count={allEntregasCliente.length} />
         </div>
 
         {allFuturaLingotes.length > 0 && (
@@ -373,7 +419,7 @@ export default function LingotesTracker({
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-bold text-red-800">Vendido sin Stock</h3>
               <div className="text-sm text-red-600 font-semibold">
-                {allFuturaLingotes.length} lingotes &bull; -{formatNum(stats?.futuraWeight || 0, 0)}g
+                {allFuturaLingotes.length} lingotes &bull; -{formatNum(futuraWeight, 0)}g
               </div>
             </div>
             <div className="space-y-1">
@@ -438,50 +484,57 @@ export default function LingotesTracker({
           </Card>
         )}
 
-        <Card>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-stone-800">Finalizados ({allLingotesFinalizados.length})</h3>
-            <div className="text-sm text-stone-500">
-              Importe: <span className="font-semibold text-emerald-600">{formatEur(stats?.importeTotal || 0)}</span>
+        {allLingotesFinalizados.length > 0 && (
+          <Card>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-stone-800">Finalizados ({allLingotesFinalizados.length})</h3>
+              <div className="text-sm text-stone-500">
+                Importe: <span className="font-semibold text-emerald-600">{formatEur(filteredImporte)}</span>
+              </div>
             </div>
-          </div>
-          <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-stone-200">
-                  <th className="text-left py-2 px-1 text-stone-500 font-medium text-xs">Cierre</th>
-                  <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Peso</th>
-                  <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">€/g</th>
-                  <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Importe</th>
-                  <th className="text-center py-2 px-1 text-stone-500 font-medium text-xs">Pagado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allLingotesFinalizados.map((l, i) => (
-                  <tr key={i} className="border-b border-stone-100 hover:bg-stone-50">
-                    <td className="py-2 px-1 text-xs">{l.fechaCierre || '-'}</td>
-                    <td className="py-2 px-1 text-right font-mono text-xs">{l.peso}g</td>
-                    <td className="py-2 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
-                    <td className="py-2 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
-                    <td className="py-2 px-1 text-center">
-                      <button
-                        onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
-                          l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
-                        }`}
-                      >
-                        {l.pagado && '✓'}
-                      </button>
-                    </td>
+            <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-stone-200">
+                    <th className="text-left py-2 px-1 text-stone-500 font-medium text-xs">Cierre</th>
+                    <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Peso</th>
+                    <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">€/g</th>
+                    <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Importe</th>
+                    <th className="text-center py-2 px-1 text-stone-500 font-medium text-xs">Pagado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {allLingotesFinalizados.length === 0 && (
-            <p className="text-stone-400 text-center py-6 text-sm">No hay lingotes finalizados</p>
-          )}
-        </Card>
+                </thead>
+                <tbody>
+                  {allLingotesFinalizados.map((l, i) => (
+                    <tr key={i} className="border-b border-stone-100 hover:bg-stone-50">
+                      <td className="py-2 px-1 text-xs">{l.fechaCierre || '-'}</td>
+                      <td className="py-2 px-1 text-right font-mono text-xs">{l.peso}g</td>
+                      <td className="py-2 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
+                      <td className="py-2 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
+                      <td className="py-2 px-1 text-center">
+                        <button
+                          onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
+                            l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
+                          }`}
+                        >
+                          {l.pagado && '✓'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {entregasFiltered.length === 0 && (
+          <Card>
+            <p className="text-stone-400 text-center py-6 text-sm">
+              {entregaFilter === 'en_curso' ? 'No hay entregas en curso' : entregaFilter === 'finalizada' ? 'No hay entregas finalizadas' : 'No hay entregas'}
+            </p>
+          </Card>
+        )}
 
         <div className="flex gap-3">
           <Button className="flex-1" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
