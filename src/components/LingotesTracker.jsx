@@ -207,10 +207,16 @@ export default function LingotesTracker({
     const entrega = entregas.find(e => e.id === entregaId);
     if (!entrega) return;
     const lingotes = [...entrega.lingotes];
+    const pesoNeto = (lingotes[lingoteIdx].peso || 0) - (data.devolucion || 0);
     lingotes[lingoteIdx] = {
       ...lingotes[lingoteIdx],
+      euroOnza: data.euroOnza || null,
+      base: data.base || null,
+      precioJofisa: data.precioJofisa || null,
+      importeJofisa: data.importeJofisa || 0,
+      margen: data.margen || 0,
       precio: data.precio,
-      importe: data.precio * ((lingotes[lingoteIdx].peso || 0) - (data.devolucion || 0)),
+      importe: data.precio * pesoNeto,
       nFactura: data.nFactura,
       fechaCierre: data.fechaCierre,
       pesoCerrado: lingotes[lingoteIdx].peso,
@@ -230,6 +236,11 @@ export default function LingotesTracker({
     if (!f) return;
     const pesoNeto = (f.peso || 0) - (data.devolucion || 0);
     await onUpdateFutura(futuraId, {
+      euroOnza: data.euroOnza || null,
+      base: data.base || null,
+      precioJofisa: data.precioJofisa || null,
+      importeJofisa: data.importeJofisa || 0,
+      margen: data.margen || 0,
       precio: data.precio,
       importe: data.precio * pesoNeto,
       nFactura: data.nFactura || null,
@@ -926,8 +937,11 @@ export default function LingotesTracker({
     const isFuturaCierre = !!selectedFuturaId;
     const futuraDoc = isFuturaCierre ? (futuraLingotes || []).find(f => f.id === selectedFuturaId) : null;
     const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
+    const [jofisaAutoFilled, setJofisaAutoFilled] = useState(false);
     const [formData, setFormData] = useState({
-      precio: lingote?.precio || '',
+      euroOnza: lingote?.euroOnza || '',
+      precioJofisa: lingote?.precioJofisa || '',
+      margen: 6,
       fechaCierre: new Date().toISOString().split('T')[0],
       nFactura: lingote?.nFactura || '',
       devolucion: 0,
@@ -941,13 +955,38 @@ export default function LingotesTracker({
     const clienteId = isFuturaCierre ? futuraDoc.clienteId : selectedEntrega.clienteId;
     const cliente = getCliente(clienteId);
     const pesoNeto = (lingote.peso || 0) - formData.devolucion;
-    const importe = formData.precio ? pesoNeto * parseFloat(formData.precio) : 0;
+
+    // Calculations
+    const euroOnzaNum = parseFloat(formData.euroOnza) || 0;
+    const base = euroOnzaNum ? Math.ceil((euroOnzaNum / 31.10349) * 100) / 100 : 0;
+    const precioJofisaNum = parseFloat(formData.precioJofisa) || 0;
+    const importeJofisa = precioJofisaNum * pesoNeto;
+    const margenNum = parseFloat(formData.margen) || 0;
+    const precioCliente = base ? Math.round((base * (1 + margenNum / 100)) * 100) / 100 : 0;
+    const importeCliente = precioCliente * pesoNeto;
+
+    // Auto-fill precioJofisa from base (one time only)
+    if (base > 0 && !jofisaAutoFilled && !formData.precioJofisa) {
+      setFormData(prev => ({ ...prev, precioJofisa: base.toFixed(2) }));
+      setJofisaAutoFilled(true);
+    }
 
     const handleConfirm = () => {
+      const cierreData = {
+        euroOnza: euroOnzaNum,
+        base,
+        precioJofisa: precioJofisaNum,
+        importeJofisa,
+        margen: margenNum,
+        precio: precioCliente,
+        fechaCierre: formData.fechaCierre,
+        nFactura: formData.nFactura,
+        devolucion: formData.devolucion,
+      };
       if (isFuturaCierre) {
-        cerrarFutura(selectedFuturaId, { precio: parseFloat(formData.precio), fechaCierre: formData.fechaCierre, nFactura: formData.nFactura, devolucion: formData.devolucion });
+        cerrarFutura(selectedFuturaId, cierreData);
       } else {
-        cerrarLingote(selectedEntrega.id, selectedLingoteIdx, { precio: parseFloat(formData.precio), fechaCierre: formData.fechaCierre, nFactura: formData.nFactura, devolucion: formData.devolucion });
+        cerrarLingote(selectedEntrega.id, selectedLingoteIdx, cierreData);
       }
     };
 
@@ -958,8 +997,41 @@ export default function LingotesTracker({
           <p className="text-stone-500 text-sm mb-6">{cliente?.nombre} • {lingote.peso}g{isFuturaCierre ? ' (FUTURA)' : ''}</p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Precio €/g</label>
-              <input type="number" step="0.01" value={formData.precio} onChange={(e) => setFormData({ ...formData, precio: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ej: 126.83" />
+              <label className="block text-sm font-medium text-stone-700 mb-1">€/Onza</label>
+              <input type="number" step="0.01" value={formData.euroOnza} onChange={(e) => setFormData({ ...formData, euroOnza: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ej: 3693,42" autoFocus />
+            </div>
+            {base > 0 && (
+              <div className="bg-stone-50 rounded-xl p-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-500">Base (€/Onza ÷ 31,10349):</span>
+                  <span className="font-mono font-semibold text-stone-800">{formatNum(base)} €/g</span>
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
+              <input type="number" step="0.01" value={formData.precioJofisa} onChange={(e) => { setFormData({ ...formData, precioJofisa: e.target.value }); setJofisaAutoFilled(true); }} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Auto desde base" />
+            </div>
+            {precioJofisaNum > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-blue-600">Importe Jofisa:</span>
+                  <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisa)}</span>
+                </div>
+                <div className="text-xs text-blue-400 mt-0.5">{pesoNeto}g x {formatNum(precioJofisaNum)} €/g</div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Margen %</label>
+                <input type="number" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Precio Cliente</label>
+                <div className="w-full border border-stone-200 bg-stone-50 rounded-xl px-4 py-3 font-mono text-stone-800">
+                  {precioCliente ? formatNum(precioCliente) : '-'}
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Cierre</label>
@@ -975,15 +1047,15 @@ export default function LingotesTracker({
                 <input type="number" value={formData.devolucion} onChange={(e) => setFormData({ ...formData, devolucion: parseFloat(e.target.value) || 0 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="0" />
               </div>
             )}
-            {formData.precio && (
+            {precioCliente > 0 && (
               <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-4">
-                <h4 className="font-semibold text-emerald-800 mb-3">Resumen</h4>
+                <h4 className="font-semibold text-emerald-800 mb-3">Resumen Cliente</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-stone-600">Peso neto:</span><span className="font-mono">{pesoNeto}g</span></div>
-                  <div className="flex justify-between"><span className="text-stone-600">Precio:</span><span className="font-mono">{formatNum(parseFloat(formData.precio))} €/g</span></div>
+                  <div className="flex justify-between"><span className="text-stone-600">Precio cliente:</span><span className="font-mono">{formatNum(precioCliente)} €/g</span></div>
                   <div className="flex justify-between pt-2 border-t border-emerald-200">
-                    <span className="font-semibold text-emerald-800">IMPORTE:</span>
-                    <span className="font-bold text-emerald-700 text-lg">{formatEur(importe)}</span>
+                    <span className="font-semibold text-emerald-800">IMPORTE CLIENTE:</span>
+                    <span className="font-bold text-emerald-700 text-lg">{formatEur(importeCliente)}</span>
                   </div>
                 </div>
               </div>
@@ -991,7 +1063,7 @@ export default function LingotesTracker({
           </div>
           <div className="flex gap-3 mt-6">
             <Button variant="secondary" className="flex-1" onClick={closeCierreModal}>Cancelar</Button>
-            <Button variant="success" className="flex-1" disabled={!formData.precio} onClick={handleConfirm}>
+            <Button variant="success" className="flex-1" disabled={!precioCliente} onClick={handleConfirm}>
               Confirmar Cierre
             </Button>
           </div>
