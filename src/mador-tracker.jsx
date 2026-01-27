@@ -2067,6 +2067,92 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     };
 
     const [showConfirmExit, setShowConfirmExit] = useState(false);
+    const [leyendoFactura, setLeyendoFactura] = useState(false);
+
+    const leerFacturaConIA = async (file) => {
+      if (!file) return;
+      setLeyendoFactura(true);
+      try {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const base64Data = base64.split(',')[1];
+        const esImagen = file.type.startsWith('image/');
+        const esPDF = file.type === 'application/pdf';
+        if (!esImagen && !esPDF) { alert('Solo imágenes o PDFs'); setLeyendoFactura(false); return; }
+
+        const clientesList = clientes.map(c => c.nombre).join(', ');
+        const archivoContent = esImagen
+          ? { type: 'image', source: { type: 'base64', media_type: file.type, data: base64Data } }
+          : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } };
+
+        const response = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            max_tokens: 800,
+            messages: [{
+              role: 'user',
+              content: [
+                archivoContent,
+                { type: 'text', text: `Analiza esta factura/albarán y extrae:
+1. Todas las líneas de peso bruto (en gramos) con su ley/kilataje
+2. El nombre del cliente o empresa (mira el logo, encabezado, o nombre que aparezca)
+
+Clientes conocidos: ${clientesList}
+
+Responde SOLO con JSON, sin texto adicional:
+{
+  "lineas": [{"bruto": número, "ley": número}],
+  "cliente": "nombre exacto de la lista de clientes conocidos, o null si no lo reconoces"
+}
+
+Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
+              ]
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const texto = data.content?.[0]?.text || '';
+        const jsonMatch = texto.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) { alert('No se pudo leer la factura'); setLeyendoFactura(false); return; }
+
+        const resultado = JSON.parse(jsonMatch[0]);
+        const nuevasLineas = (resultado.lineas || [])
+          .filter(l => l.bruto && l.ley)
+          .map((l, i) => ({ id: Date.now() + i, bruto: l.bruto, ley: l.ley }));
+
+        const updates = { ...formData, lineas: [...(formData.lineas || []), ...nuevasLineas] };
+
+        if (resultado.cliente) {
+          const match = clientes.find(c => c.nombre.toLowerCase() === resultado.cliente.toLowerCase());
+          if (match) {
+            const cat = getCategoria(updates.categoriaId);
+            updates.clienteId = match.id;
+            updates.descuento = cat?.esFino ? match.descuentoFino : match.descuentoEstandar || 5;
+          }
+        }
+
+        setFormData(updates);
+        if (nuevasLineas.length > 0) {
+          alert(`Leídas ${nuevasLineas.length} líneas` + (resultado.cliente ? ` — Cliente: ${resultado.cliente}` : ''));
+        } else {
+          alert('No se encontraron líneas de peso en el documento');
+        }
+      } catch (e) {
+        alert('Error al leer factura: ' + e.message);
+      }
+      setLeyendoFactura(false);
+    };
 
     const handleClose = () => {
       if (modalType === 'paquete' && !editingItem) {
@@ -2095,12 +2181,33 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
         <div className="bg-white border border-amber-300 rounded-2xl w-full max-w-md shadow-xl flex flex-col my-auto" style={{ maxHeight: 'calc(100vh - 32px)' }}>
           <div className="p-4 border-b border-amber-200 flex-shrink-0">
-            <h3 className="text-xl font-bold text-amber-800">
-              {modalType === 'paquete' 
-                ? `Paquete ${getPaqueteTitulo()}`
-                : `${editingItem ? 'Editar' : 'Nueva'} ${modalType}`
-              }
-            </h3>
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-amber-800">
+                {modalType === 'paquete'
+                  ? `Paquete ${getPaqueteTitulo()}`
+                  : `${editingItem ? 'Editar' : 'Nueva'} ${modalType}`
+                }
+              </h3>
+              {modalType === 'paquete' && (
+                <>
+                  <input
+                    type="file"
+                    id="leer-factura-input"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => { if (e.target.files[0]) leerFacturaConIA(e.target.files[0]); e.target.value = ''; }}
+                  />
+                  <button
+                    type="button"
+                    disabled={leyendoFactura}
+                    onClick={() => document.getElementById('leer-factura-input').click()}
+                    className="text-sm bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-200 border border-amber-300 disabled:opacity-50"
+                  >
+                    {leyendoFactura ? '⏳ Leyendo...' : '📷 Leer factura'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
@@ -2562,7 +2669,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             <div className="flex items-center gap-2">
               <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v0.6</span>
+              <span className="text-xs text-white/50 font-mono">v0.7</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Indicador usuario activo */}
