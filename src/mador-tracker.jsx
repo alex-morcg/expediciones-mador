@@ -9,6 +9,7 @@ const formatNum = (num, decimals = 2) => {
 };
 
 const formatEur = (num) => formatNum(num, 2) + ' €';
+const formatEurInt = (num) => formatNum(num, 0) + '€';
 const formatGr = (num, decimals = 2) => formatNum(num, decimals) + ' g';
 
 // Extraer número de expedición (E39 → 39, E50 → 50)
@@ -86,6 +87,25 @@ export default function MadorTracker() {
       window.history.replaceState({}, '', url);
     }
   }, [usuarioActivo]);
+
+  // Auto-assign "en_jofisa" status when expedition export date has passed
+  useEffect(() => {
+    if (!expediciones.length || !paquetes.length || !estadosPaquete.length) return;
+    const enJofisaEstado = estadosPaquete.find(e => e.id === 'en_jofisa');
+    if (!enJofisaEstado) return;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    expediciones.forEach(exp => {
+      if (!exp.fechaExportacion) return;
+      const fechaExp = new Date(exp.fechaExportacion);
+      if (fechaExp >= hoy) return;
+      // Find paquetes of this expedition that are NOT yet en_jofisa
+      const paqsToUpdate = paquetes.filter(p => p.expedicionId === exp.id && p.estado !== 'en_jofisa');
+      if (paqsToUpdate.length > 0) {
+        fmarcarTodos(exp.id, 'en_jofisa', 'sistema', estadosPaquete);
+      }
+    });
+  }, [expediciones, paquetes, estadosPaquete]);
 
   const getUsuario = (id) => usuarios.find(u => u.id === id);
   const usuarioActual = getUsuario(usuarioActivo);
@@ -766,7 +786,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               <div className="flex justify-between"><span className="text-stone-500">IGI ({paq.igi}%):</span><span className="text-stone-800 font-medium">+{formatNum(totales.igi)} €</span></div>
               <div className="flex justify-between pt-2 text-base" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}Total Fra (cl):</span><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}{formatNum(totales.totalFra)} €</span></div>
               <div className="flex justify-between mt-4 pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Fra a Jofisa:</span><span className="text-stone-800 font-medium">{formatNum(totales.fraJofisa)} €</span></div>
-              <div className="flex justify-between"><span className="text-stone-500">Margen:</span><span className={totales.margen >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{formatNum(totales.margen)} €</span></div>
+              <div className="flex justify-between"><span className="text-stone-500">Margen:</span><span className={totales.margen >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{formatNum(totales.margen, 0)} €</span></div>
             </div>
           </Card>
           
@@ -1087,13 +1107,34 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <p className="text-stone-800 font-mono font-medium">{formatNum(totales.totalFraJofisa)} €</p>
               </div>
               <div>
-                <span className="text-stone-500 flex items-center gap-1">
-                  Margen Fras
-                  <button onClick={() => setShowResultadosModal(true)} className="text-amber-500 hover:text-amber-700 text-base">🔍</button>
-                </span>
-                <p className={`font-mono font-medium ${totales.totalMargen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatNum(totales.totalMargen)} €
-                </p>
+                {(() => {
+                  const res = exp?.resultados || {};
+                  const precio = parseFloat(res.precioFinoSobra) || 0;
+                  const clientesRes = res.clientes || {};
+                  let euroSobraTotal = 0;
+                  let faltaDatos = false;
+                  Object.entries(totales.porCliente).forEach(([cId]) => {
+                    const cr = clientesRes[cId] || {};
+                    const sobraNeto = (cr.finoSobra || 0) - (cr.gramosDevueltos || 0);
+                    euroSobraTotal += sobraNeto * precio;
+                    if (!cr.finoSobra && cr.finoSobra !== 0) faltaDatos = true;
+                  });
+                  if (!precio) faltaDatos = true;
+                  const tieneEnJofisa = expedicionPaquetes.some(p => p.estado === 'en_jofisa');
+                  const mgTotal = totales.totalMargen + euroSobraTotal;
+                  return (
+                    <>
+                      <span className="text-stone-500 flex items-center gap-1">
+                        Resultados
+                        <button onClick={() => setShowResultadosModal(true)} className="text-amber-500 hover:text-amber-700 text-base">🔍</button>
+                        {faltaDatos && tieneEnJofisa && <span className="text-red-500 text-xs font-bold">!</span>}
+                      </span>
+                      <p className={`font-mono text-xs ${totales.totalMargen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatNum(totales.totalMargen, 0)}{euroSobraTotal !== 0 ? ` + ${formatNum(euroSobraTotal, 0)}` : ''} = <span className="font-medium text-sm">{formatNum(mgTotal, 0)}€</span>
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
               <div>
                 <span className="text-stone-500">€/g Bruto Medio</span>
@@ -1193,10 +1234,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   const clienteB = getCliente(b.clienteId)?.nombre || '';
                   if (clienteA !== clienteB) return clienteA.localeCompare(clienteB);
                 } else if (ordenVista === 'estado') {
-                  const estadoIndexA = estadosPaquete.findIndex(e => e.id === a.estado);
-                  const estadoIndexB = estadosPaquete.findIndex(e => e.id === b.estado);
-                  const indexA = estadoIndexA === -1 ? 999 : estadoIndexA;
-                  const indexB = estadoIndexB === -1 ? 999 : estadoIndexB;
+                  const estadoOrden = ['por_recoger', 'en_banco', 'en_casa'];
+                  const getOrden = (estadoId) => {
+                    const idx = estadoOrden.indexOf(estadoId);
+                    return idx >= 0 ? idx : 100 + estadosPaquete.findIndex(e => e.id === estadoId);
+                  };
+                  const indexA = getOrden(a.estado);
+                  const indexB = getOrden(b.estado);
                   if (indexA !== indexB) return indexA - indexB;
                 } else if (ordenVista === 'categoria') {
                   const catA = getCategoria(a.categoriaId)?.nombre || '';
@@ -1226,6 +1270,16 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   brutoPorCategoria[paq.categoriaId] = 0;
                 }
                 brutoPorCategoria[paq.categoriaId] += totales.brutoTotal;
+              });
+
+              // Pre-calcular suma de bruto por estado
+              const brutoPorEstado = {};
+              expedicionPaquetes.forEach(paq => {
+                const totales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
+                if (!brutoPorEstado[paq.estado]) {
+                  brutoPorEstado[paq.estado] = 0;
+                }
+                brutoPorEstado[paq.estado] += totales.brutoTotal;
               });
               
               let lastClienteId = null;
@@ -1281,12 +1335,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       </div>
                     )}
                     {showEstadoHeader && (
-                      <div 
+                      <div
                         className="flex items-center gap-2 pt-3 pb-1 mt-2 border-t-2"
                         style={{ borderColor: estadoPaq?.color || '#9ca3af' }}
                       >
                         <span className="text-lg">{estadoPaq?.icon || '❓'}</span>
                         <span className="font-bold text-stone-700 flex-1">{estadoPaq?.nombre || 'Sin estado'}</span>
+                        <span className="text-sm font-mono font-bold" style={{ color: estadoPaq?.color || '#9ca3af' }}>{formatNum(brutoPorEstado[paq.estado] || 0)}g</span>
                       </div>
                     )}
                     {showCategoriaHeader && (
@@ -1302,7 +1357,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       </div>
                     )}
                     <Card 
-                      onClick={() => setSelectedPaquete(paq.id)}
+                      onClick={() => { setSelectedPaquete(paq.id); window.scrollTo(0, 0); }}
                       style={{ 
                         backgroundColor: cliente?.color ? cliente.color + '10' : undefined, 
                         borderColor: cliente?.color ? cliente.color + '40' : undefined 
@@ -2727,10 +2782,14 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { saveToFirestore(); setShowResultadosModal(false); }}>
-        <div className="bg-white border border-amber-300 rounded-2xl p-5 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-lg font-bold text-amber-800 mb-4">📊 {expInfo?.nombre} — Resultados</h3>
+        <div className="bg-white border border-amber-300 rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="sticky top-0 bg-white border-b border-amber-200 px-5 py-3 rounded-t-2xl z-10 flex items-center gap-3">
+            <button onClick={() => { saveToFirestore(); setShowResultadosModal(false); }} className="text-amber-600 hover:text-amber-800 text-lg">←</button>
+            <h3 className="text-lg font-bold text-amber-800">📊 {expInfo?.nombre} — Resultados</h3>
+          </div>
+          <div className="p-5">
 
-          {/* Resumen por Cliente */}
+          {/* Resumen por Cliente — tabla */}
           <div className="mb-4">
             <div className="space-y-2">
               {clienteRows.map(({ clienteId, vals, finoSobraNeto: fsn, euroSobra, mgTotal, eurGBruto, eurGFras, eurGSobra }) => {
@@ -2738,44 +2797,44 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 const color = cliente?.color || '#f59e0b';
                 return (
                   <div key={clienteId} className="rounded-lg p-3 border" style={{ backgroundColor: color + '10', borderColor: color + '40' }}>
-                    <div className="flex justify-between items-center mb-1">
+                    {/* Fila 1: nombre | €/g Fras | Mg Fras */}
+                    <div className="grid grid-cols-3 items-center text-xs">
                       <span className="font-medium text-sm" style={{ color }}>{cliente?.nombre || 'Sin cliente'}</span>
-                      <span className={`font-mono font-bold text-sm ${mgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatNum(mgTotal)} €
-                      </span>
+                      <span className="font-mono text-stone-400 text-center">{formatNum(eurGFras)}</span>
+                      <span className={`font-mono text-right ${vals.margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(vals.margen, 0)}€</span>
                     </div>
-                    <div className="flex justify-between text-xs text-stone-500 mb-0.5">
-                      <span>Mg Fras: <span className={`font-mono ${vals.margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(vals.margen)}€</span></span>
-                      <span>€ Sobra: <span className={`font-mono ${euroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(euroSobra)}€</span></span>
+                    {/* Fila 2: grs bruto | €/g Sobra | € Sobra */}
+                    <div className="grid grid-cols-3 items-center text-xs mt-0.5">
+                      <span className="text-stone-400 font-mono">{formatNum(vals.bruto)}g</span>
+                      <span className="font-mono text-stone-400 text-center">{formatNum(eurGSobra)}</span>
+                      <span className={`font-mono text-right ${euroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(euroSobra, 0)}€</span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-stone-400 mb-1">
-                      <span>€/g Fras: <span className="font-mono">{formatNum(eurGFras)}</span></span>
-                      <span>€/g Sobra: <span className="font-mono">{formatNum(eurGSobra)}</span></span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs text-stone-500">€/g Bruto: </span>
-                      <span className={`font-mono font-bold text-sm ${eurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(eurGBruto)}</span>
+                    {/* Fila 3: — | €/g Total | Mg Total */}
+                    <div className="grid grid-cols-3 items-center mt-1 pt-1" style={{ borderTop: `1px solid ${color}20` }}>
+                      <span></span>
+                      <span className={`font-mono font-bold text-sm text-center ${eurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(eurGBruto)}</span>
+                      <span className={`font-mono font-bold text-sm text-right ${mgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(mgTotal, 0)}€</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-2 border-t border-amber-200 pt-2 space-y-1">
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="text-stone-600">Mg Total</span>
-                <span className={`font-mono ${sumMgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgTotal)} €</span>
+            {/* Totales */}
+            <div className="mt-2 border-t-2 border-amber-300 pt-2">
+              <div className="grid grid-cols-3 items-center text-xs">
+                <span className="font-semibold text-stone-600">Total</span>
+                <span className="font-mono text-stone-400 text-center">{formatNum(sumBruto > 0 ? sumMgFras / sumBruto : 0)}</span>
+                <span className={`font-mono text-right ${sumMgFras >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumMgFras, 0)}€</span>
               </div>
-              <div className="flex justify-between text-xs text-stone-500">
-                <span>Mg Fras: <span className={`font-mono ${sumMgFras >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumMgFras)}€</span></span>
-                <span>€ Sobra: <span className={`font-mono ${sumEuroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumEuroSobra)}€</span></span>
+              <div className="grid grid-cols-3 items-center text-xs mt-0.5">
+                <span className="text-stone-400 font-mono">{formatNum(sumBruto)}g</span>
+                <span className="font-mono text-stone-400 text-center">{formatNum(sumBruto > 0 ? sumEuroSobra / sumBruto : 0)}</span>
+                <span className={`font-mono text-right ${sumEuroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumEuroSobra, 0)}€</span>
               </div>
-              <div className="flex justify-between text-[10px] text-stone-400">
-                <span>€/g Fras: <span className="font-mono">{formatNum(sumBruto > 0 ? sumMgFras / sumBruto : 0)}</span></span>
-                <span>€/g Sobra: <span className="font-mono">{formatNum(sumBruto > 0 ? sumEuroSobra / sumBruto : 0)}</span></span>
-              </div>
-              <div className="text-right">
-                <span className="text-xs text-stone-500">€/g Bruto: </span>
-                <span className={`font-mono font-bold text-sm ${totalEurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(totalEurGBruto)}</span>
+              <div className="grid grid-cols-3 items-center mt-1 pt-1 border-t border-amber-200">
+                <span></span>
+                <span className={`font-mono font-bold text-sm text-center ${totalEurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(totalEurGBruto)}</span>
+                <span className={`font-mono font-bold text-sm text-right ${sumMgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgTotal, 0)}€</span>
               </div>
             </div>
           </div>
@@ -2856,6 +2915,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           </div>
 
           <Button className="w-full" onClick={() => { saveToFirestore(); setShowResultadosModal(false); }}>Cerrar</Button>
+          </div>
         </div>
       </div>
     );
