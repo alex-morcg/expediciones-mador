@@ -702,31 +702,26 @@ export default function LingotesTracker({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-100 via-amber-50/30 to-orange-50/20">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-stone-800 via-stone-700 to-stone-800 text-white shadow-xl sticky top-0 z-50">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button onClick={onBack} className="text-white/80 hover:text-white text-lg">←</button>
+      {/* Header + Nav sticky */}
+      <div className="sticky top-0 z-40">
+        <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
+          <div className="flex items-center justify-between max-w-2xl mx-auto">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">Lingotes</h1>
-                <p className="text-stone-400 text-xs">Gestion de Lingotes</p>
-              </div>
+              <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
+              <span className="text-xs text-white/50 font-mono">v1.0</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Navigation */}
-      <nav className="bg-white border-b border-stone-200 shadow-sm sticky top-[72px] z-40">
-        <div className="max-w-2xl mx-auto flex">
+        {/* Navigation */}
+        <nav className="bg-white border-b border-amber-200 flex shadow-sm">
           <TabBtn id="stock" label="Stock" icon="📊" />
           <TabBtn id="exportaciones" label="Exportaciones" icon="📦" />
           <TabBtn id="parametros" label="Ajustes" icon="⚙️" />
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       {/* Content */}
       <main className="max-w-2xl mx-auto p-4 pb-24">
