@@ -690,13 +690,15 @@ export default function LingotesTracker({
   const TabBtn = ({ id, label, icon }) => (
     <button
       onClick={() => { setActiveTab(id); setSelectedCliente(null); }}
-      className={`flex-1 py-4 px-3 text-sm font-semibold transition-all relative ${
-        activeTab === id ? 'text-amber-900 bg-gradient-to-b from-amber-100 to-amber-50' : 'text-stone-500 hover:text-amber-700 hover:bg-amber-50/50'
+      className={`flex-1 py-3 px-2 text-xs sm:text-sm font-medium transition-all duration-300 relative ${
+        activeTab === id
+          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-md'
+          : 'text-amber-700 hover:text-amber-900 hover:bg-amber-100'
       }`}
+      style={{ borderRadius: activeTab === id ? '8px' : '0' }}
     >
-      <span className="text-xl block mb-1">{icon}</span>
-      <span className="block text-xs">{label}</span>
-      {activeTab === id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500" />}
+      <span className="block">{icon}</span>
+      <span className="block mt-1">{label}</span>
     </button>
   );
 
@@ -709,7 +711,6 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-white/50 font-mono">v1.0</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
