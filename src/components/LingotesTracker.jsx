@@ -972,12 +972,24 @@ export default function LingotesTracker({
                   <h3 className="text-lg font-bold text-stone-800">{exp.nombre}</h3>
                   <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'}</p>
                 </div>
-                <button
-                  onClick={() => openEdit(exp)}
-                  className="text-amber-600 hover:text-amber-700 text-sm font-medium"
-                >
-                  ✏️ Editar
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEdit(exp)}
+                    className="text-amber-600 hover:text-amber-700 text-sm font-medium"
+                  >
+                    ✏️ Editar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
+                        onDeleteExportacion(exp.id);
+                      }
+                    }}
+                    className="text-red-400 hover:text-red-600 text-sm font-medium"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
 
               {/* Factura info */}
