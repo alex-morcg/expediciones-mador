@@ -724,7 +724,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         }
                       />
                       {esIncorrecto && (
-                        <p className="text-red-600 text-xs mt-1">Esperado: {formatNum(esperado, 2)} (−0,25)</p>
+                        <p className="text-red-600 text-xs mt-1">Esperado: {formatNum(esperado, 2)} (mg aplicado: {formatNum(cierreJofisa - precioFino, 2)})</p>
                       )}
                     </div>
                   </div>
