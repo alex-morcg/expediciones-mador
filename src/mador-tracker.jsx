@@ -308,7 +308,12 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const saveExpedicion = (data) => { fsaveExpedicion(data, editingItem); closeModal(); };
   const savePaquete = (data) => { fsavePaquete(data, editingItem, { usuarioActivo, getExpedicionNombre, getCliente, getCategoria, paquetes }); closeModal(); };
   const addLineaToPaquete = (paqueteId, linea) => faddLinea(paqueteId, linea, usuarioActivo);
-  const removeLineaFromPaquete = (paqueteId, lineaId) => fremoveLinea(paqueteId, lineaId, usuarioActivo);
+  const removeLineaFromPaquete = (paqueteId, lineaId) => {
+    const paq = paquetes.find(p => p.id === paqueteId);
+    const linea = paq?.lineas?.find(l => l.id === lineaId);
+    if (!confirm(`¿Eliminar línea: ${formatNum(linea?.bruto || 0)}g / ${formatNum(linea?.ley || 0, 0)} ley?`)) return;
+    fremoveLinea(paqueteId, lineaId, usuarioActivo);
+  };
   const updatePaqueteCierre = (paqueteId, precioFino, cierreJofisa) => fupdateCierre(paqueteId, precioFino, cierreJofisa, usuarioActivo);
   const updatePaqueteFactura = (paqueteId, factura) => fupdateFactura(paqueteId, factura, usuarioActivo);
   const updatePaqueteVerificacion = (paqueteId, verificacionIA) => fupdateVerificacion(paqueteId, verificacionIA, usuarioActivo);
@@ -316,7 +321,46 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const updatePaqueteEstado = (paqueteId, estado) => fupdateEstado(paqueteId, estado, usuarioActivo, estadosPaquete);
   const marcarTodosComoEstado = (expedicionId, estadoId) => { fmarcarTodos(expedicionId, estadoId, usuarioActivo, estadosPaquete); setMarcarTodosModal({ open: false, estadoId: null }); };
   const addComentarioToPaquete = (paqueteId, texto) => faddComentario(paqueteId, texto, usuarioActivo);
-  const deleteComentarioFromPaquete = (paqueteId, comentarioId) => fdeleteComentario(paqueteId, comentarioId, usuarioActivo);
+  const deleteComentarioFromPaquete = (paqueteId, comentarioId) => {
+    const paq = paquetes.find(p => p.id === paqueteId);
+    const comentario = paq?.comentarios?.find(c => c.id === comentarioId);
+    const preview = comentario?.texto?.substring(0, 30) + (comentario?.texto?.length > 30 ? '...' : '');
+    if (!confirm(`¿Eliminar comentario: "${preview}"?`)) return;
+    fdeleteComentario(paqueteId, comentarioId, usuarioActivo);
+  };
+
+  // Delete wrappers with confirmations
+  const handleDeleteCategoria = (id) => {
+    const cat = categorias.find(c => c.id === id);
+    if (!confirm(`¿Eliminar la categoría "${cat?.nombre || 'Sin nombre'}"?`)) return;
+    deleteCategoria(id);
+  };
+
+  const handleDeleteCliente = (id) => {
+    const cliente = clientes.find(c => c.id === id);
+    if (!confirm(`¿Eliminar el cliente "${cliente?.nombre || 'Sin nombre'}"?`)) return;
+    deleteCliente(id);
+  };
+
+  const handleDeleteExpedicion = (id) => {
+    const exp = expediciones.find(e => e.id === id);
+    const numPaquetes = paquetes.filter(p => p.expedicionId === id).length;
+    const mensaje = numPaquetes > 0
+      ? `¿Eliminar la expedición "${exp?.nombre || 'Sin nombre'}" y sus ${numPaquetes} paquete(s)?`
+      : `¿Eliminar la expedición "${exp?.nombre || 'Sin nombre'}"?`;
+    if (!confirm(mensaje)) return;
+    deleteExpedicion(id);
+  };
+
+  const handleDeletePaquete = (id) => {
+    const paq = paquetes.find(p => p.id === id);
+    const numLineas = paq?.lineas?.length || 0;
+    const mensaje = numLineas > 0
+      ? `¿Eliminar el paquete "${paq?.nombre || 'Sin nombre'}" con ${numLineas} línea(s)?`
+      : `¿Eliminar el paquete "${paq?.nombre || 'Sin nombre'}"?`;
+    if (!confirm(mensaje)) return;
+    deletePaquete(id);
+  };
 
   // Tab content components
   const TabButton = ({ id, label, icon, badge }) => (
@@ -1018,7 +1062,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               }}
               onClick={() => openModal('paquete', paq)}
             >Editar datos</button>
-            <Button variant="danger" className="flex-1" onClick={() => { deletePaquete(paq.id); setSelectedPaquete(null); }}>Eliminar</Button>
+            <Button variant="danger" className="flex-1" onClick={() => { handleDeletePaquete(paq.id); setSelectedPaquete(null); }}>Eliminar</Button>
           </div>
           
           {/* Modal de Logs */}
@@ -1482,7 +1526,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 </div>
                 <div className="flex gap-2 mt-3">
                   <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); openModal('expedicion', exp); }}>Editar</Button>
-                  <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); deleteExpedicion(exp.id); }}>Eliminar</Button>
+                  <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); handleDeleteExpedicion(exp.id); }}>Eliminar</Button>
                 </div>
                 {exp.seguro > 0 && (() => {
                   const pct = (totales.totalFra / exp.seguro) * 100;
@@ -1559,7 +1603,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="secondary" onClick={() => openModal('cliente', cliente)}>Editar</Button>
-                  <Button size="sm" variant="danger" onClick={() => deleteCliente(cliente.id)}>×</Button>
+                  <Button size="sm" variant="danger" onClick={() => handleDeleteCliente(cliente.id)}>×</Button>
                 </div>
               </div>
               
@@ -1900,7 +1944,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="secondary" onClick={() => openModal('categoria', cat)}>Editar</Button>
-                    <Button size="sm" variant="danger" onClick={() => deleteCategoria(cat.id)}>×</Button>
+                    <Button size="sm" variant="danger" onClick={() => handleDeleteCategoria(cat.id)}>×</Button>
                   </div>
                 </div>
                 <p className="text-stone-500 text-xs mt-2">
@@ -2245,12 +2289,22 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     };
 
     const handleClose = () => {
+      // Check for unsaved changes based on modal type
+      let hasChanges = false;
+
       if (modalType === 'paquete' && !editingItem) {
-        const hasData = formData.lineas?.length > 0 || formData.precioFino;
-        if (hasData) {
-          setShowConfirmExit(true);
-          return;
-        }
+        hasChanges = formData.lineas?.length > 0 || formData.precioFino;
+      } else if (modalType === 'categoria' && !editingItem) {
+        hasChanges = formData.nombre !== '';
+      } else if (modalType === 'cliente' && !editingItem) {
+        hasChanges = formData.nombre !== '' || formData.abreviacion !== '';
+      } else if (modalType === 'expedicion' && !editingItem) {
+        hasChanges = formData.nombre !== '';
+      }
+
+      if (hasChanges) {
+        setShowConfirmExit(true);
+        return;
       }
       closeModal();
     };

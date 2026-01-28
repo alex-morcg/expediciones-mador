@@ -629,7 +629,15 @@ export default function LingotesTracker({
   // Exportaciones View
   const ExportacionesView = () => {
     const [showNew, setShowNew] = useState(false);
-    const [newData, setNewData] = useState({ nombre: '', grExport: '', fecha: new Date().toISOString().split('T')[0] });
+    const defaultFecha = new Date().toISOString().split('T')[0];
+    const [newData, setNewData] = useState({ nombre: '', grExport: '', fecha: defaultFecha });
+
+    const handleCancelNew = () => {
+      const hasChanges = newData.nombre !== '' || newData.grExport !== '' || newData.fecha !== defaultFecha;
+      if (hasChanges && !confirm('¿Descartar los cambios?')) return;
+      setShowNew(false);
+      setNewData({ nombre: '', grExport: '', fecha: defaultFecha });
+    };
 
     const exportacionesStats = useMemo(() => {
       return exportaciones.map(exp => {
@@ -688,7 +696,7 @@ export default function LingotesTracker({
                 <input type="date" value={newData.fecha} onChange={(e) => setNewData({ ...newData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
               </div>
               <div className="flex gap-2 pt-2">
-                <Button variant="secondary" className="flex-1" onClick={() => setShowNew(false)}>Cancelar</Button>
+                <Button variant="secondary" className="flex-1" onClick={handleCancelNew}>Cancelar</Button>
                 <Button className="flex-1" onClick={addExportacion}>Guardar</Button>
               </div>
             </div>
@@ -860,16 +868,30 @@ export default function LingotesTracker({
 
   // Entrega Modal - creates N lingotes at once
   const EntregaModal = () => {
+    const defaultClienteId = editingEntregaClienteId || clientes[0]?.id || '';
+    const defaultExportacionId = exportaciones[0]?.id || '';
+    const defaultFecha = new Date().toISOString().split('T')[0];
     const [formData, setFormData] = useState({
-      clienteId: editingEntregaClienteId || clientes[0]?.id || '',
-      exportacionId: exportaciones[0]?.id || '',
-      fechaEntrega: new Date().toISOString().split('T')[0],
+      clienteId: defaultClienteId,
+      exportacionId: defaultExportacionId,
+      fechaEntrega: defaultFecha,
       cantidad: 1,
       pesoUnitario: 50,
     });
 
+    // Check if form has meaningful changes from defaults
+    const hasChanges = formData.cantidad !== 1 || formData.pesoUnitario !== 50 ||
+      formData.clienteId !== defaultClienteId || formData.exportacionId !== defaultExportacionId ||
+      formData.fechaEntrega !== defaultFecha;
+
+    const handleClose = () => {
+      if (hasChanges && !confirm('¿Descartar los cambios?')) return;
+      setShowEntregaModal(false);
+      setEditingEntregaClienteId(null);
+    };
+
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowEntregaModal(false); setEditingEntregaClienteId(null); }}>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
         <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
           <h3 className="text-xl font-bold text-stone-800 mb-6">Nueva Entrega</h3>
           <div className="space-y-4">
@@ -922,7 +944,7 @@ export default function LingotesTracker({
             </div>
           </div>
           <div className="flex gap-3 mt-6">
-            <Button variant="secondary" className="flex-1" onClick={() => { setShowEntregaModal(false); setEditingEntregaClienteId(null); }}>Cancelar</Button>
+            <Button variant="secondary" className="flex-1" onClick={handleClose}>Cancelar</Button>
             <Button className="flex-1" onClick={() => addEntrega(formData)}>
               Registrar
             </Button>
@@ -937,17 +959,33 @@ export default function LingotesTracker({
     const isFuturaCierre = !!selectedFuturaId;
     const futuraDoc = isFuturaCierre ? (futuraLingotes || []).find(f => f.id === selectedFuturaId) : null;
     const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
+    const defaultEuroOnza = lingote?.euroOnza || '';
+    const defaultPrecioJofisa = lingote?.precioJofisa || '';
+    const defaultNFactura = lingote?.nFactura || '';
     const [jofisaAutoFilled, setJofisaAutoFilled] = useState(false);
     const [formData, setFormData] = useState({
-      euroOnza: lingote?.euroOnza || '',
-      precioJofisa: lingote?.precioJofisa || '',
+      euroOnza: defaultEuroOnza,
+      precioJofisa: defaultPrecioJofisa,
       margen: 6,
       fechaCierre: new Date().toISOString().split('T')[0],
-      nFactura: lingote?.nFactura || '',
+      nFactura: defaultNFactura,
       devolucion: 0,
     });
 
-    const closeCierreModal = () => { setShowCierreModal(false); setSelectedEntrega(null); setSelectedLingoteIdx(null); setSelectedFuturaId(null); };
+    // Check if form has meaningful changes
+    const hasChanges = formData.euroOnza !== defaultEuroOnza ||
+      formData.precioJofisa !== defaultPrecioJofisa ||
+      formData.nFactura !== defaultNFactura ||
+      formData.devolucion !== 0 ||
+      formData.margen !== 6;
+
+    const closeCierreModal = () => {
+      if (hasChanges && !confirm('¿Descartar los cambios del cierre?')) return;
+      setShowCierreModal(false);
+      setSelectedEntrega(null);
+      setSelectedLingoteIdx(null);
+      setSelectedFuturaId(null);
+    };
 
     if (!lingote) return null;
     if (!isFuturaCierre && (!selectedEntrega || selectedLingoteIdx === null)) return null;
@@ -1074,14 +1112,26 @@ export default function LingotesTracker({
 
   // Futura Modal - record an orphan sale (lingote sold without physical stock)
   const FuturaModal = () => {
+    const defaultClienteId = editingEntregaClienteId || clientes[0]?.id || '';
     const [formData, setFormData] = useState({
-      clienteId: editingEntregaClienteId || clientes[0]?.id || '',
+      clienteId: defaultClienteId,
       cantidad: 1,
       pesoUnitario: 50,
       precio: '',
       nFactura: '',
       fechaCierre: new Date().toISOString().split('T')[0],
     });
+
+    // Check if form has meaningful changes
+    const hasChanges = formData.cantidad !== 1 || formData.pesoUnitario !== 50 ||
+      formData.precio !== '' || formData.nFactura !== '' ||
+      formData.clienteId !== defaultClienteId;
+
+    const handleClose = () => {
+      if (hasChanges && !confirm('¿Descartar los cambios?')) return;
+      setShowFuturaModal(false);
+      setEditingEntregaClienteId(null);
+    };
 
     const pesoTotal = formData.cantidad * formData.pesoUnitario;
     const importeTotal = formData.precio ? pesoTotal * parseFloat(formData.precio) : 0;
@@ -1100,7 +1150,7 @@ export default function LingotesTracker({
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowFuturaModal(false); setEditingEntregaClienteId(null); }}>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
         <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <h3 className="text-xl font-bold text-red-800 mb-2">FUTURA</h3>
           <p className="text-sm text-stone-500 mb-6">Registrar lingotes vendidos sin entrega fisica.</p>
@@ -1156,7 +1206,7 @@ export default function LingotesTracker({
             </div>
           </div>
           <div className="flex gap-3 mt-6">
-            <Button variant="secondary" className="flex-1" onClick={() => { setShowFuturaModal(false); setEditingEntregaClienteId(null); }}>Cancelar</Button>
+            <Button variant="secondary" className="flex-1" onClick={handleClose}>Cancelar</Button>
             <Button variant="danger" className="flex-1" onClick={handleSave}>
               Registrar
             </Button>
