@@ -63,6 +63,7 @@ export default function MadorTracker() {
     agregarEstado: fagregarEstado, eliminarEstado: feliminarEstado,
     guardarEdicionEstado: fguardarEdicionEstado,
     updateExpedicionResultados: fupdateResultados,
+    matriculas, agregarMatricula: fagregarMatricula, eliminarMatricula: feliminarMatricula,
     lingotesExportaciones, lingotesEntregas, lingotesConfig, lingotesFutura,
     saveLingoteExportacion, deleteLingoteExportacion,
     saveLingoteEntrega, deleteLingoteEntrega, updateLingoteEntrega,
@@ -1541,6 +1542,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             const sinCerrar = showBadges ? expPaqs.filter(p => !p.precioFino).length : 0;
             const sinFactura = showBadges ? expPaqs.filter(p => p.precioFino && !p.factura).length : 0;
             const sinVerificar = showBadges ? expPaqs.filter(p => p.precioFino && p.factura && !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length : 0;
+            // Check if logistics pending (≤2 days and missing fields)
+            const logisticaPendiente = (() => {
+              if (!exp.fechaExportacion) return false;
+              const hoy = new Date();
+              hoy.setHours(0, 0, 0, 0);
+              const fechaExp = new Date(exp.fechaExportacion);
+              fechaExp.setHours(0, 0, 0, 0);
+              const diasRestantes = Math.ceil((fechaExp - hoy) / (1000 * 60 * 60 * 24));
+              if (diasRestantes > 2) return false;
+              return !exp.matriculaId || !exp.bultos || !exp.horaExportacion;
+            })();
             return (
               <Card key={exp.id} onClick={() => setSelectedExpedicion(exp.id)} className={esActual ? 'ring-2 ring-amber-400' : ''}>
                 <div className="flex justify-between items-start">
@@ -1548,6 +1560,9 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     <div className="flex items-center gap-2">
                       <h3 className="text-stone-800 font-bold text-lg">{exp.nombre} {esActual && <span className="text-amber-500">★</span>}</h3>
                       <div className="flex gap-1">
+                        {logisticaPendiente && (
+                          <span className="bg-orange-500 text-white text-xs font-bold rounded-full px-1.5 h-5 flex items-center justify-center" title="Logística pendiente">🚗</span>
+                        )}
                         {sinCerrar > 0 && (
                           <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{sinCerrar}</span>
                         )}
@@ -1724,6 +1739,65 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           {clientes.length === 0 && (
             <p className="text-stone-400 text-center py-8">No hay clientes. Crea uno nuevo.</p>
           )}
+        </div>
+      </div>
+    );
+  };
+
+  // Matrículas Section (used in ParametrosTab)
+  const MatriculasSection = () => {
+    const [nuevaMatricula, setNuevaMatricula] = useState('');
+
+    const agregarMatricula = async () => {
+      if (!nuevaMatricula.trim()) return;
+      try {
+        await fagregarMatricula(nuevaMatricula.trim());
+        setNuevaMatricula('');
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+
+    const eliminarMatricula = async (id) => {
+      if (confirm('¿Eliminar esta matrícula?')) {
+        await feliminarMatricula(id);
+      }
+    };
+
+    return (
+      <div>
+        <h2 className="text-xl font-bold text-amber-800 mb-4">🚗 Matrículas</h2>
+
+        <div className="space-y-2">
+          {matriculas.map(m => (
+            <Card key={m.id}>
+              <div className="flex items-center justify-between">
+                <span className="text-stone-800 font-mono font-medium">{m.matricula}</span>
+                <button
+                  onClick={() => eliminarMatricula(m.id)}
+                  className="text-red-400 hover:text-red-600 px-1 text-sm"
+                >🗑️</button>
+              </div>
+            </Card>
+          ))}
+          {matriculas.length === 0 && (
+            <p className="text-stone-400 text-center py-4 text-sm">No hay matrículas registradas.</p>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-3">
+          <input
+            type="text"
+            placeholder="Nueva matrícula..."
+            value={nuevaMatricula}
+            onChange={(e) => setNuevaMatricula(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === 'Enter' && nuevaMatricula.trim() && agregarMatricula()}
+            className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 font-mono placeholder-stone-400 focus:outline-none focus:border-amber-500"
+          />
+          <Button
+            onClick={agregarMatricula}
+            disabled={!nuevaMatricula.trim()}
+          >+ Añadir</Button>
         </div>
       </div>
     );
@@ -1974,7 +2048,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         
         {/* Separador */}
         <hr className="border-amber-200" />
-        
+
+        {/* Sección Matrículas */}
+        <MatriculasSection />
+
+        {/* Separador */}
+        <hr className="border-amber-200" />
+
         {/* Sección Categorías */}
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -2203,7 +2283,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         // Get most recent precioFino across all expediciones as starting default
         const allPreciosFino = paquetes.filter(p => p.precioFino).map(p => p.precioFino);
         const defaultPrecio = allPreciosFino.length > 0 ? allPreciosFino[allPreciosFino.length - 1] : '';
-        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: 600000 };
+        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: 600000, matriculaId: null, bultos: null, horaExportacion: null };
       }
       if (modalType === 'paquete') {
         const defaultCliente = clientes[0];
@@ -2513,9 +2593,48 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   onChange={(e) => setFormData({ ...formData, esActual: e.target.checked })}
                 />
               </div>
+
+              {/* Campos de logística */}
+              <div className="bg-stone-50 rounded-xl p-3 space-y-3 border border-stone-200">
+                <p className="text-stone-500 text-xs font-medium uppercase tracking-wide">Logística</p>
+                <Select
+                  label="Matrícula del coche"
+                  value={formData.matriculaId || ''}
+                  onChange={(e) => setFormData({ ...formData, matriculaId: e.target.value || null })}
+                  options={[
+                    { value: '', label: '— Seleccionar —' },
+                    ...matriculas.map(m => ({ value: m.id, label: m.matricula }))
+                  ]}
+                />
+                <div>
+                  <label className="block text-amber-800 text-sm mb-1 font-medium">Bultos</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, bultos: n })}
+                        className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${
+                          formData.bultos === n
+                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                            : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Input
+                  label="Hora de exportación"
+                  type="time"
+                  value={formData.horaExportacion || ''}
+                  onChange={(e) => setFormData({ ...formData, horaExportacion: e.target.value || null })}
+                />
+              </div>
             </>
           )}
-          
+
           {modalType === 'paquete' && (
             <>
               <div className="flex gap-2 mb-3">
@@ -3093,6 +3212,20 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     return sum + expPaqs.filter(p => !p.precioFino || !p.factura || !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length;
   }, 0);
 
+  // Check expeditions with logistics pending (≤2 days to export and missing matricula/bultos/hora)
+  const expedicionesLogisticaPendiente = expediciones.filter(exp => {
+    if (!exp.fechaExportacion) return false;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaExp = new Date(exp.fechaExportacion);
+    fechaExp.setHours(0, 0, 0, 0);
+    const diasRestantes = Math.ceil((fechaExp - hoy) / (1000 * 60 * 60 * 24));
+    if (diasRestantes > 2) return false;
+    // Check if any logistics field is missing
+    return !exp.matriculaId || !exp.bultos || !exp.horaExportacion;
+  });
+  const logisticaPendienteCount = expedicionesLogisticaPendiente.length;
+
   if (showLingotes) {
     return (
       <LingotesTracker
@@ -3127,9 +3260,20 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               <span className="text-xs text-white/50 font-mono">v1.0</span>
             </div>
             <div className="flex items-center gap-2">
+              {/* Indicador de logística pendiente */}
+              {logisticaPendienteCount > 0 && (
+                <div
+                  className="flex items-center gap-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full cursor-pointer animate-pulse"
+                  onClick={() => setActiveTab('expediciones')}
+                  title={`${logisticaPendienteCount} expedición(es) con logística pendiente`}
+                >
+                  <span>🚗</span>
+                  <span className="font-bold">{logisticaPendienteCount}</span>
+                </div>
+              )}
               {/* Indicador usuario activo */}
               <span className="text-white/80 text-sm">{getUsuario(usuarioActivo)?.nombre}</span>
-              <Button 
+              <Button
                 onClick={() => openModal('paquete')}
                 className="bg-white text-blue-600 hover:bg-blue-50 text-sm px-3 py-1"
               >

@@ -216,6 +216,7 @@ export function useFirestore() {
   const [lingotesEntregas, setLingotesEntregas] = useState([]);
   const [lingotesConfig, setLingotesConfig] = useState({ stockMador: 0, umbralRojo: 200, umbralNaranja: 500, umbralAmarillo: 1000 });
   const [lingotesFutura, setLingotesFutura] = useState([]);
+  const [matriculas, setMatriculas] = useState([]);
   const [loading, setLoading] = useState(true);
   const seedTriggered = useRef(false);
 
@@ -231,7 +232,7 @@ export function useFirestore() {
     let cancelled = false;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 11;
+    const totalCollections = 12;
 
     const checkLoaded = () => {
       loadedCount++;
@@ -360,6 +361,16 @@ export function useFirestore() {
         checkLoaded();
       }, (error) => {
         console.error('Firestore error (lingotes_futura):', error);
+        checkLoaded();
+      })
+    );
+
+    unsubscribers.push(
+      onSnapshot(collection(db, 'matriculas'), (snap) => {
+        if (!cancelled) setMatriculas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (matriculas):', error);
         checkLoaded();
       })
     );
@@ -742,6 +753,20 @@ export function useFirestore() {
     await updateDoc(doc(db, 'estadosPaquete', id), data);
   };
 
+  // Matriculas
+  const agregarMatricula = async (matricula) => {
+    const id = matricula.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9]/g, '');
+    if (matriculas.find(m => m.id === id)) {
+      throw new Error('Ya existe esa matrícula');
+    }
+    await setDoc(doc(db, 'matriculas', id), { matricula: matricula.toUpperCase() });
+    return id;
+  };
+
+  const eliminarMatricula = async (id) => {
+    await deleteDoc(doc(db, 'matriculas', id));
+  };
+
   // --- Lingotes CRUD ---
   const saveLingoteExportacion = async (data, editId) => {
     if (editId) {
@@ -825,6 +850,11 @@ export function useFirestore() {
     eliminarEstado,
     guardarEdicionEstado,
     updateExpedicionResultados,
+
+    // Matriculas
+    matriculas,
+    agregarMatricula,
+    eliminarMatricula,
 
     // Lingotes
     lingotesExportaciones,
