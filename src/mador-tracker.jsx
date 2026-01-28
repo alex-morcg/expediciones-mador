@@ -2657,8 +2657,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     <input
                       type="number"
                       step="0.01"
-                      value={formData.precioFino || ''}
-                      onChange={(e) => setFormData({ ...formData, precioFino: e.target.value ? parseFloat(e.target.value) : null })}
+                      value={formData.precioFino ?? ''}
+                      onChange={(e) => setFormData({ ...formData, precioFino: e.target.value === '' ? null : parseFloat(e.target.value) })}
                       className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
                     />
                   </div>
