@@ -2614,8 +2614,20 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   }
                   return null;
                 })()}
+
+                {/* Total bruto y fino */}
+                {formData.lineas?.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-amber-200 text-right">
+                    <span className="text-amber-800 font-semibold">
+                      Total: {formatGr(formData.lineas.reduce((sum, l) => sum + (l.bruto || 0), 0))}
+                    </span>
+                    <span className="text-amber-600 ml-2">
+                      ({formatGr(formData.lineas.reduce((sum, l) => sum + calcularFinoLinea(l.bruto, l.ley), 0))} fino)
+                    </span>
+                  </div>
+                )}
               </div>
-              
+
               {/* Cierre */}
               <div className="border-t border-amber-200 pt-3 mt-3">
                 <h4 className="text-amber-700 font-medium mb-2">🔒 Cierre (opcional)</h4>
