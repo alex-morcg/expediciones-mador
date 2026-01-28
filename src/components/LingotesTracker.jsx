@@ -119,20 +119,29 @@ export default function LingotesTracker({
   }, [entregas, futuraLingotes]);
 
   // CRUD
-  // Calculate global stock from all exportaciones
-  // Calculate global stock from all exportaciones
+  // Calculate global stock from all exportaciones (with exportacion names)
   const stockGlobal = useMemo(() => {
     const stockByPeso = {};
     exportaciones.forEach(exp => {
       (exp.lingotes || []).forEach(l => {
         const peso = l.peso;
-        if (!stockByPeso[peso]) stockByPeso[peso] = 0;
-        stockByPeso[peso] += l.cantidad || 0;
+        if (!stockByPeso[peso]) stockByPeso[peso] = { cantidad: 0, exportaciones: [] };
+        if (l.cantidad > 0) {
+          stockByPeso[peso].cantidad += l.cantidad;
+          // Track which exportaciones contribute to this peso
+          const existing = stockByPeso[peso].exportaciones.find(e => e.nombre === exp.nombre);
+          if (existing) {
+            existing.cantidad += l.cantidad;
+          } else {
+            stockByPeso[peso].exportaciones.push({ nombre: exp.nombre, cantidad: l.cantidad });
+          }
+        }
       });
     });
     // Convert to array sorted by peso
     return Object.entries(stockByPeso)
-      .map(([peso, cantidad]) => ({ peso: parseFloat(peso), cantidad }))
+      .map(([peso, data]) => ({ peso: parseFloat(peso), cantidad: data.cantidad, exportaciones: data.exportaciones }))
+      .filter(s => s.cantidad > 0)
       .sort((a, b) => a.peso - b.peso);
   }, [exportaciones]);
 
@@ -372,46 +381,67 @@ export default function LingotesTracker({
 
     return (
       <div className="space-y-6">
-        {/* Stock Ma d'Or - card grande */}
-        <div className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-5 text-white shadow-lg`}>
-          <div className="text-center mb-3">
-            <p className={`text-xs ${stockColor.text} mb-1`}>📦 Stock Ma d'Or</p>
-            <div className={`text-5xl font-black ${stockColor.accent}`}>{formatNum(stockRealTotal, 0)}</div>
-            <div className={`text-sm ${stockColor.text}`}>gramos</div>
-          </div>
-          {stockGlobal.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2 pt-3 border-t border-white/20">
-              {stockGlobal.map((s, idx) => (
-                <div key={idx} className="bg-white/20 rounded-lg px-3 py-1 text-sm">
-                  <span className="font-bold">{s.cantidad}</span>
-                  <span className="text-white/70 ml-1">× {s.peso}g</span>
-                </div>
-              ))}
+        {/* Stock Ma d'Or + En Clientes lado a lado */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Stock Ma d'Or */}
+          <div className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-4 text-white shadow-lg`}>
+            <div className="text-center">
+              <p className={`text-xs ${stockColor.text} mb-1`}>📦 Stock Ma d'Or</p>
+              <div className={`text-4xl font-black ${stockColor.accent}`}>{formatNum(stockRealTotal, 0)}</div>
+              <div className={`text-xs ${stockColor.text}`}>gramos</div>
             </div>
-          )}
-          {stockGlobal.length === 0 && (
-            <p className={`text-center text-sm ${stockColor.text}`}>Sin stock. Crea una exportación.</p>
-          )}
-        </div>
+          </div>
 
-        <div className={`grid ${stockTotal.totalFutura > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+          {/* En Clientes */}
           <div className="bg-gradient-to-br from-stone-700 via-stone-600 to-stone-700 rounded-2xl p-4 text-white shadow-lg">
             <div className="text-center">
-              <p className="text-xs text-stone-400 mb-1">En Clientes</p>
-              <div className="text-3xl font-black text-amber-400">{formatNum(stockTotal.stockClientes, 0)}</div>
+              <p className="text-xs text-stone-400 mb-1">👥 En Clientes</p>
+              <div className="text-4xl font-black text-amber-400">{formatNum(stockTotal.stockClientes, 0)}</div>
               <div className="text-xs text-stone-400">gramos</div>
             </div>
           </div>
-          {stockTotal.totalFutura > 0 && (
-            <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-700 rounded-2xl p-4 text-white shadow-lg">
-              <div className="text-center">
-                <p className="text-xs text-red-200 mb-1">FUTURA</p>
-                <div className="text-3xl font-black text-white">-{formatNum(stockTotal.totalFutura, 0)}</div>
-                <div className="text-xs text-red-200">gramos</div>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Desglose de stock por tipo con exportaciones */}
+        {stockGlobal.length > 0 && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-200">
+            <p className="text-xs text-stone-500 mb-3 font-medium">📦 Composición del stock</p>
+            <div className="space-y-2">
+              {stockGlobal.map((s, idx) => (
+                <div key={idx} className="flex items-center justify-between bg-stone-50 rounded-xl px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-amber-600 text-lg">{s.cantidad}</span>
+                    <span className="text-stone-500">×</span>
+                    <span className="font-semibold text-stone-700">{s.peso}g</span>
+                  </div>
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    {s.exportaciones.map((exp, i) => (
+                      <span key={i} className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-medium">
+                        {exp.nombre} ({exp.cantidad})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {stockGlobal.length === 0 && (
+          <div className="bg-stone-100 rounded-2xl p-4 text-center">
+            <p className="text-stone-500 text-sm">Sin stock. Crea una exportación.</p>
+          </div>
+        )}
+
+        {/* FUTURA si existe */}
+        {stockTotal.totalFutura > 0 && (
+          <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-700 rounded-2xl p-4 text-white shadow-lg">
+            <div className="text-center">
+              <p className="text-xs text-red-200 mb-1">⚠️ FUTURA (vendido sin stock)</p>
+              <div className="text-3xl font-black text-white">-{formatNum(stockTotal.totalFutura, 0)}g</div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           {statsClientes.map(cliente => (
