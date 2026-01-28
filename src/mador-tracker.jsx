@@ -701,28 +701,38 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         type="number"
                         placeholder="€/g"
                         value={cierreData.precioFino || paq.precioFino || ''}
-                        onChange={(e) => {
-                          const precio = parseFloat(e.target.value) || 0;
-                          const autoFill = !cierreData.cierreJofisa && !paq.cierreJofisa;
-                          setCierreData({ precioFino: e.target.value, cierreJofisa: autoFill ? (precio - 0.25).toFixed(2) : cierreData.cierreJofisa });
-                        }}
+                        onChange={(e) => setCierreData({ ...cierreData, precioFino: e.target.value })}
                         className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none"
                         style={{ border: `1px solid ${clienteColor}50` }}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <label className="block text-xs mb-1" style={{ color: clienteColor }}>Cierre Jofisa</label>
-                      <input
-                        type="number"
-                        placeholder="€/g"
-                        value={cierreData.cierreJofisa || paq.cierreJofisa || ''}
-                        onChange={(e) => setCierreData({ ...cierreData, cierreJofisa: e.target.value })}
-                        className="w-full rounded-lg px-3 py-2 placeholder-stone-400 focus:outline-none"
-                        style={esIncorrecto 
-                          ? { backgroundColor: '#fef2f2', border: '2px solid #f87171', color: '#991b1b' }
-                          : { backgroundColor: 'white', border: `1px solid ${clienteColor}50`, color: '#1c1917' }
-                        }
-                      />
+                      <div className="flex gap-1">
+                        <input
+                          type="number"
+                          placeholder="€/g"
+                          value={cierreData.cierreJofisa || paq.cierreJofisa || ''}
+                          onChange={(e) => setCierreData({ ...cierreData, cierreJofisa: e.target.value })}
+                          className="flex-1 min-w-0 rounded-lg px-3 py-2 placeholder-stone-400 focus:outline-none"
+                          style={esIncorrecto
+                            ? { backgroundColor: '#fef2f2', border: '2px solid #f87171', color: '#991b1b' }
+                            : { backgroundColor: 'white', border: `1px solid ${clienteColor}50`, color: '#1c1917' }
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const precio = parseFloat(cierreData.precioFino) || paq.precioFino || 0;
+                            if (precio > 0) {
+                              setCierreData({ ...cierreData, cierreJofisa: (precio - 0.25).toFixed(2) });
+                            }
+                          }}
+                          className="px-2 py-1 text-sm rounded-lg transition-colors"
+                          style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
+                          title="Auto-rellenar con Precio fino - 0,25"
+                        >🪄</button>
+                      </div>
                       {esIncorrecto && (
                         <p className="text-red-600 text-xs mt-1">Esperado: {formatNum(esperado, 2)} (mg aplicado: {formatNum(cierreJofisa - precioFino, 2)})</p>
                       )}
@@ -2648,26 +2658,31 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       type="number"
                       step="0.01"
                       value={formData.precioFino || ''}
-                      onChange={(e) => {
-                        const precio = parseFloat(e.target.value) || 0;
-                        const updates = { precioFino: e.target.value ? precio : null };
-                        if (!formData.cierreJofisa) {
-                          updates.cierreJofisa = precio ? precio - 0.25 : null;
-                        }
-                        setFormData({ ...formData, ...updates });
-                      }}
+                      onChange={(e) => setFormData({ ...formData, precioFino: e.target.value ? parseFloat(e.target.value) : null })}
                       className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
                     />
                   </div>
                   <div className="flex-1 min-w-0">
                     <label className="block text-amber-800 text-xs mb-1">Cierre Jofisa</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.cierreJofisa || ''}
-                      onChange={(e) => setFormData({ ...formData, cierreJofisa: parseFloat(e.target.value) || null })}
-                      className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
-                    />
+                    <div className="flex gap-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.cierreJofisa || ''}
+                        onChange={(e) => setFormData({ ...formData, cierreJofisa: parseFloat(e.target.value) || null })}
+                        className="flex-1 min-w-0 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (formData.precioFino > 0) {
+                            setFormData({ ...formData, cierreJofisa: formData.precioFino - 0.25 });
+                          }
+                        }}
+                        className="px-2 py-1 text-sm bg-amber-100 text-amber-700 rounded-lg border border-amber-300 hover:bg-amber-200"
+                        title="Auto-rellenar con Base - 0,25"
+                      >🪄</button>
+                    </div>
                   </div>
                 </div>
               </div>
