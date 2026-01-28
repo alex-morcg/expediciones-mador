@@ -629,14 +629,77 @@ export default function LingotesTracker({
   // Exportaciones View
   const ExportacionesView = () => {
     const [showNew, setShowNew] = useState(false);
+    const [editingExp, setEditingExp] = useState(null); // null or exportacion object
+    const [uploadingFactura, setUploadingFactura] = useState(null); // exportacion id being uploaded
     const defaultFecha = new Date().toISOString().split('T')[0];
-    const [newData, setNewData] = useState({ nombre: '', grExport: '', fecha: defaultFecha });
+    const defaultLingotes = [{ cantidad: 1, peso: 50 }];
+    const [formData, setFormData] = useState({ nombre: '', fecha: defaultFecha, lingotes: defaultLingotes, precioGramo: '' });
 
-    const handleCancelNew = () => {
-      const hasChanges = newData.nombre !== '' || newData.grExport !== '' || newData.fecha !== defaultFecha;
+    const resetForm = () => {
+      setFormData({ nombre: '', fecha: defaultFecha, lingotes: [{ cantidad: 1, peso: 50 }], precioGramo: '' });
+    };
+
+    const openNew = () => {
+      resetForm();
+      setEditingExp(null);
+      setShowNew(true);
+    };
+
+    const openEdit = (exp) => {
+      setFormData({
+        nombre: exp.nombre || '',
+        fecha: exp.fecha || defaultFecha,
+        lingotes: exp.lingotes && exp.lingotes.length > 0 ? [...exp.lingotes] : [{ cantidad: 1, peso: 50 }],
+        precioGramo: exp.precioGramo || '',
+      });
+      setEditingExp(exp);
+      setShowNew(true);
+    };
+
+    const handleCancel = () => {
+      const isEditing = !!editingExp;
+      const original = isEditing ? {
+        nombre: editingExp.nombre || '',
+        fecha: editingExp.fecha || defaultFecha,
+        lingotes: editingExp.lingotes || [{ cantidad: 1, peso: 50 }],
+        precioGramo: editingExp.precioGramo || '',
+      } : { nombre: '', fecha: defaultFecha, lingotes: defaultLingotes, precioGramo: '' };
+
+      const hasChanges = formData.nombre !== original.nombre ||
+        formData.fecha !== original.fecha ||
+        formData.precioGramo !== original.precioGramo ||
+        JSON.stringify(formData.lingotes) !== JSON.stringify(original.lingotes);
+
       if (hasChanges && !confirm('¿Descartar los cambios?')) return;
       setShowNew(false);
-      setNewData({ nombre: '', grExport: '', fecha: defaultFecha });
+      setEditingExp(null);
+      resetForm();
+    };
+
+    // Calculate totals from lingotes array
+    const calcTotals = (lingotes) => {
+      const totalLingotes = lingotes.reduce((sum, l) => sum + (parseInt(l.cantidad) || 0), 0);
+      const totalGramos = lingotes.reduce((sum, l) => sum + ((parseInt(l.cantidad) || 0) * (parseFloat(l.peso) || 0)), 0);
+      return { totalLingotes, totalGramos };
+    };
+
+    const { totalLingotes: formTotalLingotes, totalGramos: formTotalGramos } = calcTotals(formData.lingotes);
+    const formTotalFactura = formData.precioGramo ? formTotalGramos * parseFloat(formData.precioGramo) : 0;
+
+    const addLingoteTipo = () => {
+      setFormData({ ...formData, lingotes: [...formData.lingotes, { cantidad: 1, peso: 50 }] });
+    };
+
+    const removeLingoteTipo = (idx) => {
+      if (formData.lingotes.length > 1) {
+        setFormData({ ...formData, lingotes: formData.lingotes.filter((_, i) => i !== idx) });
+      }
+    };
+
+    const updateLingoteTipo = (idx, field, value) => {
+      const updated = [...formData.lingotes];
+      updated[idx] = { ...updated[idx], [field]: value };
+      setFormData({ ...formData, lingotes: updated });
     };
 
     const exportacionesStats = useMemo(() => {
@@ -649,6 +712,14 @@ export default function LingotesTracker({
         const totalImporte = entregasExp.reduce((sum, e) => sum + importeEntrega(e), 0);
         const totalLingotes = entregasExp.reduce((sum, e) => sum + numLingotes(e), 0);
 
+        // Calculate stock disponible from exp.lingotes array
+        const stockLingotes = exp.lingotes || [];
+        const stockTotal = stockLingotes.reduce((sum, l) => sum + ((l.cantidad || 0) * (l.peso || 0)), 0);
+        const stockCount = stockLingotes.reduce((sum, l) => sum + (l.cantidad || 0), 0);
+
+        // Calculate factura total
+        const facturaTotal = exp.precioGramo ? exp.grExport * exp.precioGramo : 0;
+
         const porCliente = clientes.map(c => {
           const ec = entregasExp.filter(e => e.clienteId === c.id);
           return {
@@ -660,44 +731,189 @@ export default function LingotesTracker({
           };
         }).filter(c => c.entregado > 0);
 
-        return { ...exp, totalEntregado, totalCerrado, totalDevuelto, totalPendiente, totalImporte, totalLingotes, porCliente };
+        return { ...exp, totalEntregado, totalCerrado, totalDevuelto, totalPendiente, totalImporte, totalLingotes, porCliente, stockTotal, stockCount, facturaTotal };
       });
     }, [exportaciones, entregas, clientes]);
 
-    const addExportacion = async () => {
-      if (newData.nombre && newData.grExport) {
-        await onSaveExportacion({ nombre: newData.nombre, grExport: parseFloat(newData.grExport), fecha: newData.fecha });
-        setNewData({ nombre: '', grExport: '', fecha: new Date().toISOString().split('T')[0] });
+    const saveExportacion = async () => {
+      if (formData.nombre && formTotalLingotes > 0) {
+        const validLingotes = formData.lingotes.filter(l => l.cantidad > 0 && l.peso > 0);
+        const grExport = validLingotes.reduce((sum, l) => sum + (l.cantidad * l.peso), 0);
+        const data = {
+          nombre: formData.nombre,
+          grExport,
+          fecha: formData.fecha,
+          lingotes: validLingotes,
+          precioGramo: formData.precioGramo ? parseFloat(formData.precioGramo) : null,
+        };
+
+        if (editingExp) {
+          // Keep existing factura if editing
+          if (editingExp.factura) {
+            data.factura = editingExp.factura;
+          }
+          await onSaveExportacion(data, editingExp.id);
+        } else {
+          await onSaveExportacion(data);
+        }
+
         setShowNew(false);
+        setEditingExp(null);
+        resetForm();
       }
+    };
+
+    // Handle factura upload
+    const handleFacturaUpload = async (expId, file) => {
+      if (!file) return;
+      setUploadingFactura(expId);
+      try {
+        // Convert to base64 for storage (simple approach)
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = e.target.result;
+          const exp = exportaciones.find(ex => ex.id === expId);
+          if (exp) {
+            await onSaveExportacion({
+              ...exp,
+              factura: {
+                nombre: file.name,
+                tipo: file.type,
+                data: base64,
+                fecha: new Date().toISOString(),
+              }
+            }, expId);
+          }
+          setUploadingFactura(null);
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error('Error uploading factura:', err);
+        setUploadingFactura(null);
+      }
+    };
+
+    const removeFactura = async (exp) => {
+      if (!confirm('¿Eliminar la factura?')) return;
+      const { factura, ...rest } = exp;
+      await onSaveExportacion({ ...rest, factura: null }, exp.id);
     };
 
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-stone-800">Exportaciones</h2>
-          <Button size="sm" onClick={() => setShowNew(true)}>+ Nueva</Button>
+          <Button size="sm" onClick={openNew}>+ Nueva</Button>
         </div>
 
         {showNew && (
           <Card className="border-amber-400 bg-amber-50">
-            <h3 className="font-bold text-stone-800 mb-4">Nueva Exportacion</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
-                <input type="text" value={newData.nombre} onChange={(e) => setNewData({ ...newData, nombre: e.target.value })} placeholder="Ej: 5-11" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <h3 className="font-bold text-stone-800 mb-4">{editingExp ? 'Editar Exportación' : 'Nueva Exportación'}</h3>
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
+                  <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div className="w-40">
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Fecha</label>
+                  <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
               </div>
+
+              {/* Lingotes breakdown */}
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Gramos Exportados</label>
-                <input type="number" value={newData.grExport} onChange={(e) => setNewData({ ...newData, grExport: e.target.value })} placeholder="Ej: 4155" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <label className="block text-sm font-medium text-stone-700 mb-2">Lingotes comprados</label>
+                <div className="space-y-2">
+                  {formData.lingotes.map((l, idx) => (
+                    <div key={idx} className="flex items-center gap-2 flex-wrap">
+                      <input
+                        type="number"
+                        value={l.cantidad}
+                        onChange={(e) => updateLingoteTipo(idx, 'cantidad', parseInt(e.target.value) || 0)}
+                        className="w-16 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        min="1"
+                      />
+                      <span className="text-stone-500">×</span>
+                      <div className="flex gap-1 flex-wrap">
+                        {[50, 100, 250, 500, 1000].map(peso => (
+                          <button
+                            key={peso}
+                            type="button"
+                            onClick={() => updateLingoteTipo(idx, 'peso', peso)}
+                            className={`px-2 py-1 rounded-lg text-sm font-medium transition-colors ${
+                              l.peso === peso
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
+                            }`}
+                          >
+                            {peso}g
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="number"
+                        value={l.peso}
+                        onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
+                        className="w-20 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        placeholder="otro"
+                      />
+                      <span className="text-stone-600 font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
+                      {formData.lingotes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeLingoteTipo(idx)}
+                          className="text-red-400 hover:text-red-600 text-lg"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addLingoteTipo}
+                  className="mt-2 text-amber-600 hover:text-amber-700 text-sm font-medium"
+                >
+                  + Añadir tipo
+                </button>
               </div>
+
+              {/* Precio por gramo */}
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Fecha</label>
-                <input type="date" value={newData.fecha} onChange={(e) => setNewData({ ...newData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <label className="block text-sm font-medium text-stone-700 mb-1">Precio por gramo (€/g)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.precioGramo}
+                  onChange={(e) => setFormData({ ...formData, precioGramo: e.target.value })}
+                  placeholder="Ej: 95.50"
+                  className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
               </div>
+
+              {/* Total summary */}
+              <div className="bg-amber-100 rounded-xl p-3">
+                <div className="text-center">
+                  <span className="text-amber-700 font-bold text-lg">
+                    {formTotalLingotes} lingotes = {formatNum(formTotalGramos, 0)}g
+                  </span>
+                </div>
+                {formData.precioGramo && (
+                  <div className="text-center mt-1 pt-1 border-t border-amber-200">
+                    <span className="text-amber-800 font-bold">
+                      Total factura: {formatEur(formTotalFactura)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2 pt-2">
-                <Button variant="secondary" className="flex-1" onClick={handleCancelNew}>Cancelar</Button>
-                <Button className="flex-1" onClick={addExportacion}>Guardar</Button>
+                <Button variant="secondary" className="flex-1" onClick={handleCancel}>Cancelar</Button>
+                <Button className="flex-1" onClick={saveExportacion} disabled={!formData.nombre || formTotalLingotes === 0}>
+                  {editingExp ? 'Guardar cambios' : 'Crear'}
+                </Button>
               </div>
             </div>
           </Card>
@@ -706,16 +922,84 @@ export default function LingotesTracker({
         <div className="space-y-4">
           {exportacionesStats.map(exp => (
             <Card key={exp.id}>
-              <div className="flex justify-between items-start mb-4">
+              <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="text-lg font-bold text-stone-800">{exp.nombre}</h3>
-                  <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'} • {formatNum(exp.grExport, 0)}g exportados</p>
+                  <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-emerald-600">{formatEur(exp.totalImporte)}</div>
-                  <div className="text-xs text-stone-500">{exp.totalLingotes} lingotes</div>
+                <button
+                  onClick={() => openEdit(exp)}
+                  className="text-amber-600 hover:text-amber-700 text-sm font-medium"
+                >
+                  ✏️ Editar
+                </button>
+              </div>
+
+              {/* Factura info */}
+              <div className="bg-stone-50 rounded-xl p-3 mb-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-stone-600">Precio:</span>
+                  <span className="font-mono font-bold text-stone-800">
+                    {exp.precioGramo ? `${formatNum(exp.precioGramo)} €/g` : '— sin definir'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-stone-600">Total compra:</span>
+                  <span className="font-mono font-bold text-emerald-600">
+                    {exp.facturaTotal > 0 ? formatEur(exp.facturaTotal) : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-stone-200">
+                  <span className="text-sm text-stone-600">Factura PDF:</span>
+                  {exp.factura ? (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={exp.factura.data}
+                        download={exp.factura.nombre}
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      >
+                        📄 {exp.factura.nombre}
+                      </a>
+                      <button
+                        onClick={() => removeFactura(exp)}
+                        className="text-red-400 hover:text-red-600 text-sm"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer text-amber-600 hover:text-amber-700 text-sm font-medium">
+                      {uploadingFactura === exp.id ? '⏳ Subiendo...' : '📤 Subir PDF'}
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => handleFacturaUpload(exp.id, e.target.files[0])}
+                        disabled={uploadingFactura === exp.id}
+                      />
+                    </label>
+                  )}
                 </div>
               </div>
+
+              {/* Stock de lingotes en esta exportación */}
+              {exp.lingotes && exp.lingotes.length > 0 && (
+                <div className="bg-amber-50 rounded-xl p-3 mb-4">
+                  <p className="text-xs text-amber-700 font-medium mb-2">📦 Stock en Ma d'Or</p>
+                  <div className="flex flex-wrap gap-2">
+                    {exp.lingotes.map((l, idx) => (
+                      <div key={idx} className="bg-white border border-amber-200 rounded-lg px-2 py-1 text-sm">
+                        <span className="font-bold text-amber-700">{l.cantidad}</span>
+                        <span className="text-stone-500"> × </span>
+                        <span className="text-stone-700">{l.peso}g</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-amber-800 font-bold mt-2 text-sm">
+                    Total: {exp.stockCount} lingotes = {formatNum(exp.stockTotal, 0)}g
+                  </p>
+                </div>
+              )}
 
               {exp.totalEntregado > 0 && (
                 <div className="mb-4">
