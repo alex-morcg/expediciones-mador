@@ -120,6 +120,7 @@ export default function LingotesTracker({
 
   // CRUD
   // Calculate global stock from all exportaciones
+  // Calculate global stock from all exportaciones
   const stockGlobal = useMemo(() => {
     const stockByPeso = {};
     exportaciones.forEach(exp => {
@@ -134,6 +135,15 @@ export default function LingotesTracker({
       .map(([peso, cantidad]) => ({ peso: parseFloat(peso), cantidad }))
       .sort((a, b) => a.peso - b.peso);
   }, [exportaciones]);
+
+  // Total stock real in grams
+  const stockRealTotal = useMemo(() => {
+    return stockGlobal.reduce((sum, s) => sum + (s.cantidad * s.peso), 0);
+  }, [stockGlobal]);
+
+  const stockRealLingotes = useMemo(() => {
+    return stockGlobal.reduce((sum, s) => sum + s.cantidad, 0);
+  }, [stockGlobal]);
 
   const addEntrega = async (data) => {
     // First, check if we have enough stock
@@ -354,7 +364,7 @@ export default function LingotesTracker({
 
   // Stock Overview
   const StockOverview = () => {
-    const stockColor = getStockColor(stockMador);
+    const stockColor = getStockColor(stockRealTotal);
 
     if (selectedCliente) {
       return <ClienteDetalle />;
@@ -362,14 +372,29 @@ export default function LingotesTracker({
 
     return (
       <div className="space-y-6">
-        <div className={`grid ${stockTotal.totalFutura > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
-          <div className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-4 text-white shadow-lg`}>
-            <div className="text-center">
-              <p className={`text-xs ${stockColor.text} mb-1`}>Stock Ma d'Or</p>
-              <div className={`text-3xl font-black ${stockColor.accent}`}>{formatNum(stockMador, 0)}</div>
-              <div className={`text-xs ${stockColor.text}`}>gramos</div>
-            </div>
+        {/* Stock Ma d'Or - card grande */}
+        <div className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-5 text-white shadow-lg`}>
+          <div className="text-center mb-3">
+            <p className={`text-xs ${stockColor.text} mb-1`}>📦 Stock Ma d'Or</p>
+            <div className={`text-5xl font-black ${stockColor.accent}`}>{formatNum(stockRealTotal, 0)}</div>
+            <div className={`text-sm ${stockColor.text}`}>gramos</div>
           </div>
+          {stockGlobal.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 pt-3 border-t border-white/20">
+              {stockGlobal.map((s, idx) => (
+                <div key={idx} className="bg-white/20 rounded-lg px-3 py-1 text-sm">
+                  <span className="font-bold">{s.cantidad}</span>
+                  <span className="text-white/70 ml-1">× {s.peso}g</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {stockGlobal.length === 0 && (
+            <p className={`text-center text-sm ${stockColor.text}`}>Sin stock. Crea una exportación.</p>
+          )}
+        </div>
+
+        <div className={`grid ${stockTotal.totalFutura > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
           <div className="bg-gradient-to-br from-stone-700 via-stone-600 to-stone-700 rounded-2xl p-4 text-white shadow-lg">
             <div className="text-center">
               <p className="text-xs text-stone-400 mb-1">En Clientes</p>
