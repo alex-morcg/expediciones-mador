@@ -119,7 +119,52 @@ export default function LingotesTracker({
   }, [entregas, futuraLingotes]);
 
   // CRUD
+  // Calculate global stock from all exportaciones
+  const stockGlobal = useMemo(() => {
+    const stockByPeso = {};
+    exportaciones.forEach(exp => {
+      (exp.lingotes || []).forEach(l => {
+        const peso = l.peso;
+        if (!stockByPeso[peso]) stockByPeso[peso] = 0;
+        stockByPeso[peso] += l.cantidad || 0;
+      });
+    });
+    // Convert to array sorted by peso
+    return Object.entries(stockByPeso)
+      .map(([peso, cantidad]) => ({ peso: parseFloat(peso), cantidad }))
+      .sort((a, b) => a.peso - b.peso);
+  }, [exportaciones]);
+
   const addEntrega = async (data) => {
+    // First, check if we have enough stock
+    const pesoRequerido = data.pesoUnitario;
+    const cantidadRequerida = data.cantidad;
+    const stockDisponible = stockGlobal.find(s => s.peso === pesoRequerido)?.cantidad || 0;
+
+    if (stockDisponible < cantidadRequerida) {
+      alert(`No hay suficiente stock de lingotes de ${pesoRequerido}g. Disponibles: ${stockDisponible}, Requeridos: ${cantidadRequerida}`);
+      return;
+    }
+
+    // Deduct from exportaciones stock (FIFO - first exportacion first)
+    let remaining = cantidadRequerida;
+    for (const exp of exportaciones) {
+      if (remaining <= 0) break;
+      const expLingotes = exp.lingotes || [];
+      const idx = expLingotes.findIndex(l => l.peso === pesoRequerido && l.cantidad > 0);
+      if (idx !== -1) {
+        const available = expLingotes[idx].cantidad;
+        const toDeduct = Math.min(available, remaining);
+        const newLingotes = [...expLingotes];
+        newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad - toDeduct };
+        // Remove if empty
+        const filtered = newLingotes.filter(l => l.cantidad > 0);
+        await onSaveExportacion({ ...exp, lingotes: filtered }, exp.id);
+        remaining -= toDeduct;
+      }
+    }
+
+    // Create the entrega with lingotes
     const lingotes = [];
     for (let i = 0; i < data.cantidad; i++) {
       lingotes.push({
@@ -1150,21 +1195,27 @@ export default function LingotesTracker({
     );
   };
 
-  // Entrega Modal - creates N lingotes at once
+  // Entrega Modal - creates N lingotes at once, deducting from stock
   const EntregaModal = () => {
     const defaultClienteId = editingEntregaClienteId || clientes[0]?.id || '';
     const defaultExportacionId = exportaciones[0]?.id || '';
     const defaultFecha = new Date().toISOString().split('T')[0];
+    // Default peso to first available in stock, or 50
+    const defaultPeso = stockGlobal.length > 0 ? stockGlobal[0].peso : 50;
     const [formData, setFormData] = useState({
       clienteId: defaultClienteId,
       exportacionId: defaultExportacionId,
       fechaEntrega: defaultFecha,
       cantidad: 1,
-      pesoUnitario: 50,
+      pesoUnitario: defaultPeso,
     });
 
+    // Check stock availability for selected peso
+    const stockDelPeso = stockGlobal.find(s => s.peso === formData.pesoUnitario)?.cantidad || 0;
+    const stockSuficiente = stockDelPeso >= formData.cantidad;
+
     // Check if form has meaningful changes from defaults
-    const hasChanges = formData.cantidad !== 1 || formData.pesoUnitario !== 50 ||
+    const hasChanges = formData.cantidad !== 1 || formData.pesoUnitario !== defaultPeso ||
       formData.clienteId !== defaultClienteId || formData.exportacionId !== defaultExportacionId ||
       formData.fechaEntrega !== defaultFecha;
 
@@ -1176,8 +1227,34 @@ export default function LingotesTracker({
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-stone-800 mb-6">Nueva Entrega</h3>
+        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-stone-800 mb-4">Nueva Entrega</h3>
+
+          {/* Stock disponible */}
+          <div className="bg-amber-50 rounded-xl p-3 mb-4">
+            <p className="text-xs text-amber-700 font-medium mb-2">📦 Stock disponible</p>
+            {stockGlobal.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {stockGlobal.map((s, idx) => (
+                  <div
+                    key={idx}
+                    className={`rounded-lg px-3 py-1 text-sm cursor-pointer transition-colors ${
+                      formData.pesoUnitario === s.peso
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-white border border-amber-200 hover:border-amber-400'
+                    }`}
+                    onClick={() => setFormData({ ...formData, pesoUnitario: s.peso })}
+                  >
+                    <span className="font-bold">{s.cantidad}</span>
+                    <span className="text-xs ml-1">× {s.peso}g</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-amber-600 text-sm">No hay stock. Crea una exportación primero.</p>
+            )}
+          </div>
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Cliente</label>
@@ -1188,48 +1265,44 @@ export default function LingotesTracker({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Exportacion</label>
-              <select value={formData.exportacionId} onChange={(e) => setFormData({ ...formData, exportacionId: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
-                {exportaciones.length === 0 && <option value="">Sin exportaciones</option>}
-                {exportaciones.map(e => (
-                  <option key={e.id} value={e.id}>{e.nombre}</option>
-                ))}
-              </select>
-            </div>
-            <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Entrega</label>
               <input type="date" value={formData.fechaEntrega} onChange={(e) => setFormData({ ...formData, fechaEntrega: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Cantidad de lingotes</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">
+                Cantidad de lingotes de {formData.pesoUnitario}g
+                <span className={`ml-2 text-xs ${stockSuficiente ? 'text-green-600' : 'text-red-600'}`}>
+                  (disponibles: {stockDelPeso})
+                </span>
+              </label>
               <div className="flex gap-2">
-                {[1, 2, 4, 6, 10].map(q => (
+                {[1, 2, 4, 6, 10].filter(q => q <= stockDelPeso || stockDelPeso === 0).map(q => (
                   <button key={q} onClick={() => setFormData({ ...formData, cantidad: q })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.cantidad === q ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
                     {q}
                   </button>
                 ))}
               </div>
-              <input type="number" value={formData.cantidad} onChange={(e) => setFormData({ ...formData, cantidad: parseInt(e.target.value) || 1 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Otra cantidad..." />
+              <input type="number" value={formData.cantidad} onChange={(e) => setFormData({ ...formData, cantidad: parseInt(e.target.value) || 1 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Otra cantidad..." min="1" max={stockDelPeso} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Peso por lingote (gramos)</label>
-              <div className="flex gap-2">
-                {[50, 100].map(p => (
-                  <button key={p} onClick={() => setFormData({ ...formData, pesoUnitario: p })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.pesoUnitario === p ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
-                    {p}g
-                  </button>
-                ))}
-              </div>
-              <input type="number" value={formData.pesoUnitario} onChange={(e) => setFormData({ ...formData, pesoUnitario: parseFloat(e.target.value) || 50 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 mt-2 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Otro peso..." />
-            </div>
-            <div className="bg-stone-50 rounded-xl p-3 text-center">
-              <span className="text-stone-500 text-sm">Total: </span>
-              <span className="font-bold text-stone-800">{formData.cantidad} x {formData.pesoUnitario}g = {formData.cantidad * formData.pesoUnitario}g</span>
+
+            {/* Summary */}
+            <div className={`rounded-xl p-3 text-center ${stockSuficiente ? 'bg-stone-50' : 'bg-red-50'}`}>
+              <span className={`text-sm ${stockSuficiente ? 'text-stone-500' : 'text-red-500'}`}>Total: </span>
+              <span className={`font-bold ${stockSuficiente ? 'text-stone-800' : 'text-red-700'}`}>
+                {formData.cantidad} × {formData.pesoUnitario}g = {formData.cantidad * formData.pesoUnitario}g
+              </span>
+              {!stockSuficiente && (
+                <p className="text-red-600 text-xs mt-1">⚠️ Stock insuficiente</p>
+              )}
             </div>
           </div>
           <div className="flex gap-3 mt-6">
             <Button variant="secondary" className="flex-1" onClick={handleClose}>Cancelar</Button>
-            <Button className="flex-1" onClick={() => addEntrega(formData)}>
+            <Button
+              className="flex-1"
+              onClick={() => addEntrega(formData)}
+              disabled={!stockSuficiente || stockGlobal.length === 0}
+            >
               Registrar
             </Button>
           </div>
