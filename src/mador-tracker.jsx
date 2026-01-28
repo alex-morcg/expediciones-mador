@@ -616,8 +616,18 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 );
               })}
               {paq.lineas.length === 0 && <p className="text-stone-400 text-center py-4">Sin líneas</p>}
+              {paq.lineas.length > 1 && (
+                <div className="mt-2 pt-2 border-t text-right" style={{ borderColor: clienteColor + '30' }}>
+                  <span className="font-semibold" style={{ color: clienteColor }}>
+                    Total: {formatGr(paq.lineas.reduce((sum, l) => sum + (l.bruto || 0), 0))}
+                  </span>
+                  <span className="ml-2" style={{ color: clienteColor + 'bb' }}>
+                    ({formatGr(paq.lineas.reduce((sum, l) => sum + calcularFinoLinea(l.bruto, l.ley), 0))} fino)
+                  </span>
+                </div>
+              )}
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex gap-2 flex-1">
                 <input
@@ -2615,8 +2625,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   return null;
                 })()}
 
-                {/* Total bruto y fino */}
-                {formData.lineas?.length > 0 && (
+                {/* Total bruto y fino (solo si hay más de 1 línea) */}
+                {formData.lineas?.length > 1 && (
                   <div className="mt-3 pt-2 border-t border-amber-200 text-right">
                     <span className="text-amber-800 font-semibold">
                       Total: {formatGr(formData.lineas.reduce((sum, l) => sum + (l.bruto || 0), 0))}
