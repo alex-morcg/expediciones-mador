@@ -3264,7 +3264,12 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               {logisticaPendienteCount > 0 && (
                 <div
                   className="flex items-center gap-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full cursor-pointer animate-pulse"
-                  onClick={() => setActiveTab('expediciones')}
+                  onClick={() => {
+                    const expPendiente = expedicionesLogisticaPendiente[0];
+                    if (expPendiente) {
+                      openModal('expedicion', expPendiente);
+                    }
+                  }}
                   title={`${logisticaPendienteCount} expedición(es) con logística pendiente`}
                 >
                   <span>🚗</span>
