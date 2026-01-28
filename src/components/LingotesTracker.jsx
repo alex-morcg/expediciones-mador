@@ -66,6 +66,7 @@ export default function LingotesTracker({
   onSaveFutura,
   onDeleteFutura,
   onUpdateFutura,
+  onAddLog,
 }) {
   const [activeTab, setActiveTab] = useState('stock');
   const [selectedCliente, setSelectedCliente] = useState(null);
@@ -205,6 +206,17 @@ export default function LingotesTracker({
       fechaEntrega: data.fechaEntrega,
       lingotes,
     });
+
+    // Log
+    const cliente = clientes.find(c => c.id === data.clienteId);
+    onAddLog?.('NUEVA_ENTREGA', {
+      cliente: cliente?.nombre || data.clienteId,
+      cantidad: data.cantidad,
+      peso: data.pesoUnitario,
+      totalGramos: data.cantidad * data.pesoUnitario,
+      fecha: data.fechaEntrega,
+    });
+
     setShowEntregaModal(false);
     setEditingEntregaClienteId(null);
 
@@ -227,6 +239,15 @@ export default function LingotesTracker({
       fechaCierre: data.fechaCierre || null,
       pagado: data.pagado || false,
     });
+
+    // Log
+    const cliente = clientes.find(c => c.id === data.clienteId);
+    onAddLog?.('NUEVA_FUTURA', {
+      cliente: cliente?.nombre || data.clienteId,
+      peso: data.peso,
+      precio: data.precio || null,
+    });
+
     setShowFuturaModal(false);
   };
 
@@ -264,6 +285,16 @@ export default function LingotesTracker({
       await onDeleteFutura(fId);
     }
 
+    // Log
+    const cliente = clientes.find(c => c.id === targetEntrega.clienteId);
+    const totalPeso = newLingotes.reduce((sum, l) => sum + (l.peso || 0), 0);
+    onAddLog?.('ASIGNAR_FUTURA', {
+      cliente: cliente?.nombre || targetEntrega.clienteId,
+      cantidad: futuraIds.length,
+      totalGramos: totalPeso,
+      fechaEntrega: targetEntrega.fechaEntrega,
+    });
+
     setShowAssignFuturaModal(false);
   };
 
@@ -289,6 +320,17 @@ export default function LingotesTracker({
       pagado: false,
     };
     await onUpdateEntrega(entregaId, { lingotes });
+
+    // Log
+    const cliente = clientes.find(c => c.id === entrega.clienteId);
+    onAddLog?.('CERRAR_LINGOTE', {
+      cliente: cliente?.nombre || entrega.clienteId,
+      peso: lingotes[lingoteIdx].peso,
+      precio: data.precio,
+      importe: data.precio * pesoNeto,
+      devolucion: data.devolucion || 0,
+    });
+
     setShowCierreModal(false);
     setSelectedEntrega(null);
     setSelectedLingoteIdx(null);
@@ -310,6 +352,16 @@ export default function LingotesTracker({
       nFactura: data.nFactura || null,
       fechaCierre: data.fechaCierre || null,
     });
+
+    // Log
+    const cliente = clientes.find(c => c.id === f.clienteId);
+    onAddLog?.('CERRAR_FUTURA', {
+      cliente: cliente?.nombre || f.clienteId,
+      peso: f.peso,
+      precio: data.precio,
+      importe: data.precio * pesoNeto,
+    });
+
     setShowCierreModal(false);
     setSelectedFuturaId(null);
     setSelectedEntrega(null);
@@ -333,7 +385,17 @@ export default function LingotesTracker({
 
   const deleteEntrega = async (entregaId) => {
     if (confirm('Eliminar esta entrega?')) {
+      const entrega = entregas.find(e => e.id === entregaId);
+      const cliente = entrega ? clientes.find(c => c.id === entrega.clienteId) : null;
+
       await onDeleteEntrega(entregaId);
+
+      // Log
+      onAddLog?.('ELIMINAR_ENTREGA', {
+        cliente: cliente?.nombre || entrega?.clienteId || 'desconocido',
+        fecha: entrega?.fechaEntrega || 'sin fecha',
+        lingotes: entrega?.lingotes?.length || 0,
+      });
     }
   };
 
@@ -861,8 +923,23 @@ export default function LingotesTracker({
             data.factura = editingExp.factura;
           }
           await onSaveExportacion(data, editingExp.id);
+
+          // Log edit
+          onAddLog?.('EDITAR_EXPORTACION', {
+            nombre: formData.nombre,
+            totalGramos: grExport,
+            precioGramo: formData.precioGramo || null,
+          });
         } else {
           await onSaveExportacion(data);
+
+          // Log new
+          onAddLog?.('NUEVA_EXPORTACION', {
+            nombre: formData.nombre,
+            totalGramos: grExport,
+            lingotes: validLingotes.map(l => `${l.cantidad}x${l.peso}g`).join(', '),
+            precioGramo: formData.precioGramo || null,
+          });
         }
 
         setShowNew(false);
@@ -1061,9 +1138,13 @@ export default function LingotesTracker({
                   </button>
                   {exp.totalEntregado === 0 && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
-                          onDeleteExportacion(exp.id);
+                          await onDeleteExportacion(exp.id);
+                          onAddLog?.('ELIMINAR_EXPORTACION', {
+                            nombre: exp.nombre,
+                            totalGramos: exp.grExport,
+                          });
                         }
                       }}
                       className="text-red-400 hover:text-red-600 text-sm font-medium"
@@ -1790,7 +1871,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v1.5</span>
+              <span className="text-xs text-stone-400 ml-1">v1.6</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
