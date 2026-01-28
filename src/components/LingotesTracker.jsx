@@ -715,12 +715,15 @@ export default function LingotesTracker({
       setShowNew(true);
     };
 
-    const openEdit = (exp) => {
+    const openEdit = (expId) => {
+      // Always get the original from exportaciones array to avoid stale data
+      const exp = exportaciones.find(e => e.id === expId);
+      if (!exp) return;
       setFormData({
         nombre: exp.nombre || '',
         fecha: exp.fecha || defaultFecha,
-        lingotes: exp.lingotes && exp.lingotes.length > 0 ? [...exp.lingotes] : [{ cantidad: 1, peso: 50 }],
-        precioGramo: exp.precioGramo || '',
+        lingotes: exp.lingotes && exp.lingotes.length > 0 ? exp.lingotes.map(l => ({ ...l })) : [{ cantidad: 1, peso: 50 }],
+        precioGramo: exp.precioGramo ? String(exp.precioGramo) : '',
       });
       setEditingExp(exp);
       setShowNew(true);
@@ -1006,21 +1009,23 @@ export default function LingotesTracker({
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => openEdit(exp)}
+                    onClick={() => openEdit(exp.id)}
                     className="text-amber-600 hover:text-amber-700 text-sm font-medium"
                   >
                     ✏️ Editar
                   </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
-                        onDeleteExportacion(exp.id);
-                      }
-                    }}
-                    className="text-red-400 hover:text-red-600 text-sm font-medium"
-                  >
-                    🗑️
-                  </button>
+                  {exp.totalEntregado === 0 && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
+                          onDeleteExportacion(exp.id);
+                        }
+                      }}
+                      className="text-red-400 hover:text-red-600 text-sm font-medium"
+                    >
+                      🗑️
+                    </button>
+                  )}
                 </div>
               </div>
 
