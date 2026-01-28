@@ -905,13 +905,13 @@ export default function LingotesTracker({
                         min="1"
                       />
                       <span className="text-stone-500">×</span>
-                      <div className="flex gap-1 flex-wrap">
-                        {[50, 100, 250, 500, 1000].map(peso => (
+                      <div className="flex gap-1 items-center">
+                        {[50, 100].map(peso => (
                           <button
                             key={peso}
                             type="button"
                             onClick={() => updateLingoteTipo(idx, 'peso', peso)}
-                            className={`px-2 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                               l.peso === peso
                                 ? 'bg-amber-500 text-white'
                                 : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
@@ -920,14 +920,21 @@ export default function LingotesTracker({
                             {peso}g
                           </button>
                         ))}
+                        <div className="flex items-center gap-1 ml-1">
+                          <input
+                            type="number"
+                            value={l.peso !== 50 && l.peso !== 100 ? l.peso : ''}
+                            onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
+                            className={`w-16 border rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                              l.peso !== 50 && l.peso !== 100 && l.peso > 0
+                                ? 'border-amber-500 bg-amber-50'
+                                : 'border-stone-300'
+                            }`}
+                            placeholder="otro"
+                          />
+                          <span className="text-stone-400 text-sm">g</span>
+                        </div>
                       </div>
-                      <input
-                        type="number"
-                        value={l.peso}
-                        onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
-                        className="w-20 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
-                        placeholder="otro"
-                      />
                       <span className="text-stone-600 font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
                       {formData.lingotes.length > 1 && (
                         <button
@@ -1733,6 +1740,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
+              <span className="text-xs text-stone-400 ml-1">v1.2</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
