@@ -1245,6 +1245,34 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               );
             })()}
 
+          {/* Resumen por categoría - solo visible en vista por categoría */}
+          {ordenVista === 'categoria' && Object.keys(totales.porCategoria).length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <h4 className="text-amber-700 font-semibold text-sm mb-2">📊 Resumen por Categoría</h4>
+              <div className="space-y-1.5">
+                {Object.entries(totales.porCategoria)
+                  .sort((a, b) => b[1].bruto - a[1].bruto)
+                  .map(([catNombre, vals]) => {
+                    const cat = categorias.find(c => c.nombre === catNombre);
+                    return (
+                      <div key={catNombre} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-stone-700">{catNombre}</span>
+                          {cat?.esFino && (
+                            <span className="bg-amber-200 text-amber-800 text-xs px-1.5 py-0.5 rounded font-medium">FINO</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 font-mono text-xs">
+                          <span className="text-stone-600">{formatNum(vals.bruto)}g</span>
+                          <span className="text-amber-600 font-semibold">{formatNum(vals.precioMedioBruto)} €/g</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between items-center">
             <h3 className="text-amber-600 font-semibold">📦 Paquetes ({expedicionPaquetes.length})</h3>
             <Button size="sm" onClick={() => openModal('paquete', null)}>+ Nuevo</Button>
