@@ -1216,7 +1216,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
           {/* Barra de seguro */}
           {exp.seguro > 0 && (() => {
-              const pct = (totales.totalFra / exp.seguro) * 100;
+              const pct = (totales.totalFraJofisa / exp.seguro) * 100;
               const over = pct > 100;
               const maxPct = over ? pct : 100;
               const barPct = (pct / maxPct) * 100;
@@ -1225,7 +1225,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <div className="bg-white rounded-xl p-3 border border-stone-200">
                   <div className="flex justify-between items-center text-xs mb-1">
                     <span className="text-stone-500">Seguro</span>
-                    <span className="text-stone-600 font-mono">{formatNum(totales.totalFra)} / {formatNum(exp.seguro)} €</span>
+                    <span className="text-stone-600 font-mono">{formatNum(totales.totalFraJofisa)} / {formatNum(exp.seguro)} €</span>
                   </div>
                   <div className="relative w-full h-5">
                     <div className="absolute top-1 w-full bg-stone-200 rounded-full h-3 overflow-hidden">
@@ -1577,7 +1577,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); handleDeleteExpedicion(exp.id); }}>Eliminar</Button>
                 </div>
                 {exp.seguro > 0 && (() => {
-                  const pct = (totales.totalFra / exp.seguro) * 100;
+                  const pct = (totales.totalFraJofisa / exp.seguro) * 100;
                   const over = pct > 100;
                   const barPct = over ? 100 : pct;
                   const markPct = over ? (100 / pct) * 100 : null;
