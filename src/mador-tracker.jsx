@@ -1542,17 +1542,8 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             const sinCerrar = showBadges ? expPaqs.filter(p => !p.precioFino).length : 0;
             const sinFactura = showBadges ? expPaqs.filter(p => p.precioFino && !p.factura).length : 0;
             const sinVerificar = showBadges ? expPaqs.filter(p => p.precioFino && p.factura && !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length : 0;
-            // Check if logistics pending (≤2 days and missing fields)
-            const logisticaPendiente = (() => {
-              if (!exp.fechaExportacion) return false;
-              const hoy = new Date();
-              hoy.setHours(0, 0, 0, 0);
-              const fechaExp = new Date(exp.fechaExportacion);
-              fechaExp.setHours(0, 0, 0, 0);
-              const diasRestantes = Math.ceil((fechaExp - hoy) / (1000 * 60 * 60 * 24));
-              if (diasRestantes > 2) return false;
-              return !exp.matriculaId || !exp.bultos || !exp.horaExportacion;
-            })();
+            // Check if logistics pending (has export date but missing fields)
+            const logisticaPendiente = exp.fechaExportacion && (!exp.matriculaId || !exp.bultos || !exp.horaExportacion);
             return (
               <Card key={exp.id} onClick={() => setSelectedExpedicion(exp.id)} className={esActual ? 'ring-2 ring-amber-400' : ''}>
                 <div className="flex justify-between items-start">
@@ -3212,15 +3203,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     return sum + expPaqs.filter(p => !p.precioFino || !p.factura || !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length;
   }, 0);
 
-  // Check expeditions with logistics pending (≤2 days to export and missing matricula/bultos/hora)
+  // Check expeditions with logistics pending (has export date but missing matricula/bultos/hora)
   const expedicionesLogisticaPendiente = expediciones.filter(exp => {
     if (!exp.fechaExportacion) return false;
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const fechaExp = new Date(exp.fechaExportacion);
-    fechaExp.setHours(0, 0, 0, 0);
-    const diasRestantes = Math.ceil((fechaExp - hoy) / (1000 * 60 * 60 * 24));
-    if (diasRestantes > 2) return false;
     // Check if any logistics field is missing
     return !exp.matriculaId || !exp.bultos || !exp.horaExportacion;
   });
