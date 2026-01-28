@@ -809,15 +809,6 @@ export function useFirestore() {
     await updateDoc(doc(db, 'lingotes_futura', id), data);
   };
 
-  // --- Logs ---
-  const addLog = async (accion, detalles = {}) => {
-    await addDoc(collection(db, 'lingotes_logs'), {
-      accion,
-      detalles,
-      timestamp: new Date().toISOString(),
-    });
-  };
-
   return {
     // Data
     categorias,
@@ -879,8 +870,5 @@ export function useFirestore() {
     saveLingoteFutura,
     deleteLingoteFutura,
     updateLingoteFutura,
-
-    // Logs
-    addLog,
   };
 }

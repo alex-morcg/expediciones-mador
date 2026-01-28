@@ -69,7 +69,6 @@ export default function MadorTracker() {
     saveLingoteEntrega, deleteLingoteEntrega, updateLingoteEntrega,
     updateLingotesConfig,
     saveLingoteFutura, deleteLingoteFutura, updateLingoteFutura,
-    addLog,
   } = useFirestore();
 
   // Local UI state
@@ -3304,7 +3303,6 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         onSaveFutura={saveLingoteFutura}
         onDeleteFutura={deleteLingoteFutura}
         onUpdateFutura={updateLingoteFutura}
-        onAddLog={addLog}
       />
     );
   }
