@@ -2274,7 +2274,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         // Get most recent precioFino across all expediciones as starting default
         const allPreciosFino = paquetes.filter(p => p.precioFino).map(p => p.precioFino);
         const defaultPrecio = allPreciosFino.length > 0 ? allPreciosFino[allPreciosFino.length - 1] : '';
-        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: 600000, matriculaId: null, bultos: null, horaExportacion: null };
+        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: 600000, matriculaId: null, bultos: null, horaExportacion: null, matriculaLog: null, bultosLog: null, horaLog: null };
       }
       if (modalType === 'paquete') {
         const defaultCliente = clientes[0];
@@ -2586,43 +2586,117 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               </div>
 
               {/* Campos de logística */}
-              <div className="bg-stone-50 rounded-xl p-3 space-y-3 border border-stone-200">
-                <p className="text-stone-500 text-xs font-medium uppercase tracking-wide">Logística</p>
-                <Select
-                  label="Matrícula del coche"
-                  value={formData.matriculaId || ''}
-                  onChange={(e) => setFormData({ ...formData, matriculaId: e.target.value || null })}
-                  options={[
-                    { value: '', label: '— Seleccionar —' },
-                    ...matriculas.map(m => ({ value: m.id, label: m.matricula }))
-                  ]}
-                />
-                <div>
-                  <label className="block text-amber-800 text-sm mb-1 font-medium">Bultos</label>
-                  <div className="flex gap-2">
-                    {[1, 2, 3].map(n => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, bultos: n })}
-                        className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${
-                          formData.bultos === n
-                            ? 'border-amber-500 bg-amber-50 text-amber-700'
-                            : 'border-stone-200 text-stone-600 hover:border-stone-300'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
+              {(() => {
+                // Si hay fecha de exportación, los campos vacíos se marcan en rojo
+                const tieneExportacion = !!formData.fechaExportacion;
+                const faltaMatricula = tieneExportacion && !formData.matriculaId;
+                const faltaBultos = tieneExportacion && !formData.bultos;
+                const faltaHora = tieneExportacion && !formData.horaExportacion;
+
+                return (
+                  <div className={`rounded-xl p-3 space-y-3 border ${tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) ? 'bg-red-50 border-red-200' : 'bg-stone-50 border-stone-200'}`}>
+                    <p className={`text-xs font-medium uppercase tracking-wide ${tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) ? 'text-red-500' : 'text-stone-500'}`}>
+                      Logística {tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) && '⚠️'}
+                    </p>
+
+                    {/* Matrícula */}
+                    <div className={faltaMatricula ? 'bg-red-100 rounded-lg p-2 -mx-1' : ''}>
+                      <Select
+                        label={<span className={faltaMatricula ? 'text-red-700' : ''}>Matrícula del coche {faltaMatricula && <span className="text-red-500">*</span>}</span>}
+                        value={formData.matriculaId || ''}
+                        onChange={(e) => {
+                          const val = e.target.value || null;
+                          setFormData({
+                            ...formData,
+                            matriculaId: val,
+                            matriculaLog: val ? { usuario: usuarioActivo, fecha: new Date().toISOString() } : null
+                          });
+                        }}
+                        options={[
+                          { value: '', label: '— Seleccionar —' },
+                          ...matriculas.map(m => ({ value: m.id, label: m.matricula }))
+                        ]}
+                      />
+                      {faltaMatricula && (
+                        <p className="text-red-600 text-xs mt-1">⚠️ Campo requerido</p>
+                      )}
+                      {formData.matriculaId && formData.matriculaLog && (
+                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-green-700 text-xs font-medium">
+                            ✅ {formData.matriculaLog.usuario} • {new Date(formData.matriculaLog.fecha).toLocaleDateString('es-ES')} {new Date(formData.matriculaLog.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bultos */}
+                    <div className={faltaBultos ? 'bg-red-100 rounded-lg p-2 -mx-1' : ''}>
+                      <label className={`block text-sm mb-1 font-medium ${faltaBultos ? 'text-red-700' : 'text-amber-800'}`}>
+                        Bultos {faltaBultos && <span className="text-red-500">*</span>}
+                      </label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3].map(n => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setFormData({
+                              ...formData,
+                              bultos: n,
+                              bultosLog: { usuario: usuarioActivo, fecha: new Date().toISOString() }
+                            })}
+                            className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${
+                              formData.bultos === n
+                                ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                : faltaBultos
+                                  ? 'border-red-300 text-red-600 hover:border-red-400'
+                                  : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                      {faltaBultos && (
+                        <p className="text-red-600 text-xs mt-1">⚠️ Campo requerido</p>
+                      )}
+                      {formData.bultos && formData.bultosLog && (
+                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-green-700 text-xs font-medium">
+                            ✅ {formData.bultosLog.usuario} • {new Date(formData.bultosLog.fecha).toLocaleDateString('es-ES')} {new Date(formData.bultosLog.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Hora exportación */}
+                    <div className={faltaHora ? 'bg-red-100 rounded-lg p-2 -mx-1' : ''}>
+                      <Input
+                        label={<span className={faltaHora ? 'text-red-700' : ''}>Hora de exportación {faltaHora && <span className="text-red-500">*</span>}</span>}
+                        type="time"
+                        value={formData.horaExportacion || ''}
+                        onChange={(e) => {
+                          const val = e.target.value || null;
+                          setFormData({
+                            ...formData,
+                            horaExportacion: val,
+                            horaLog: val ? { usuario: usuarioActivo, fecha: new Date().toISOString() } : null
+                          });
+                        }}
+                      />
+                      {faltaHora && (
+                        <p className="text-red-600 text-xs mt-1">⚠️ Campo requerido</p>
+                      )}
+                      {formData.horaExportacion && formData.horaLog && (
+                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-green-700 text-xs font-medium">
+                            ✅ {formData.horaLog.usuario} • {new Date(formData.horaLog.fecha).toLocaleDateString('es-ES')} {new Date(formData.horaLog.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <Input
-                  label="Hora de exportación"
-                  type="time"
-                  value={formData.horaExportacion || ''}
-                  onChange={(e) => setFormData({ ...formData, horaExportacion: e.target.value || null })}
-                />
-              </div>
+                );
+              })()}
             </>
           )}
 
