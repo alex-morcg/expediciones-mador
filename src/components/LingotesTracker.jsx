@@ -89,6 +89,8 @@ export default function LingotesTracker({
   const [showAssignFuturaModal, setShowAssignFuturaModal] = useState(false);
   const [selectedFuturaId, setSelectedFuturaId] = useState(null);
   const [showHistorial, setShowHistorial] = useState(false);
+  const [showMultiCierreModal, setShowMultiCierreModal] = useState(false);
+  const [multiCierreSelection, setMultiCierreSelection] = useState({}); // { entregaId_idx: true }
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -774,61 +776,24 @@ export default function LingotesTracker({
           <Card>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-stone-800">En Curso</h3>
-              <div className="text-sm text-stone-500">
-                {entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0)} lingotes
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-stone-500">
+                  {entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0)} lingotes
+                </span>
+                {entregasConEnCurso.length > 1 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setMultiCierreSelection({});
+                      setShowMultiCierreModal(true);
+                    }}
+                  >
+                    Cerrar múltiples
+                  </Button>
+                )}
               </div>
             </div>
-
-            {/* Resumen global para cerrar todos */}
-            {(() => {
-              // Recopilar TODOS los lingotes en curso de TODAS las entregas
-              const todosEnCurso = entregasConEnCurso.flatMap(e =>
-                e.lingotes.map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx }))
-              ).filter(l => l.estado === 'en_curso');
-
-              const totalLingotes = todosEnCurso.length;
-              const totalPesoGlobal = todosEnCurso.reduce((s, l) => s + (l.peso || 0), 0);
-
-              // Agrupar por peso para mostrar resumen
-              const porPesoGlobal = {};
-              todosEnCurso.forEach(l => {
-                if (!porPesoGlobal[l.peso]) porPesoGlobal[l.peso] = 0;
-                porPesoGlobal[l.peso]++;
-              });
-              const resumenPesos = Object.entries(porPesoGlobal)
-                .map(([peso, cant]) => `${cant} x ${peso}g`)
-                .join(' + ');
-
-              const handleCerrarTodos = () => {
-                // Guardar todos los índices para cerrar
-                const allIndices = entregasConEnCurso.map(e => ({
-                  entregaId: e.id,
-                  indices: e.lingotes.map((l, idx) => l.estado === 'en_curso' ? idx : null).filter(i => i !== null)
-                })).filter(x => x.indices.length > 0);
-
-                // Usamos el primer entrega como referencia y guardamos todos los datos
-                setSelectedEntrega({ ...entregasConEnCurso[0], _allEntregasIndices: allIndices });
-                setSelectedLingoteIndices(allIndices[0].indices);
-                setSelectedLingoteIdx(allIndices[0].indices[0]);
-                setShowCierreModal(true);
-              };
-
-              if (totalLingotes <= 1 || entregasConEnCurso.length <= 1) return null;
-
-              return (
-                <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-300">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-stone-800">{totalLingotes} lingotes = {totalPesoGlobal}g</div>
-                      <div className="text-xs text-stone-500">{resumenPesos}</div>
-                    </div>
-                    <Button size="sm" variant="success" onClick={handleCerrarTodos}>
-                      Cerrar todos
-                    </Button>
-                  </div>
-                </div>
-              );
-            })()}
 
             <div className="space-y-3">
               {entregasConEnCurso.map(entrega => {
@@ -2628,6 +2593,176 @@ export default function LingotesTracker({
     );
   };
 
+  // Modal para selección múltiple de lingotes de diferentes entregas
+  const MultiCierreModal = () => {
+    const cliente = getCliente(selectedCliente);
+    if (!cliente) return null;
+
+    const allEntregasCliente = entregas.filter(e => e.clienteId === cliente.id);
+    const entregasActivas = allEntregasCliente.filter(e => lingotesEnCurso(e).length > 0);
+
+    // Recopilar todos los lingotes en curso
+    const todosLingotes = entregasActivas.flatMap(e =>
+      e.lingotes.map((l, idx) => ({
+        ...l,
+        entregaId: e.id,
+        lingoteIdx: idx,
+        fechaEntrega: e.fechaEntrega,
+        exportacionNombre: getExportacion(e.exportacionId)?.nombre || '?'
+      }))
+    ).filter(l => l.estado === 'en_curso');
+
+    // Calcular seleccionados
+    const selectedCount = Object.values(multiCierreSelection).filter(Boolean).length;
+    const selectedLingotes = todosLingotes.filter(l => multiCierreSelection[`${l.entregaId}_${l.lingoteIdx}`]);
+    const selectedPeso = selectedLingotes.reduce((s, l) => s + (l.peso || 0), 0);
+
+    // Agrupar por entrega para mostrar
+    const porEntrega = {};
+    todosLingotes.forEach(l => {
+      if (!porEntrega[l.entregaId]) {
+        porEntrega[l.entregaId] = {
+          entregaId: l.entregaId,
+          fechaEntrega: l.fechaEntrega,
+          exportacionNombre: l.exportacionNombre,
+          lingotes: []
+        };
+      }
+      porEntrega[l.entregaId].lingotes.push(l);
+    });
+
+    const toggleLingote = (entregaId, idx) => {
+      const key = `${entregaId}_${idx}`;
+      setMultiCierreSelection(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const toggleEntrega = (entregaId, lingotes) => {
+      const allSelected = lingotes.every(l => multiCierreSelection[`${l.entregaId}_${l.lingoteIdx}`]);
+      const newSelection = { ...multiCierreSelection };
+      lingotes.forEach(l => {
+        newSelection[`${l.entregaId}_${l.lingoteIdx}`] = !allSelected;
+      });
+      setMultiCierreSelection(newSelection);
+    };
+
+    const selectAll = () => {
+      const newSelection = {};
+      todosLingotes.forEach(l => {
+        newSelection[`${l.entregaId}_${l.lingoteIdx}`] = true;
+      });
+      setMultiCierreSelection(newSelection);
+    };
+
+    const handleCerrarSeleccionados = () => {
+      if (selectedCount === 0) return;
+
+      // Agrupar por entrega
+      const porEntregaIndices = {};
+      selectedLingotes.forEach(l => {
+        if (!porEntregaIndices[l.entregaId]) {
+          porEntregaIndices[l.entregaId] = [];
+        }
+        porEntregaIndices[l.entregaId].push(l.lingoteIdx);
+      });
+
+      const allIndices = Object.entries(porEntregaIndices).map(([entregaId, indices]) => ({
+        entregaId,
+        indices
+      }));
+
+      // Configurar para cierre múltiple
+      const firstEntrega = entregas.find(e => e.id === allIndices[0].entregaId);
+      setSelectedEntrega({ ...firstEntrega, _allEntregasIndices: allIndices });
+      setSelectedLingoteIndices(allIndices[0].indices);
+      setSelectedLingoteIdx(allIndices[0].indices[0]);
+      setShowMultiCierreModal(false);
+      setShowCierreModal(true);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowMultiCierreModal(false)}>
+        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-stone-800">Seleccionar lingotes</h3>
+            <button onClick={selectAll} className="text-xs text-amber-600 hover:text-amber-700 font-semibold">
+              Seleccionar todos
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+            {Object.values(porEntrega).map(grupo => {
+              const allSelected = grupo.lingotes.every(l => multiCierreSelection[`${l.entregaId}_${l.lingoteIdx}`]);
+              const someSelected = grupo.lingotes.some(l => multiCierreSelection[`${l.entregaId}_${l.lingoteIdx}`]);
+
+              return (
+                <div key={grupo.entregaId} className="border border-stone-200 rounded-xl p-3">
+                  <div
+                    className="flex items-center gap-2 mb-2 cursor-pointer"
+                    onClick={() => toggleEntrega(grupo.entregaId, grupo.lingotes)}
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      allSelected ? 'bg-amber-500 border-amber-500 text-white' :
+                      someSelected ? 'bg-amber-200 border-amber-400' : 'border-stone-300'
+                    }`}>
+                      {allSelected && '✓'}
+                      {someSelected && !allSelected && '–'}
+                    </div>
+                    <span
+                      className="px-2 py-0.5 rounded font-bold text-sm"
+                      style={{ backgroundColor: getEntregaColor(grupo.fechaEntrega) + '20', color: getEntregaColor(grupo.fechaEntrega) }}
+                    >{formatEntregaShort(grupo.fechaEntrega)}</span>
+                    <span className="text-xs text-stone-500">• Exp: {grupo.exportacionNombre}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {grupo.lingotes.map(l => {
+                      const key = `${l.entregaId}_${l.lingoteIdx}`;
+                      const isSelected = multiCierreSelection[key];
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => toggleLingote(l.entregaId, l.lingoteIdx)}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-mono font-semibold transition-colors ${
+                            isSelected
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                          }`}
+                        >
+                          {l.peso}g
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Resumen y botones */}
+          <div className="border-t border-stone-200 pt-4">
+            {selectedCount > 0 && (
+              <div className="text-sm text-stone-600 mb-3 text-center">
+                <span className="font-bold text-amber-600">{selectedCount}</span> lingotes seleccionados = <span className="font-bold">{selectedPeso}g</span>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => setShowMultiCierreModal(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="success"
+                className="flex-1"
+                disabled={selectedCount === 0}
+                onClick={handleCerrarSeleccionados}
+              >
+                Cerrar ({selectedCount})
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Tab button
   const TabBtn = ({ id, label, icon }) => (
     <button
@@ -2679,6 +2814,7 @@ export default function LingotesTracker({
       {showCierreModal && <CierreModal />}
       {showFuturaModal && <FuturaModal />}
       {showAssignFuturaModal && <AssignFuturaModal />}
+      {showMultiCierreModal && <MultiCierreModal />}
     </div>
   );
 }
