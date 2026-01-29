@@ -868,7 +868,8 @@ export default function LingotesTracker({
         }).filter(c => c.entregado > 0);
 
         // Has been used = stock actual menor que original
-        const hasBeenUsed = stockTotal < (exp.grExport || 0);
+        // Si grExport no existe, no podemos saber → asumimos no usado
+        const hasBeenUsed = exp.grExport ? stockTotal < exp.grExport : false;
 
         return { ...exp, totalEntregado, totalCerrado, totalDevuelto, totalPendiente, totalImporte, totalLingotes, porCliente, stockTotal, stockCount, facturaTotal, hasBeenUsed };
       });
