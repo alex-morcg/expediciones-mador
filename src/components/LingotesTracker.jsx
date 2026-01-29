@@ -1037,7 +1037,7 @@ export default function LingotesTracker({
                           <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Peso</th>
                           <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">€/g</th>
                           <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Importe</th>
-                          <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs">Pagado</th>
+                          <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-16">Pag</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1047,15 +1047,30 @@ export default function LingotesTracker({
                             <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
                             <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
                             <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
-                            <td className="py-1.5 px-1 text-center">
-                              <button
-                                onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
-                                  l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
-                                }`}
-                              >
-                                {l.pagado && '✓'}
-                              </button>
+                            <td className="py-1.5 px-1">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
+                                    l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
+                                  }`}
+                                >
+                                  {l.pagado && '✓'}
+                                </button>
+                                {l.nFactura && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const factura = (facturas || []).find(f => f.id === l.nFactura);
+                                      if (factura) setViewingFactura(factura);
+                                    }}
+                                    className="text-blue-500 hover:text-blue-700 text-sm"
+                                    title="Ver factura"
+                                  >
+                                    📄
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -3075,7 +3090,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v2.3</span>
+              <span className="text-xs text-stone-400 ml-1">v2.4</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
