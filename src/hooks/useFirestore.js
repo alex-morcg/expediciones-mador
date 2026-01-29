@@ -542,7 +542,12 @@ export function useFirestore() {
   const updatePaqueteCierre = async (paqueteId, precioFino, cierreJofisa, usuarioActivo) => {
     const paq = paquetes.find(p => p.id === paqueteId);
     if (!paq) return;
-    if (paq.precioFino === precioFino && paq.cierreJofisa === cierreJofisa) return;
+    // Normalizar a números para comparación
+    const oldPrecio = paq.precioFino ?? null;
+    const oldCierre = paq.cierreJofisa ?? null;
+    const newPrecio = precioFino ?? null;
+    const newCierre = cierreJofisa ?? null;
+    if (oldPrecio === newPrecio && oldCierre === newCierre) return;
 
     const modificacion = { usuario: usuarioActivo, fecha: new Date().toISOString() };
     const log = {

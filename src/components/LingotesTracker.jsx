@@ -285,6 +285,7 @@ export default function LingotesTracker({
       ...lingotes[lingoteIdx],
       euroOnza: data.euroOnza || null,
       base: data.base || null,
+      baseCliente: data.baseCliente || null,
       precioJofisa: data.precioJofisa || null,
       importeJofisa: data.importeJofisa || 0,
       margen: data.margen || 0,
@@ -312,6 +313,7 @@ export default function LingotesTracker({
     await onUpdateFutura(futuraId, {
       euroOnza: data.euroOnza || null,
       base: data.base || null,
+      baseCliente: data.baseCliente || null,
       precioJofisa: data.precioJofisa || null,
       importeJofisa: data.importeJofisa || 0,
       margen: data.margen || 0,
@@ -1332,13 +1334,13 @@ export default function LingotesTracker({
                         </div>
                       );
                     })}
-                    {/* Parte gris: stock pendiente de entregar */}
+                    {/* Parte gris: stock = desde entregados hasta el 100% */}
                     {exp.stockTotal > 0 && (
                       <div
                         className="absolute h-full flex items-center justify-center bg-stone-300"
                         style={{
                           left: `${(exp.totalEntregado / exp.grExport) * 100}%`,
-                          width: `${(exp.stockTotal / exp.grExport) * 100}%`,
+                          right: 0,
                         }}
                       >
                         <span className="text-stone-600 text-xs font-medium whitespace-nowrap">
@@ -1678,10 +1680,12 @@ export default function LingotesTracker({
     const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
     const defaultEuroOnza = lingote?.euroOnza || '';
     const defaultPrecioJofisa = lingote?.precioJofisa || '';
+    const defaultBaseCliente = lingote?.baseCliente || '';
     const defaultNFactura = lingote?.nFactura || '';
-    const [jofisaAutoFilled, setJofisaAutoFilled] = useState(false);
+    const [euroOnzaConfirmado, setEuroOnzaConfirmado] = useState(!!defaultEuroOnza);
     const [formData, setFormData] = useState({
       euroOnza: defaultEuroOnza,
+      baseCliente: defaultBaseCliente,
       precioJofisa: defaultPrecioJofisa,
       margen: 6,
       fechaCierre: new Date().toISOString().split('T')[0],
@@ -1692,6 +1696,7 @@ export default function LingotesTracker({
     // Check if form has meaningful changes
     const hasChanges = formData.euroOnza !== defaultEuroOnza ||
       formData.precioJofisa !== defaultPrecioJofisa ||
+      formData.baseCliente !== defaultBaseCliente ||
       formData.nFactura !== defaultNFactura ||
       formData.devolucion !== 0 ||
       formData.margen !== 6;
@@ -1711,25 +1716,33 @@ export default function LingotesTracker({
     const cliente = getCliente(clienteId);
     const pesoNeto = (lingote.peso || 0) - formData.devolucion;
 
-    // Calculations
+    // Calculations - solo si euroOnza está confirmado
     const euroOnzaNum = parseFloat(formData.euroOnza) || 0;
-    const base = euroOnzaNum ? Math.ceil((euroOnzaNum / 31.10349) * 100) / 100 : 0;
+    const base = (euroOnzaConfirmado && euroOnzaNum) ? Math.ceil((euroOnzaNum / 31.10349) * 100) / 100 : 0;
+    const baseClienteNum = parseFloat(formData.baseCliente) || base;
     const precioJofisaNum = parseFloat(formData.precioJofisa) || 0;
     const importeJofisa = precioJofisaNum * pesoNeto;
     const margenNum = parseFloat(formData.margen) || 0;
-    const precioCliente = base ? Math.round((base * (1 + margenNum / 100)) * 100) / 100 : 0;
+    const precioCliente = baseClienteNum ? Math.round((baseClienteNum * (1 + margenNum / 100)) * 100) / 100 : 0;
     const importeCliente = precioCliente * pesoNeto;
 
-    // Auto-fill precioJofisa from base (one time only)
-    if (base > 0 && !jofisaAutoFilled && !formData.precioJofisa) {
-      setFormData(prev => ({ ...prev, precioJofisa: base.toFixed(2) }));
-      setJofisaAutoFilled(true);
-    }
+    // Auto-fill baseCliente y precioJofisa cuando se confirma euroOnza
+    const confirmarEuroOnza = () => {
+      if (!euroOnzaNum) return;
+      const baseCalc = Math.ceil((euroOnzaNum / 31.10349) * 100) / 100;
+      setFormData(prev => ({
+        ...prev,
+        baseCliente: prev.baseCliente || baseCalc.toFixed(2),
+        precioJofisa: prev.precioJofisa || baseCalc.toFixed(2),
+      }));
+      setEuroOnzaConfirmado(true);
+    };
 
     const handleConfirm = () => {
       const cierreData = {
         euroOnza: euroOnzaNum,
         base,
+        baseCliente: baseClienteNum,
         precioJofisa: precioJofisaNum,
         importeJofisa,
         margen: margenNum,
@@ -1753,9 +1766,36 @@ export default function LingotesTracker({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">€/Onza</label>
-              <input type="number" step="0.01" value={formData.euroOnza} onChange={(e) => setFormData({ ...formData, euroOnza: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ej: 3693,42" autoFocus />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.euroOnza}
+                  onChange={(e) => {
+                    setFormData({ ...formData, euroOnza: e.target.value });
+                    setEuroOnzaConfirmado(false);
+                  }}
+                  className={`flex-1 border rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 ${euroOnzaConfirmado ? 'border-emerald-400 bg-emerald-50' : 'border-stone-300'}`}
+                  placeholder="Ej: 3693,42"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={confirmarEuroOnza}
+                  disabled={!euroOnzaNum || euroOnzaConfirmado}
+                  className={`px-4 py-2 rounded-xl font-semibold transition-all ${
+                    euroOnzaConfirmado
+                      ? 'bg-emerald-100 text-emerald-600 cursor-default'
+                      : euroOnzaNum
+                        ? 'bg-amber-500 text-white hover:bg-amber-600'
+                        : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                  }`}
+                >
+                  {euroOnzaConfirmado ? '✓' : 'OK'}
+                </button>
+              </div>
             </div>
-            {base > 0 && (
+            {euroOnzaConfirmado && base > 0 && (
               <div className="bg-stone-50 rounded-xl p-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-stone-500">Base (€/Onza ÷ 31,10349):</span>
@@ -1763,31 +1803,39 @@ export default function LingotesTracker({
                 </div>
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
-              <input type="number" step="0.01" value={formData.precioJofisa} onChange={(e) => { setFormData({ ...formData, precioJofisa: e.target.value }); setJofisaAutoFilled(true); }} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Auto desde base" />
-            </div>
-            {precioJofisaNum > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-blue-600">Importe Jofisa:</span>
-                  <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisa)}</span>
+            {euroOnzaConfirmado && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
+                  <input type="number" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Igual a base" />
                 </div>
-                <div className="text-xs text-blue-400 mt-0.5">{pesoNeto}g x {formatNum(precioJofisaNum)} €/g</div>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
+                  <input type="number" step="0.01" value={formData.precioJofisa} onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Auto desde base" />
+                </div>
+                {precioJofisaNum > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-blue-600">Importe Jofisa:</span>
+                      <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisa)}</span>
+                    </div>
+                    <div className="text-xs text-blue-400 mt-0.5">{pesoNeto}g x {formatNum(precioJofisaNum)} €/g</div>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Margen %</label>
+                    <input type="number" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Precio Cliente</label>
+                    <div className="w-full border border-stone-200 bg-stone-50 rounded-xl px-4 py-3 font-mono text-stone-800">
+                      {precioCliente ? formatNum(precioCliente) : '-'}
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Margen %</label>
-                <input type="number" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Precio Cliente</label>
-                <div className="w-full border border-stone-200 bg-stone-50 rounded-xl px-4 py-3 font-mono text-stone-800">
-                  {precioCliente ? formatNum(precioCliente) : '-'}
-                </div>
-              </div>
-            </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Cierre</label>
               <input type="date" value={formData.fechaCierre} onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" />

@@ -701,7 +701,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       <input
                         type="number"
                         placeholder="€/g"
-                        value={cierreData.precioFino !== undefined ? cierreData.precioFino : (paq.precioFino || '')}
+                        value={cierreData.precioFino || paq.precioFino || ''}
                         onChange={(e) => setCierreData({ ...cierreData, precioFino: e.target.value })}
                         className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none"
                         style={{ border: `1px solid ${clienteColor}50` }}
@@ -713,7 +713,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         <input
                           type="number"
                           placeholder="€/g"
-                          value={cierreData.cierreJofisa !== undefined ? cierreData.cierreJofisa : (paq.cierreJofisa || '')}
+                          value={cierreData.cierreJofisa || paq.cierreJofisa || ''}
                           onChange={(e) => setCierreData({ ...cierreData, cierreJofisa: e.target.value })}
                           className="flex-1 min-w-0 rounded-lg px-3 py-2 placeholder-stone-400 focus:outline-none"
                           style={esIncorrecto
