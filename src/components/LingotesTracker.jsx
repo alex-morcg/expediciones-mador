@@ -388,6 +388,7 @@ export default function LingotesTracker({
   // Stock Overview
   const StockOverview = () => {
     const stockColor = getStockColor(stockRealTotal);
+    const [showComposicion, setShowComposicion] = useState(false);
 
     if (selectedCliente) {
       return <ClienteDetalle />;
@@ -397,12 +398,20 @@ export default function LingotesTracker({
       <div className="space-y-6">
         {/* Stock Ma d'Or + En Clientes lado a lado */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Stock Ma d'Or */}
-          <div className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-4 text-white shadow-lg`}>
+          {/* Stock Ma d'Or - clickable para desplegar composición */}
+          <div
+            className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-4 text-white shadow-lg cursor-pointer transition-transform active:scale-95`}
+            onClick={() => stockGlobal.length > 0 && setShowComposicion(!showComposicion)}
+          >
             <div className="text-center">
               <p className={`text-xs ${stockColor.text} mb-1`}>📦 Stock Ma d'Or</p>
               <div className={`text-4xl font-black ${stockColor.accent}`}>{formatNum(stockRealTotal, 0)}</div>
               <div className={`text-xs ${stockColor.text}`}>gramos</div>
+              {stockGlobal.length > 0 && (
+                <div className={`text-xs ${stockColor.text} mt-2`}>
+                  {showComposicion ? '▲ ocultar' : '▼ ver desglose'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -416,9 +425,9 @@ export default function LingotesTracker({
           </div>
         </div>
 
-        {/* Desglose de stock por tipo con exportaciones */}
-        {stockGlobal.length > 0 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-200">
+        {/* Desglose de stock por tipo con exportaciones - desplegable */}
+        {showComposicion && stockGlobal.length > 0 && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-200 animate-in slide-in-from-top-2">
             <p className="text-xs text-stone-500 mb-3 font-medium">📦 Composición del stock</p>
             <div className="space-y-2">
               {stockGlobal.map((s, idx) => (
@@ -858,7 +867,10 @@ export default function LingotesTracker({
           };
         }).filter(c => c.entregado > 0);
 
-        return { ...exp, totalEntregado, totalCerrado, totalDevuelto, totalPendiente, totalImporte, totalLingotes, porCliente, stockTotal, stockCount, facturaTotal };
+        // Has been used = stock actual menor que original
+        const hasBeenUsed = stockTotal < (exp.grExport || 0);
+
+        return { ...exp, totalEntregado, totalCerrado, totalDevuelto, totalPendiente, totalImporte, totalLingotes, porCliente, stockTotal, stockCount, facturaTotal, hasBeenUsed };
       });
     }, [exportaciones, entregas, clientes]);
 
@@ -1209,7 +1221,7 @@ export default function LingotesTracker({
                   >
                     ✏️ Editar
                   </button>
-                  {exp.stockTotal >= exp.grExport && (
+                  {!exp.hasBeenUsed && (
                     <button
                       onClick={() => {
                         if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
@@ -1290,33 +1302,51 @@ export default function LingotesTracker({
                 </div>
               )}
 
-              {exp.totalEntregado > 0 && (
-                <div className="mb-4">
-                  <div className="flex justify-between text-xs text-stone-500 mb-1">
-                    <span>Cerrado: {formatNum(exp.totalCerrado, 0)}g</span>
-                    <span>Pendiente: {formatNum(exp.totalPendiente, 0)}g</span>
-                  </div>
-                  <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full" style={{ width: `${exp.totalEntregado > 0 ? (exp.totalCerrado / exp.totalEntregado) * 100 : 0}%` }} />
-                  </div>
-                </div>
-              )}
-
               {exp.porCliente.length > 0 && (
-                <div className="space-y-2">
-                  {exp.porCliente.map(c => (
-                    <div key={c.id} className="flex items-center justify-between text-sm py-1 border-b border-stone-100 last:border-0">
-                      <div className="flex items-center gap-2">
+                <div className="mb-4">
+                  {/* Barra segmentada por cliente */}
+                  <div className="relative h-6 bg-stone-200 rounded-full overflow-hidden">
+                    {exp.porCliente.map((c, idx) => {
+                      // Calculate position: sum of previous clients' cerrado
+                      const prevCerrado = exp.porCliente.slice(0, idx).reduce((sum, pc) => sum + pc.cerrado, 0);
+                      const leftPercent = exp.totalEntregado > 0 ? (prevCerrado / exp.totalEntregado) * 100 : 0;
+                      const widthPercent = exp.totalEntregado > 0 ? (c.cerrado / exp.totalEntregado) * 100 : 0;
+                      if (c.cerrado === 0) return null;
+                      return (
+                        <div
+                          key={c.id}
+                          className="absolute h-full flex items-center justify-center"
+                          style={{
+                            left: `${leftPercent}%`,
+                            width: `${widthPercent}%`,
+                            backgroundColor: c.color,
+                          }}
+                        >
+                          {widthPercent > 8 && (
+                            <span className="text-white text-xs font-bold drop-shadow-sm">
+                              {formatNum(c.cerrado, 0)}g
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Leyenda debajo */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                    {exp.porCliente.map(c => (
+                      <div key={c.id} className="flex items-center gap-1 text-xs">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
-                        <span className="text-stone-700">{c.nombre}</span>
+                        <span className="text-stone-600">{c.nombre}</span>
+                        <span className="text-stone-400">({formatNum(c.cerrado, 0)}g)</span>
                       </div>
-                      <div className="flex gap-4 text-xs">
-                        <span className="text-stone-500">Ent: {formatNum(c.entregado, 0)}g</span>
-                        <span className="text-emerald-600">Cer: {formatNum(c.cerrado, 0)}g</span>
-                        {c.pendiente > 0 && <span className="text-amber-600">Pend: {formatNum(c.pendiente, 0)}g</span>}
+                    ))}
+                    {exp.totalPendiente > 0 && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <div className="w-2 h-2 rounded-full bg-stone-300" />
+                        <span className="text-stone-400">Pendiente: {formatNum(exp.totalPendiente, 0)}g</span>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
               )}
             </Card>
@@ -2010,7 +2040,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v1.9</span>
+              <span className="text-xs text-stone-400 ml-1">v2.0</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
