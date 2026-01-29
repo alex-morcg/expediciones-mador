@@ -36,17 +36,24 @@ const isCerrado = (l) => l.estado === 'pendiente_pago' || l.estado === 'finaliza
 // Helper: sum all lingotes peso in an entrega
 const pesoEntrega = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.peso || 0), 0);
 const pesoCerrado = (entrega) => (entrega.lingotes || []).filter(l => isCerrado(l)).reduce((s, l) => s + (l.peso || 0) - (l.pesoDevuelto || 0), 0);
-const pesoDevuelto = (entrega) => (entrega.lingotes || []).reduce((s, l) => s + (l.pesoDevuelto || 0), 0);
+// Peso devuelto incluye lingotes enteros devueltos (estado='devuelto') + devoluciones parciales de gramos
+const pesoDevuelto = (entrega) => {
+  const lingotes = entrega.lingotes || [];
+  const pesoLingotesDevueltos = lingotes.filter(l => l.estado === 'devuelto').reduce((s, l) => s + (l.peso || 0), 0);
+  const pesoGramosDevueltos = lingotes.reduce((s, l) => s + (l.pesoDevuelto || 0), 0);
+  return pesoLingotesDevueltos + pesoGramosDevueltos;
+};
 const importeEntrega = (entrega) => (entrega.lingotes || []).filter(l => isCerrado(l)).reduce((s, l) => s + (l.importe || 0), 0);
 const numLingotes = (entrega) => (entrega.lingotes || []).length;
 const lingotesEnCurso = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'en_curso');
 const lingotesPendientePago = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'pendiente_pago');
 const lingotesFinalizados = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado');
 const lingotesCerrados = (entrega) => (entrega.lingotes || []).filter(l => isCerrado(l));
-// An entrega is "finalizada" when ALL lingotes are cerrados (pendiente_pago or finalizado)
+const lingotesDevueltos = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'devuelto');
+// An entrega is "finalizada" when ALL lingotes are cerrados (pendiente_pago or finalizado) or devueltos
 const isEntregaFinalizada = (entrega) => {
   const all = entrega.lingotes || [];
-  return all.length > 0 && all.every(l => isCerrado(l));
+  return all.length > 0 && all.every(l => isCerrado(l) || l.estado === 'devuelto');
 };
 const isEntregaEnCurso = (entrega) => !isEntregaFinalizada(entrega);
 
@@ -75,6 +82,7 @@ export default function LingotesTracker({
   const [selectedLingoteIdx, setSelectedLingoteIdx] = useState(null);
   const [selectedLingoteIndices, setSelectedLingoteIndices] = useState([]); // For bulk closing
   const [cierreCantidad, setCierreCantidad] = useState({}); // { entregaId_peso: cantidad }
+  const [devolucionCantidad, setDevolucionCantidad] = useState({}); // { entregaId_peso: cantidad }
   const [editingEntregaClienteId, setEditingEntregaClienteId] = useState(null);
   const [entregaFilter, setEntregaFilter] = useState('en_curso');
   const [showFuturaModal, setShowFuturaModal] = useState(false);
@@ -333,6 +341,22 @@ export default function LingotesTracker({
     setSelectedFuturaId(null);
     setSelectedEntrega(null);
     setSelectedLingoteIdx(null);
+  };
+
+  // Devolver lingotes: marcarlos como devueltos (no vuelven al stock)
+  const devolverLingotes = async (entregaId, lingoteIndices) => {
+    const entrega = entregas.find(e => e.id === entregaId);
+    if (!entrega) return;
+    const lingotes = [...entrega.lingotes];
+
+    for (const idx of lingoteIndices) {
+      lingotes[idx] = {
+        ...lingotes[idx],
+        estado: 'devuelto',
+        fechaDevolucion: new Date().toISOString().split('T')[0],
+      };
+    }
+    await onUpdateEntrega(entregaId, { lingotes });
   };
 
   const marcarPagado = async (entregaId, lingoteIdx) => {
@@ -652,6 +676,7 @@ export default function LingotesTracker({
                 const exportacion = getExportacion(entrega.exportacionId);
                 const enCursoList = lingotesEnCurso(entrega);
                 const totalPeso = enCursoList.reduce((s, l) => s + (l.peso || 0), 0);
+                const hasCerrados = lingotesCerrados(entrega).length > 0;
 
                 // Agrupar lingotes en_curso por peso
                 const porPeso = {};
@@ -664,75 +689,138 @@ export default function LingotesTracker({
 
                 return (
                   <div key={entrega.id} className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                    {/* Header: Fecha grande a la izquierda, summary + X a la derecha */}
                     <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <div className="font-semibold text-stone-800">{enCursoList.length} x {enCursoList[0]?.peso || '?'}g = {totalPeso}g</div>
-                        <div className="text-xs text-stone-500 flex items-center gap-1">
-                          <span
-                            className="px-1.5 py-0.5 rounded font-bold"
-                            style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '20', color: getEntregaColor(entrega.fechaEntrega) }}
-                          >{formatEntregaShort(entrega.fechaEntrega)}</span>
-                          {exportacion && <span>• Exp: {exportacion.nombre}</span>}
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="px-2 py-1 rounded-lg font-bold text-base"
+                          style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '20', color: getEntregaColor(entrega.fechaEntrega) }}
+                        >{formatEntregaShort(entrega.fechaEntrega)}</span>
+                        {exportacion && <span className="text-sm text-stone-500">• Exp: {exportacion.nombre}</span>}
                       </div>
-                      <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>x</Button>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm text-stone-600">{enCursoList.length} x {enCursoList[0]?.peso || '?'}g = {totalPeso}g</span>
+                        {!hasCerrados && (
+                          <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>x</Button>
+                        )}
+                      </div>
                     </div>
-                    {/* Por cada grupo de peso */}
-                    {grupos.map(grupo => {
-                      const key = `${entrega.id}_${grupo.peso}`;
-                      const cantidad = cierreCantidad[key] || 1;
-                      const maxCantidad = grupo.indices.length;
-                      const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
 
-                      const handleCerrar = () => {
-                        const indicesToClose = grupo.indices.slice(0, cantidad);
-                        setSelectedEntrega(entrega);
-                        setSelectedLingoteIndices(indicesToClose);
-                        setSelectedLingoteIdx(indicesToClose[0]); // First one for reference
-                        setShowCierreModal(true);
-                      };
+                    {/* Sección CERRAR */}
+                    <div className="mb-2">
+                      <div className="text-xs font-semibold text-stone-500 mb-1">Cerrar</div>
+                      {grupos.map(grupo => {
+                        const key = `${entrega.id}_${grupo.peso}`;
+                        const cantidad = cierreCantidad[key] || 1;
+                        const maxCantidad = grupo.indices.length;
+                        const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
 
-                      return (
-                        <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-2">
-                          <div className="flex items-center gap-3">
+                        const handleCerrar = () => {
+                          const indicesToClose = grupo.indices.slice(0, cantidad);
+                          setSelectedEntrega(entrega);
+                          setSelectedLingoteIndices(indicesToClose);
+                          setSelectedLingoteIdx(indicesToClose[0]);
+                          setShowCierreModal(true);
+                        };
+
+                        return (
+                          <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
                             <span className="font-mono font-semibold text-stone-700">{maxCantidad} x {grupo.peso}g</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {/* Selector de cantidad */}
-                            <div className="flex items-center gap-1">
-                              {quickOptions.map(n => (
-                                <button
-                                  key={n}
-                                  onClick={() => setCierreCantidad({ ...cierreCantidad, [key]: n })}
-                                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                                    cantidad === n
-                                      ? 'bg-amber-500 text-white'
-                                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                                  }`}
-                                >
-                                  {n}
-                                </button>
-                              ))}
-                              {maxCantidad > 1 && (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max={maxCantidad}
-                                  value={cantidad}
-                                  onChange={(e) => setCierreCantidad({ ...cierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                  className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                                    !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
-                                  }`}
-                                />
-                              )}
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                {quickOptions.map(n => (
+                                  <button
+                                    key={n}
+                                    onClick={() => setCierreCantidad({ ...cierreCantidad, [key]: n })}
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                      cantidad === n
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                    }`}
+                                  >
+                                    {n}
+                                  </button>
+                                ))}
+                                {maxCantidad > 1 && (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={maxCantidad}
+                                    value={cantidad}
+                                    onChange={(e) => setCierreCantidad({ ...cierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                                      !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
+                                    }`}
+                                  />
+                                )}
+                              </div>
+                              <Button size="sm" variant="success" onClick={handleCerrar}>
+                                Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
+                              </Button>
                             </div>
-                            <Button size="sm" variant="success" onClick={handleCerrar}>
-                              Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
-                            </Button>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+
+                    {/* Sección DEVOLVER */}
+                    <div>
+                      <div className="text-xs font-semibold text-stone-500 mb-1">Devolver</div>
+                      {grupos.map(grupo => {
+                        const key = `${entrega.id}_${grupo.peso}_dev`;
+                        const cantidad = devolucionCantidad[key] || 1;
+                        const maxCantidad = grupo.indices.length;
+                        const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
+
+                        const handleDevolver = () => {
+                          if (confirm(`¿Devolver ${cantidad} lingote${cantidad > 1 ? 's' : ''} de ${grupo.peso}g?`)) {
+                            const indicesToReturn = grupo.indices.slice(0, cantidad);
+                            devolverLingotes(entrega.id, indicesToReturn);
+                          }
+                        };
+
+                        return (
+                          <div key={grupo.peso} className="flex items-center justify-between bg-red-50/50 rounded-lg p-2 mb-1">
+                            <span className="font-mono font-semibold text-stone-700">{maxCantidad} x {grupo.peso}g</span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                {quickOptions.map(n => (
+                                  <button
+                                    key={n}
+                                    onClick={() => setDevolucionCantidad({ ...devolucionCantidad, [key]: n })}
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                      cantidad === n
+                                        ? 'bg-red-500 text-white'
+                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                    }`}
+                                  >
+                                    {n}
+                                  </button>
+                                ))}
+                                {maxCantidad > 1 && (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={maxCantidad}
+                                    value={cantidad}
+                                    onChange={(e) => setDevolucionCantidad({ ...devolucionCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                                      !quickOptions.includes(cantidad) ? 'border-red-400 bg-red-50' : 'border-stone-300'
+                                    }`}
+                                  />
+                                )}
+                              </div>
+                              <button
+                                onClick={handleDevolver}
+                                className="px-3 py-1.5 text-xs rounded-xl font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors"
+                              >
+                                Devolver {cantidad > 1 ? `(${cantidad})` : ''}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
