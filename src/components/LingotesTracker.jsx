@@ -1341,11 +1341,20 @@ export default function LingotesTracker({
                 </div>
               </div>
 
-              {/* Stock de lingotes en esta exportación */}
-              {exp.lingotes && exp.lingotes.length > 0 && (
-                <div className="bg-amber-50 rounded-xl p-3 mb-4">
-                  <p className="text-xs text-amber-700 font-medium mb-2">📦 Stock en Ma d'Or</p>
-                  <div className="flex flex-wrap gap-2">
+              {/* Resumen exportación: original vs disponible */}
+              <div className="bg-amber-50 rounded-xl p-3 mb-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="text-xs text-amber-600 font-medium">📦 Exportación</p>
+                    <p className="text-amber-800 font-bold">{formatNum(exp.grExport || 0, 0)}g</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-emerald-600 font-medium">✓ Disponible</p>
+                    <p className="text-emerald-700 font-bold">{formatNum(exp.stockTotal, 0)}g</p>
+                  </div>
+                </div>
+                {exp.lingotes && exp.lingotes.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-amber-200">
                     {exp.lingotes.map((l, idx) => (
                       <div key={idx} className="bg-white border border-amber-200 rounded-lg px-2 py-1 text-sm">
                         <span className="font-bold text-amber-700">{l.cantidad}</span>
@@ -1354,11 +1363,8 @@ export default function LingotesTracker({
                       </div>
                     ))}
                   </div>
-                  <p className="text-amber-800 font-bold mt-2 text-sm">
-                    Total: {exp.stockCount} lingotes = {formatNum(exp.stockTotal, 0)}g
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Barra de progreso: 100% = grExport original */}
               {exp.grExport > 0 && (
@@ -1538,6 +1544,34 @@ export default function LingotesTracker({
               <div className="text-sm opacity-80">{previewColor.label}</div>
             </div>
           </div>
+        </Card>
+
+        {/* Reset data */}
+        <Card>
+          <h3 className="font-bold text-red-700 mb-4">⚠️ Zona Peligrosa</h3>
+          <p className="text-sm text-stone-600 mb-4">
+            Borrar todos los datos de lingotes: exportaciones ({exportaciones.length}), entregas ({entregas.length}) y FUTURA ({(futuraLingotes || []).length}).
+          </p>
+          <Button
+            variant="danger"
+            onClick={async () => {
+              if (!confirm('¿Estás seguro? Esto borrará TODAS las exportaciones, entregas y datos FUTURA. Esta acción no se puede deshacer.')) return;
+              if (!confirm('¿SEGURO SEGURO? Última oportunidad para cancelar.')) return;
+              // Delete all
+              for (const exp of exportaciones) {
+                await onDeleteExportacion(exp.id);
+              }
+              for (const ent of entregas) {
+                await onDeleteEntrega(ent.id);
+              }
+              for (const f of (futuraLingotes || [])) {
+                await onDeleteFutura(f.id);
+              }
+              alert('Datos borrados correctamente');
+            }}
+          >
+            🗑️ Borrar todos los datos
+          </Button>
         </Card>
       </div>
     );
