@@ -996,7 +996,7 @@ export default function LingotesTracker({
         {/* Historial de actividad */}
         {(() => {
           // Recopilar todos los logs de todas las entregas del cliente
-          const allLogs = entregasCliente
+          const allLogs = allEntregasCliente
             .flatMap(e => (e.logs || []).map(log => ({ ...log, entregaId: e.id, fechaEntrega: e.fechaEntrega })))
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .slice(0, 20); // Últimos 20 logs
