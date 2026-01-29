@@ -1303,16 +1303,17 @@ export default function LingotesTracker({
                 </div>
               )}
 
-              {exp.porCliente.length > 0 && (
+              {/* Barra de progreso: 100% = grExport original */}
+              {exp.grExport > 0 && (
                 <div className="mb-4">
-                  {/* Barra segmentada por cliente */}
-                  <div className="relative h-6 bg-stone-200 rounded-full overflow-hidden">
+                  {/* Barra: clientes (entregados) + stock (gris) */}
+                  <div className="relative h-8 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
+                    {/* Segmentos por cliente (entregados) */}
                     {exp.porCliente.map((c, idx) => {
-                      // Calculate position: sum of previous clients' cerrado
-                      const prevCerrado = exp.porCliente.slice(0, idx).reduce((sum, pc) => sum + pc.cerrado, 0);
-                      const leftPercent = exp.totalEntregado > 0 ? (prevCerrado / exp.totalEntregado) * 100 : 0;
-                      const widthPercent = exp.totalEntregado > 0 ? (c.cerrado / exp.totalEntregado) * 100 : 0;
-                      if (c.cerrado === 0) return null;
+                      const prevEntregado = exp.porCliente.slice(0, idx).reduce((sum, pc) => sum + pc.entregado, 0);
+                      const leftPercent = (prevEntregado / exp.grExport) * 100;
+                      const widthPercent = (c.entregado / exp.grExport) * 100;
+                      if (c.entregado === 0) return null;
                       return (
                         <div
                           key={c.id}
@@ -1323,14 +1324,28 @@ export default function LingotesTracker({
                             backgroundColor: c.color,
                           }}
                         >
-                          {widthPercent > 8 && (
-                            <span className="text-white text-xs font-bold drop-shadow-sm">
-                              {formatNum(c.cerrado, 0)}g
+                          {widthPercent > 12 && (
+                            <span className="text-white text-xs font-bold drop-shadow-sm whitespace-nowrap">
+                              {formatNum(c.cerrado, 0)}/{formatNum(c.entregado, 0)}g
                             </span>
                           )}
                         </div>
                       );
                     })}
+                    {/* Parte gris: stock pendiente de entregar */}
+                    {exp.stockTotal > 0 && (
+                      <div
+                        className="absolute h-full flex items-center justify-center bg-stone-300"
+                        style={{
+                          left: `${(exp.totalEntregado / exp.grExport) * 100}%`,
+                          width: `${(exp.stockTotal / exp.grExport) * 100}%`,
+                        }}
+                      >
+                        <span className="text-stone-600 text-xs font-medium whitespace-nowrap">
+                          Stock: {formatNum(exp.stockTotal, 0)}g
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {/* Leyenda debajo */}
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
@@ -1338,13 +1353,13 @@ export default function LingotesTracker({
                       <div key={c.id} className="flex items-center gap-1 text-xs">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
                         <span className="text-stone-600">{c.nombre}</span>
-                        <span className="text-stone-400">({formatNum(c.cerrado, 0)}g)</span>
+                        <span className="text-stone-400">({formatNum(c.cerrado, 0)}/{formatNum(c.entregado, 0)}g)</span>
                       </div>
                     ))}
-                    {exp.totalPendiente > 0 && (
+                    {exp.stockTotal > 0 && (
                       <div className="flex items-center gap-1 text-xs">
                         <div className="w-2 h-2 rounded-full bg-stone-300" />
-                        <span className="text-stone-400">Pendiente: {formatNum(exp.totalPendiente, 0)}g</span>
+                        <span className="text-stone-400">Stock: {formatNum(exp.stockTotal, 0)}g</span>
                       </div>
                     )}
                   </div>
@@ -2041,7 +2056,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v2.0</span>
+              <span className="text-xs text-stone-400 ml-1">v2.1</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
