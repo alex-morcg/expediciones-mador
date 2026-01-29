@@ -707,14 +707,16 @@ export default function LingotesTracker({
                                   {n}
                                 </button>
                               ))}
-                              {maxCantidad > 4 && (
+                              {maxCantidad > 1 && (
                                 <input
                                   type="number"
                                   min="1"
                                   max={maxCantidad}
                                   value={cantidad}
                                   onChange={(e) => setCierreCantidad({ ...cierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                  className="w-12 h-7 rounded-lg border border-stone-300 text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                  className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                                    !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
+                                  }`}
                                 />
                               )}
                             </div>
