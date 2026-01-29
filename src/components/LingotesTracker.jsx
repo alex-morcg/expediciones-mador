@@ -309,38 +309,85 @@ export default function LingotesTracker({
 
   // Cerrar múltiples lingotes a la vez (bulk)
   const cerrarLingotes = async (entregaId, lingoteIndices, data) => {
-    const entrega = entregas.find(e => e.id === entregaId);
-    if (!entrega) return;
-    const lingotes = [...entrega.lingotes];
-    const peso = lingotes[lingoteIndices[0]]?.peso || 0;
+    const entregaRef = entregas.find(e => e.id === entregaId);
+    if (!entregaRef) return;
 
-    for (const idx of lingoteIndices) {
-      const pesoNeto = (lingotes[idx].peso || 0) - (data.devolucion || 0);
-      lingotes[idx] = {
-        ...lingotes[idx],
-        euroOnza: data.euroOnza || null,
-        base: data.base || null,
-        baseCliente: data.baseCliente || null,
-        precioJofisa: data.precioJofisa || null,
-        importeJofisa: (data.precioJofisa || 0) * pesoNeto,
-        margen: data.margen || 0,
-        precio: data.precio,
-        importe: data.precio * pesoNeto,
-        nFactura: data.nFactura,
-        fechaCierre: data.fechaCierre,
-        pesoCerrado: lingotes[idx].peso,
-        pesoDevuelto: data.devolucion || 0,
-        estado: 'pendiente_pago',
-        pagado: false,
-      };
+    // Si hay _allEntregasIndices, cerrar lingotes de múltiples entregas
+    const allEntregasIndices = selectedEntrega?._allEntregasIndices;
+
+    if (allEntregasIndices && allEntregasIndices.length > 1) {
+      // Cerrar lingotes de TODAS las entregas
+      let totalLingotes = 0;
+      let totalPeso = 0;
+
+      for (const { entregaId: eId, indices } of allEntregasIndices) {
+        const entrega = entregas.find(e => e.id === eId);
+        if (!entrega) continue;
+
+        const lingotes = [...entrega.lingotes];
+        for (const idx of indices) {
+          const pesoNeto = (lingotes[idx].peso || 0) - (data.devolucion || 0);
+          totalPeso += pesoNeto;
+          totalLingotes++;
+          lingotes[idx] = {
+            ...lingotes[idx],
+            euroOnza: data.euroOnza || null,
+            base: data.base || null,
+            baseCliente: data.baseCliente || null,
+            precioJofisa: data.precioJofisa || null,
+            importeJofisa: (data.precioJofisa || 0) * pesoNeto,
+            margen: data.margen || 0,
+            precio: data.precio,
+            importe: data.precio * pesoNeto,
+            nFactura: data.nFactura,
+            fechaCierre: data.fechaCierre,
+            pesoCerrado: lingotes[idx].peso,
+            pesoDevuelto: data.devolucion || 0,
+            estado: 'pendiente_pago',
+            pagado: false,
+          };
+        }
+
+        // Log para esta entrega
+        const entregaPeso = indices.reduce((s, idx) => s + (entrega.lingotes[idx]?.peso || 0), 0);
+        const log = createLog('cierre', `Cerrado (bulk): ${indices.length} lingotes (${entregaPeso}g) a ${formatNum(data.precio)}€/g`);
+        const logs = [...(entrega.logs || []), log];
+
+        await onUpdateEntrega(eId, { lingotes, logs });
+      }
+    } else {
+      // Cierre normal de una sola entrega
+      const lingotes = [...entregaRef.lingotes];
+      const peso = lingotes[lingoteIndices[0]]?.peso || 0;
+
+      for (const idx of lingoteIndices) {
+        const pesoNeto = (lingotes[idx].peso || 0) - (data.devolucion || 0);
+        lingotes[idx] = {
+          ...lingotes[idx],
+          euroOnza: data.euroOnza || null,
+          base: data.base || null,
+          baseCliente: data.baseCliente || null,
+          precioJofisa: data.precioJofisa || null,
+          importeJofisa: (data.precioJofisa || 0) * pesoNeto,
+          margen: data.margen || 0,
+          precio: data.precio,
+          importe: data.precio * pesoNeto,
+          nFactura: data.nFactura,
+          fechaCierre: data.fechaCierre,
+          pesoCerrado: lingotes[idx].peso,
+          pesoDevuelto: data.devolucion || 0,
+          estado: 'pendiente_pago',
+          pagado: false,
+        };
+      }
+
+      // Añadir log
+      const totalPeso = lingoteIndices.length * peso;
+      const log = createLog('cierre', `Cerrado: ${lingoteIndices.length} x ${peso}g (${totalPeso}g) a ${formatNum(data.precio)}€/g`);
+      const logs = [...(entregaRef.logs || []), log];
+
+      await onUpdateEntrega(entregaId, { lingotes, logs });
     }
-
-    // Añadir log
-    const totalPeso = lingoteIndices.length * peso;
-    const log = createLog('cierre', `Cerrado: ${lingoteIndices.length} x ${peso}g (${totalPeso}g) a ${formatNum(data.precio)}€/g`);
-    const logs = [...(entrega.logs || []), log];
-
-    await onUpdateEntrega(entregaId, { lingotes, logs });
 
     setShowCierreModal(false);
     setSelectedEntrega(null);
@@ -731,6 +778,58 @@ export default function LingotesTracker({
                 {entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0)} lingotes
               </div>
             </div>
+
+            {/* Resumen global para cerrar todos */}
+            {(() => {
+              // Recopilar TODOS los lingotes en curso de TODAS las entregas
+              const todosEnCurso = entregasConEnCurso.flatMap(e =>
+                e.lingotes.map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx }))
+              ).filter(l => l.estado === 'en_curso');
+
+              const totalLingotes = todosEnCurso.length;
+              const totalPesoGlobal = todosEnCurso.reduce((s, l) => s + (l.peso || 0), 0);
+
+              // Agrupar por peso para mostrar resumen
+              const porPesoGlobal = {};
+              todosEnCurso.forEach(l => {
+                if (!porPesoGlobal[l.peso]) porPesoGlobal[l.peso] = 0;
+                porPesoGlobal[l.peso]++;
+              });
+              const resumenPesos = Object.entries(porPesoGlobal)
+                .map(([peso, cant]) => `${cant} x ${peso}g`)
+                .join(' + ');
+
+              const handleCerrarTodos = () => {
+                // Guardar todos los índices para cerrar
+                const allIndices = entregasConEnCurso.map(e => ({
+                  entregaId: e.id,
+                  indices: e.lingotes.map((l, idx) => l.estado === 'en_curso' ? idx : null).filter(i => i !== null)
+                })).filter(x => x.indices.length > 0);
+
+                // Usamos el primer entrega como referencia y guardamos todos los datos
+                setSelectedEntrega({ ...entregasConEnCurso[0], _allEntregasIndices: allIndices });
+                setSelectedLingoteIndices(allIndices[0].indices);
+                setSelectedLingoteIdx(allIndices[0].indices[0]);
+                setShowCierreModal(true);
+              };
+
+              if (totalLingotes <= 1 || entregasConEnCurso.length <= 1) return null;
+
+              return (
+                <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-300">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-stone-800">{totalLingotes} lingotes = {totalPesoGlobal}g</div>
+                      <div className="text-xs text-stone-500">{resumenPesos}</div>
+                    </div>
+                    <Button size="sm" variant="success" onClick={handleCerrarTodos}>
+                      Cerrar todos
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="space-y-3">
               {entregasConEnCurso.map(entrega => {
                 const exportacion = getExportacion(entrega.exportacionId);
@@ -2077,10 +2176,34 @@ export default function LingotesTracker({
   // Cierre Modal - close one or multiple lingotes (entrega or futura standalone)
   const CierreModal = () => {
     const isFuturaCierre = !!selectedFuturaId;
-    const isBulkCierre = selectedLingoteIndices.length > 1;
+    const isMultiEntregaCierre = selectedEntrega?._allEntregasIndices?.length > 1;
+    const isBulkCierre = selectedLingoteIndices.length > 1 || isMultiEntregaCierre;
     const futuraDoc = isFuturaCierre ? (futuraLingotes || []).find(f => f.id === selectedFuturaId) : null;
     const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
-    const cantidadLingotes = isBulkCierre ? selectedLingoteIndices.length : 1;
+
+    // Calcular cantidad y peso total para multi-entrega
+    let cantidadLingotes = 1;
+    let pesoTotalMulti = 0;
+    let resumenMulti = '';
+    if (isMultiEntregaCierre) {
+      const allIndices = selectedEntrega._allEntregasIndices;
+      const todosLingotes = allIndices.flatMap(({ entregaId, indices }) => {
+        const e = entregas.find(x => x.id === entregaId);
+        return indices.map(idx => e?.lingotes?.[idx]).filter(Boolean);
+      });
+      cantidadLingotes = todosLingotes.length;
+      pesoTotalMulti = todosLingotes.reduce((s, l) => s + (l.peso || 0), 0);
+      // Agrupar por peso
+      const porPeso = {};
+      todosLingotes.forEach(l => {
+        if (!porPeso[l.peso]) porPeso[l.peso] = 0;
+        porPeso[l.peso]++;
+      });
+      resumenMulti = Object.entries(porPeso).map(([p, c]) => `${c} x ${p}g`).join(' + ');
+    } else if (isBulkCierre) {
+      cantidadLingotes = selectedLingoteIndices.length;
+    }
+
     const defaultEuroOnza = lingote?.euroOnza || '';
     const defaultPrecioJofisa = lingote?.precioJofisa || '';
     const defaultBaseCliente = lingote?.baseCliente || '';
@@ -2120,7 +2243,8 @@ export default function LingotesTracker({
     const cliente = getCliente(clienteId);
     const pesoUnitario = lingote.peso || 0;
     const pesoNetoUnitario = pesoUnitario - formData.devolucion;
-    const pesoTotalNeto = pesoNetoUnitario * cantidadLingotes;
+    // Para multi-entrega, usar el peso total calculado
+    const pesoTotalNeto = isMultiEntregaCierre ? pesoTotalMulti : (pesoNetoUnitario * cantidadLingotes);
 
     // Calculations
     const euroOnzaNum = parseFloat(formData.euroOnza) || 0;
@@ -2128,12 +2252,10 @@ export default function LingotesTracker({
     const base = (euroOnzaConfirmado && euroOnzaNum) ? Math.ceil((euroOnzaNum / 31.10349) * 100) / 100 : 0;
     const baseClienteNum = parseFloat(formData.baseCliente) || 0;
     const precioJofisaNum = parseFloat(formData.precioJofisa) || 0;
-    const importeJofisaUnitario = precioJofisaNum * pesoNetoUnitario;
-    const importeJofisaTotal = importeJofisaUnitario * cantidadLingotes;
+    const importeJofisaTotal = precioJofisaNum * pesoTotalNeto;
     const margenNum = parseFloat(formData.margen) || 0;
     const precioCliente = baseClienteNum ? Math.round((baseClienteNum * (1 + margenNum / 100)) * 100) / 100 : 0;
-    const importeClienteUnitario = precioCliente * pesoNetoUnitario;
-    const importeClienteTotal = importeClienteUnitario * cantidadLingotes;
+    const importeClienteTotal = precioCliente * pesoTotalNeto;
 
     // Auto-fill baseCliente y precioJofisa cuando se confirma euroOnza
     const confirmarEuroOnza = () => {
@@ -2154,7 +2276,6 @@ export default function LingotesTracker({
         base,
         baseCliente: baseClienteNum,
         precioJofisa: precioJofisaNum,
-        importeJofisa: importeJofisaUnitario,
         margen: margenNum,
         precio: precioCliente,
         fechaCierre: formData.fechaCierre,
@@ -2177,8 +2298,10 @@ export default function LingotesTracker({
             Cerrar {cantidadLingotes > 1 ? `${cantidadLingotes} Lingotes` : 'Lingote'}
           </h3>
           <p className="text-stone-500 text-sm mb-6">
-            {cliente?.nombre} • {cantidadLingotes > 1 ? `${cantidadLingotes} x ` : ''}{pesoUnitario}g
-            {cantidadLingotes > 1 ? ` = ${pesoUnitario * cantidadLingotes}g` : ''}
+            {cliente?.nombre} • {isMultiEntregaCierre
+              ? `${resumenMulti} = ${pesoTotalMulti}g`
+              : `${cantidadLingotes > 1 ? `${cantidadLingotes} x ` : ''}${pesoUnitario}g${cantidadLingotes > 1 ? ` = ${pesoUnitario * cantidadLingotes}g` : ''}`
+            }
             {isFuturaCierre ? ' (FUTURA)' : ''}
           </p>
           <div className="space-y-4">
