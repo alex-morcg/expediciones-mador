@@ -793,9 +793,14 @@ export default function LingotesTracker({
       resetForm();
     };
 
-    // Check if exportacion has entregas (can't edit lingotes if so)
-    const editingExpHasEntregas = editingExp
-      ? entregas.some(e => e.exportacionId === editingExp.id)
+    // Check if exportacion has been used (lingotes consumed from stock)
+    // Compare current stock with original grExport - if less, some were used
+    const editingExpHasBeenUsed = editingExp
+      ? (() => {
+          const currentStock = (editingExp.lingotes || []).reduce((sum, l) => sum + ((l.cantidad || 0) * (l.peso || 0)), 0);
+          const originalStock = editingExp.grExport || 0;
+          return currentStock < originalStock;
+        })()
       : false;
 
     // Calculate totals from lingotes array
@@ -928,9 +933,9 @@ export default function LingotesTracker({
           <Button size="sm" onClick={openNew}>+ Nueva</Button>
         </div>
 
-        {showNew && (
+        {showNew && !editingExp && (
           <Card className="border-amber-400 bg-amber-50">
-            <h3 className="font-bold text-stone-800 mb-4">{editingExp ? 'Editar Exportación' : 'Nueva Exportación'}</h3>
+            <h3 className="font-bold text-stone-800 mb-4">Nueva Exportación</h3>
             <div className="space-y-4">
               <div className="flex gap-3">
                 <div className="flex-1">
@@ -946,12 +951,12 @@ export default function LingotesTracker({
               {/* Lingotes breakdown */}
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-2">Lingotes comprados</label>
-                {editingExpHasEntregas && (
+                {editingExpHasBeenUsed && (
                   <div className="bg-orange-100 border border-orange-300 rounded-xl p-2 mb-2 text-xs text-orange-700">
-                    ⚠️ No se pueden modificar los lingotes porque ya hay entregas de esta exportación.
+                    ⚠️ No se pueden modificar los lingotes porque ya se han usado de esta exportación.
                   </div>
                 )}
-                <div className={`space-y-2 ${editingExpHasEntregas ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className={`space-y-2 ${editingExpHasBeenUsed ? 'opacity-50 pointer-events-none' : ''}`}>
                   {formData.lingotes.map((l, idx) => (
                     <div key={idx} className="flex items-center gap-2 flex-wrap">
                       <input
@@ -960,7 +965,7 @@ export default function LingotesTracker({
                         onChange={(e) => updateLingoteTipo(idx, 'cantidad', parseInt(e.target.value) || 0)}
                         className="w-16 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
                         min="1"
-                        disabled={editingExpHasEntregas}
+                        disabled={editingExpHasBeenUsed}
                       />
                       <span className="text-stone-500">×</span>
                       <div className="flex gap-1 items-center">
@@ -969,7 +974,7 @@ export default function LingotesTracker({
                             key={peso}
                             type="button"
                             onClick={() => updateLingoteTipo(idx, 'peso', peso)}
-                            disabled={editingExpHasEntregas}
+                            disabled={editingExpHasBeenUsed}
                             className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                               l.peso === peso
                                 ? 'bg-amber-500 text-white'
@@ -984,7 +989,7 @@ export default function LingotesTracker({
                             type="number"
                             value={l.peso !== 50 && l.peso !== 100 ? l.peso : ''}
                             onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
-                            disabled={editingExpHasEntregas}
+                            disabled={editingExpHasBeenUsed}
                             className={`w-16 border rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${
                               l.peso !== 50 && l.peso !== 100 && l.peso > 0
                                 ? 'border-amber-500 bg-amber-50'
@@ -996,7 +1001,7 @@ export default function LingotesTracker({
                         </div>
                       </div>
                       <span className="text-stone-600 font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
-                      {formData.lingotes.length > 1 && !editingExpHasEntregas && (
+                      {formData.lingotes.length > 1 && !editingExpHasBeenUsed && (
                         <button
                           type="button"
                           onClick={() => removeLingoteTipo(idx)}
@@ -1008,7 +1013,7 @@ export default function LingotesTracker({
                     </div>
                   ))}
                 </div>
-                {!editingExpHasEntregas && (
+                {!editingExpHasBeenUsed && (
                   <button
                     type="button"
                     onClick={addLingoteTipo}
@@ -1051,7 +1056,7 @@ export default function LingotesTracker({
               <div className="flex gap-2 pt-2">
                 <Button variant="secondary" className="flex-1" onClick={handleCancel}>Cancelar</Button>
                 <Button className="flex-1" onClick={saveExportacion} disabled={!formData.nombre || formTotalLingotes === 0}>
-                  {editingExp ? 'Guardar cambios' : 'Crear'}
+                  Crear
                 </Button>
               </div>
             </div>
@@ -1060,6 +1065,137 @@ export default function LingotesTracker({
 
         <div className="space-y-4">
           {exportacionesStats.map(exp => (
+            editingExp?.id === exp.id ? (
+              /* Formulario de edición inline */
+              <Card key={exp.id} className="border-amber-400 bg-amber-50">
+                <h3 className="font-bold text-stone-800 mb-4">Editar: {exp.nombre}</h3>
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
+                      <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                    </div>
+                    <div className="w-40">
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Fecha</label>
+                      <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                    </div>
+                  </div>
+
+                  {/* Lingotes breakdown */}
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">Lingotes comprados</label>
+                    {editingExpHasBeenUsed && (
+                      <div className="bg-orange-100 border border-orange-300 rounded-xl p-2 mb-2 text-xs text-orange-700">
+                        ⚠️ No se pueden modificar los lingotes porque ya se han usado de esta exportación.
+                      </div>
+                    )}
+                    <div className={`space-y-2 ${editingExpHasBeenUsed ? 'opacity-50 pointer-events-none' : ''}`}>
+                      {formData.lingotes.map((l, idx) => (
+                        <div key={idx} className="flex items-center gap-2 flex-wrap">
+                          <input
+                            type="number"
+                            value={l.cantidad}
+                            onChange={(e) => updateLingoteTipo(idx, 'cantidad', parseInt(e.target.value) || 0)}
+                            className="w-16 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            min="1"
+                            disabled={editingExpHasBeenUsed}
+                          />
+                          <span className="text-stone-500">×</span>
+                          <div className="flex gap-1 items-center">
+                            {[50, 100].map(peso => (
+                              <button
+                                key={peso}
+                                type="button"
+                                onClick={() => updateLingoteTipo(idx, 'peso', peso)}
+                                disabled={editingExpHasBeenUsed}
+                                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                  l.peso === peso
+                                    ? 'bg-amber-500 text-white'
+                                    : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
+                                }`}
+                              >
+                                {peso}g
+                              </button>
+                            ))}
+                            <div className="flex items-center gap-1 ml-1">
+                              <input
+                                type="number"
+                                value={l.peso !== 50 && l.peso !== 100 ? l.peso : ''}
+                                onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
+                                disabled={editingExpHasBeenUsed}
+                                className={`w-16 border rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                                  l.peso !== 50 && l.peso !== 100 && l.peso > 0
+                                    ? 'border-amber-500 bg-amber-50'
+                                    : 'border-stone-300'
+                                }`}
+                                placeholder="otro"
+                              />
+                              <span className="text-stone-400 text-sm">g</span>
+                            </div>
+                          </div>
+                          <span className="text-stone-600 font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
+                          {formData.lingotes.length > 1 && !editingExpHasBeenUsed && (
+                            <button
+                              type="button"
+                              onClick={() => removeLingoteTipo(idx)}
+                              className="text-red-400 hover:text-red-600 text-lg"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {!editingExpHasBeenUsed && (
+                      <button
+                        type="button"
+                        onClick={addLingoteTipo}
+                        className="mt-2 text-amber-600 hover:text-amber-700 text-sm font-medium"
+                      >
+                        + Añadir tipo
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Precio por gramo */}
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Precio por gramo (€/g)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.precioGramo}
+                      onChange={(e) => setFormData({ ...formData, precioGramo: e.target.value })}
+                      placeholder="Ej: 95.50"
+                      className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  {/* Total summary */}
+                  <div className="bg-amber-100 rounded-xl p-3">
+                    <div className="text-center">
+                      <span className="text-amber-700 font-bold text-lg">
+                        {formTotalLingotes} lingotes = {formatNum(formTotalGramos, 0)}g
+                      </span>
+                    </div>
+                    {formData.precioGramo && (
+                      <div className="text-center mt-1 pt-1 border-t border-amber-200">
+                        <span className="text-amber-800 font-bold">
+                          Total factura: {formatEur(formTotalFactura)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="secondary" className="flex-1" onClick={handleCancel}>Cancelar</Button>
+                    <Button className="flex-1" onClick={saveExportacion} disabled={!formData.nombre || formTotalLingotes === 0}>
+                      Guardar cambios
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+            /* Tarjeta normal de exportación */
             <Card key={exp.id}>
               <div className="flex justify-between items-start mb-3">
                 <div>
@@ -1073,7 +1209,7 @@ export default function LingotesTracker({
                   >
                     ✏️ Editar
                   </button>
-                  {exp.totalEntregado === 0 && (
+                  {exp.stockTotal >= exp.grExport && (
                     <button
                       onClick={() => {
                         if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
@@ -1184,6 +1320,7 @@ export default function LingotesTracker({
                 </div>
               )}
             </Card>
+            )
           ))}
           {exportaciones.length === 0 && (
             <Card><p className="text-stone-400 text-center py-6">No hay exportaciones. Crea una para empezar.</p></Card>
@@ -1873,7 +2010,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v1.7</span>
+              <span className="text-xs text-stone-400 ml-1">v1.9</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
