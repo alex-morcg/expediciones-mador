@@ -216,6 +216,7 @@ export function useFirestore() {
   const [lingotesEntregas, setLingotesEntregas] = useState([]);
   const [lingotesConfig, setLingotesConfig] = useState({ stockMador: 0, umbralRojo: 200, umbralNaranja: 500, umbralAmarillo: 1000 });
   const [lingotesFutura, setLingotesFutura] = useState([]);
+  const [lingotesFacturas, setLingotesFacturas] = useState([]);
   const [matriculas, setMatriculas] = useState([]);
   const [loading, setLoading] = useState(true);
   const seedTriggered = useRef(false);
@@ -232,7 +233,7 @@ export function useFirestore() {
     let cancelled = false;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 12;
+    const totalCollections = 13;
 
     const checkLoaded = () => {
       loadedCount++;
@@ -361,6 +362,16 @@ export function useFirestore() {
         checkLoaded();
       }, (error) => {
         console.error('Firestore error (lingotes_futura):', error);
+        checkLoaded();
+      })
+    );
+
+    unsubscribers.push(
+      onSnapshot(collection(db, 'lingotes_facturas'), (snap) => {
+        if (!cancelled) setLingotesFacturas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        checkLoaded();
+      }, (error) => {
+        console.error('Firestore error (lingotes_facturas):', error);
         checkLoaded();
       })
     );
@@ -814,6 +825,20 @@ export function useFirestore() {
     await updateDoc(doc(db, 'lingotes_futura', id), data);
   };
 
+  // Lingotes Facturas CRUD
+  const saveLingoteFactura = async (data) => {
+    const docRef = await addDoc(collection(db, 'lingotes_facturas'), data);
+    return docRef.id;
+  };
+
+  const deleteLingoteFactura = async (id) => {
+    await deleteDoc(doc(db, 'lingotes_facturas', id));
+  };
+
+  const updateLingoteFactura = async (id, data) => {
+    await updateDoc(doc(db, 'lingotes_facturas', id), data);
+  };
+
   return {
     // Data
     categorias,
@@ -866,6 +891,7 @@ export function useFirestore() {
     lingotesEntregas,
     lingotesConfig,
     lingotesFutura,
+    lingotesFacturas,
     saveLingoteExportacion,
     deleteLingoteExportacion,
     saveLingoteEntrega,
@@ -875,5 +901,8 @@ export function useFirestore() {
     saveLingoteFutura,
     deleteLingoteFutura,
     updateLingoteFutura,
+    saveLingoteFactura,
+    deleteLingoteFactura,
+    updateLingoteFactura,
   };
 }

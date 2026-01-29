@@ -7,12 +7,12 @@ const formatNum = (num, decimals = 2) => {
 
 const formatEur = (num) => formatNum(num, 2) + ' €';
 
-// Entrega date as short label: "2025-01-19" → "25-1"
+// Entrega date as short label: "2025-01-29" → "29-1" (día-mes)
 const formatEntregaShort = (fecha) => {
   if (!fecha || fecha === '-') return '-';
-  const m = fecha.match(/^(\d{4})-(\d{2})/);
+  const m = fecha.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!m) return fecha;
-  return `${m[1].slice(2)}-${parseInt(m[2])}`;
+  return `${parseInt(m[3])}-${parseInt(m[2])}`;
 };
 
 // 20-color palette for entrega badges
@@ -62,6 +62,7 @@ export default function LingotesTracker({
   exportaciones,
   entregas,
   futuraLingotes,
+  facturas,
   config,
   onBack,
   onSaveExportacion,
@@ -73,6 +74,9 @@ export default function LingotesTracker({
   onSaveFutura,
   onDeleteFutura,
   onUpdateFutura,
+  onSaveFactura,
+  onDeleteFactura,
+  onUpdateFactura,
 }) {
   const [activeTab, setActiveTab] = useState('stock');
   const [selectedCliente, setSelectedCliente] = useState(null);
@@ -91,6 +95,10 @@ export default function LingotesTracker({
   const [showHistorial, setShowHistorial] = useState(false);
   const [showMultiCierreModal, setShowMultiCierreModal] = useState(false);
   const [multiCierreSelection, setMultiCierreSelection] = useState({}); // { entregaId_idx: true }
+  const [showFacturaModal, setShowFacturaModal] = useState(false);
+  const [facturaFile, setFacturaFile] = useState(null);
+  const [facturaSelection, setFacturaSelection] = useState({}); // { entregaId_idx: true }
+  const [viewingFactura, setViewingFactura] = useState(null); // factura object to view
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -993,7 +1001,7 @@ export default function LingotesTracker({
           </Card>
         )}
 
-        {/* Finalizados table with Entrega column */}
+        {/* Cerrados agrupados por entrega */}
         {allLingotesCerrados.length > 0 && (
           <Card>
             <div className="flex justify-between items-center mb-4">
@@ -1002,48 +1010,61 @@ export default function LingotesTracker({
                 Importe: <span className="font-semibold text-emerald-600">{formatEur(filteredImporte)}</span>
               </div>
             </div>
-            <div className="overflow-x-auto -mx-5 px-5">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-stone-200">
-                    <th className="text-left py-2 px-1 text-stone-500 font-medium text-xs">Entrega</th>
-                    <th className="text-left py-2 px-1 text-stone-500 font-medium text-xs">Cierre</th>
-                    <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Peso</th>
-                    <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">€/g</th>
-                    <th className="text-right py-2 px-1 text-stone-500 font-medium text-xs">Importe</th>
-                    <th className="text-center py-2 px-1 text-stone-500 font-medium text-xs">Pagado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allLingotesCerrados.map((l, i) => (
-                    <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-amber-50/50' : 'hover:bg-stone-50'}`}>
-                      <td className="py-2 px-1">
-                        {l.fechaEntrega ? (
-                          <span
-                            className="text-xs px-1.5 py-0.5 rounded font-bold"
-                            style={{ backgroundColor: getEntregaColor(l.fechaEntrega) + '20', color: getEntregaColor(l.fechaEntrega) }}
-                          >{formatEntregaShort(l.fechaEntrega)}</span>
-                        ) : '-'}
-                      </td>
-                      <td className="py-2 px-1 text-xs">{l.fechaCierre || '-'}</td>
-                      <td className="py-2 px-1 text-right font-mono text-xs">{l.peso}g</td>
-                      <td className="py-2 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
-                      <td className="py-2 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
-                      <td className="py-2 px-1 text-center">
-                        <button
-                          onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
-                            l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
-                          }`}
-                        >
-                          {l.pagado && '✓'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {(() => {
+              // Agrupar por entrega
+              const porEntrega = {};
+              allLingotesCerrados.forEach(l => {
+                if (!porEntrega[l.entregaId]) {
+                  porEntrega[l.entregaId] = { fechaEntrega: l.fechaEntrega, lingotes: [] };
+                }
+                porEntrega[l.entregaId].lingotes.push(l);
+              });
+
+              return Object.entries(porEntrega).map(([entregaId, grupo]) => (
+                <div key={entregaId} className="mb-4 last:mb-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className="px-2 py-1 rounded-lg font-bold text-sm"
+                      style={{ backgroundColor: getEntregaColor(grupo.fechaEntrega) + '20', color: getEntregaColor(grupo.fechaEntrega) }}
+                    >{formatEntregaShort(grupo.fechaEntrega)}</span>
+                    <span className="text-xs text-stone-400">{grupo.lingotes.length} lingotes</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-stone-200">
+                          <th className="text-left py-1.5 px-1 text-stone-500 font-medium text-xs">Cierre</th>
+                          <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Peso</th>
+                          <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">€/g</th>
+                          <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Importe</th>
+                          <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs">Pagado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {grupo.lingotes.map((l, i) => (
+                          <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-amber-50/50' : 'hover:bg-stone-50'}`}>
+                            <td className="py-1.5 px-1 text-xs">{l.fechaCierre || '-'}</td>
+                            <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
+                            <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
+                            <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
+                            <td className="py-1.5 px-1 text-center">
+                              <button
+                                onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
+                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
+                                  l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
+                                }`}
+                              >
+                                {l.pagado && '✓'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ));
+            })()}
           </Card>
         )}
 
@@ -1055,14 +1076,69 @@ export default function LingotesTracker({
           </Card>
         )}
 
-        <div className="flex gap-3">
-          <Button className="flex-1" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
-            + Nueva Entrega
-          </Button>
-          <Button className="flex-1" size="lg" variant="danger" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}>
-            + FUTURA
-          </Button>
-        </div>
+        {/* Sección Facturas */}
+        {(() => {
+          // Lingotes cerrados sin factura de este cliente
+          const lingotesSinFactura = allLingotesCerrados.filter(l => !l.nFactura);
+          // Facturas de este cliente
+          const facturasCliente = (facturas || []).filter(f => f.clienteId === cliente.id);
+
+          return (
+            <Card>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-stone-800">Facturas</h3>
+                {lingotesSinFactura.length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setFacturaSelection({});
+                      setFacturaFile(null);
+                      setShowFacturaModal(true);
+                    }}
+                  >
+                    + Subir factura
+                  </Button>
+                )}
+              </div>
+
+              {facturasCliente.length === 0 && lingotesSinFactura.length === 0 && (
+                <p className="text-stone-400 text-sm text-center py-4">No hay facturas ni lingotes pendientes de factura</p>
+              )}
+
+              {lingotesSinFactura.length > 0 && (
+                <div className="mb-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="text-sm text-amber-700">
+                    <span className="font-bold">{lingotesSinFactura.length}</span> lingotes cerrados sin factura
+                  </div>
+                </div>
+              )}
+
+              {facturasCliente.length > 0 && (
+                <div className="space-y-2">
+                  {facturasCliente.map(f => (
+                    <div
+                      key={f.id}
+                      className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-100"
+                      onClick={() => setViewingFactura(f)}
+                    >
+                      <div>
+                        <div className="font-semibold text-stone-800">{f.nombre}</div>
+                        <div className="text-xs text-stone-500">
+                          {f.lingotesCount || 0} lingotes • {new Date(f.createdAt).toLocaleDateString('es-ES')}
+                        </div>
+                      </div>
+                      <span className="text-stone-400">👁</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          );
+        })()}
+
+        <Button className="w-full" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
+          + Nueva Entrega
+        </Button>
 
         {/* Historial de actividad */}
         {(() => {
@@ -2101,8 +2177,8 @@ export default function LingotesTracker({
                 </div>
               </div>
 
-              {/* Summary */}
-              <div className={`rounded-xl p-4 text-center ${allStockSuficiente && hasAnyItems ? 'bg-emerald-50' : hasAnyItems ? 'bg-red-50' : 'bg-stone-50'}`}>
+              {/* Summary - altura fija para evitar que se muevan los botones */}
+              <div className={`rounded-xl p-4 text-center min-h-[80px] flex flex-col justify-center ${allStockSuficiente && hasAnyItems ? 'bg-emerald-50' : hasAnyItems ? 'bg-red-50' : 'bg-stone-50'}`}>
                 {hasAnyItems ? (
                   <>
                     <div className="text-sm text-stone-500 mb-1">Total entrega:</div>
@@ -2763,6 +2839,217 @@ export default function LingotesTracker({
     );
   };
 
+  // Modal para subir factura y asignar a lingotes
+  const FacturaModal = () => {
+    const cliente = getCliente(selectedCliente);
+    if (!cliente) return null;
+
+    const allEntregasCliente = entregas.filter(e => e.clienteId === cliente.id);
+
+    // Lingotes cerrados sin factura
+    const lingotesSinFactura = allEntregasCliente
+      .flatMap(e => e.lingotes.map((l, idx) => ({
+        ...l,
+        entregaId: e.id,
+        lingoteIdx: idx,
+        fechaEntrega: e.fechaEntrega,
+      })))
+      .filter(l => (l.estado === 'pendiente_pago' || l.estado === 'finalizado') && !l.nFactura);
+
+    const selectedCount = Object.values(facturaSelection).filter(Boolean).length;
+    const selectedLingotes = lingotesSinFactura.filter(l => facturaSelection[`${l.entregaId}_${l.lingoteIdx}`]);
+
+    const selectAll = () => {
+      const newSelection = {};
+      lingotesSinFactura.forEach(l => {
+        newSelection[`${l.entregaId}_${l.lingoteIdx}`] = true;
+      });
+      setFacturaSelection(newSelection);
+    };
+
+    const handleFileChange = (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        // Convert to base64 for storage
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFacturaFile({
+            name: file.name,
+            type: file.type,
+            data: reader.result,
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleSubir = async () => {
+      if (!facturaFile || selectedCount === 0) return;
+
+      // Guardar factura en Firestore
+      const facturaId = await onSaveFactura({
+        clienteId: cliente.id,
+        nombre: facturaFile.name,
+        tipo: facturaFile.type,
+        data: facturaFile.data,
+        lingotesCount: selectedCount,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Actualizar cada lingote con la factura
+      for (const l of selectedLingotes) {
+        const entrega = entregas.find(e => e.id === l.entregaId);
+        if (!entrega) continue;
+        const lingotes = [...entrega.lingotes];
+        lingotes[l.lingoteIdx] = { ...lingotes[l.lingoteIdx], nFactura: facturaFile.name, facturaId };
+        await onUpdateEntrega(l.entregaId, { lingotes });
+      }
+
+      setShowFacturaModal(false);
+      setFacturaFile(null);
+      setFacturaSelection({});
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowFacturaModal(false)}>
+        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-bold text-stone-800 mb-4">Subir Factura</h3>
+
+          {/* File input */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-stone-700 mb-2">Archivo (PDF o imagen)</label>
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              onChange={handleFileChange}
+              className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm"
+            />
+            {facturaFile && (
+              <div className="mt-2 p-2 bg-emerald-50 rounded-lg text-sm text-emerald-700">
+                ✓ {facturaFile.name}
+              </div>
+            )}
+          </div>
+
+          {/* Selección de lingotes */}
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-stone-700">Asignar a lingotes:</span>
+            <button onClick={selectAll} className="text-xs text-amber-600 hover:text-amber-700 font-semibold">
+              Seleccionar todos
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto border border-stone-200 rounded-xl p-2 mb-4 max-h-48">
+            {lingotesSinFactura.length === 0 ? (
+              <p className="text-stone-400 text-sm text-center py-4">No hay lingotes sin factura</p>
+            ) : (
+              <div className="space-y-1">
+                {lingotesSinFactura.map(l => {
+                  const key = `${l.entregaId}_${l.lingoteIdx}`;
+                  const isSelected = facturaSelection[key];
+                  return (
+                    <div
+                      key={key}
+                      onClick={() => setFacturaSelection(prev => ({ ...prev, [key]: !prev[key] }))}
+                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                        isSelected ? 'bg-amber-100 border border-amber-300' : 'bg-stone-50 hover:bg-stone-100'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                        isSelected ? 'bg-amber-500 border-amber-500 text-white' : 'border-stone-300'
+                      }`}>
+                        {isSelected && '✓'}
+                      </div>
+                      <span
+                        className="px-1.5 py-0.5 rounded text-xs font-bold"
+                        style={{ backgroundColor: getEntregaColor(l.fechaEntrega) + '20', color: getEntregaColor(l.fechaEntrega) }}
+                      >{formatEntregaShort(l.fechaEntrega)}</span>
+                      <span className="font-mono text-sm">{l.peso}g</span>
+                      <span className="text-xs text-stone-400">{formatEur(l.importe || 0)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {selectedCount > 0 && (
+            <div className="text-sm text-center text-stone-600 mb-3">
+              <span className="font-bold text-amber-600">{selectedCount}</span> lingotes seleccionados
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => setShowFacturaModal(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={!facturaFile || selectedCount === 0}
+              onClick={handleSubir}
+            >
+              Subir y asignar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Modal para ver factura
+  const ViewFacturaModal = () => {
+    if (!viewingFactura) return null;
+
+    const isPdf = viewingFactura.tipo?.includes('pdf');
+
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewingFactura(null)}>
+        <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-4 border-b border-stone-200">
+            <h3 className="font-bold text-stone-800">{viewingFactura.nombre}</h3>
+            <button
+              onClick={() => setViewingFactura(null)}
+              className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            {isPdf ? (
+              <iframe
+                src={viewingFactura.data}
+                className="w-full h-[70vh] rounded-xl"
+                title={viewingFactura.nombre}
+              />
+            ) : (
+              <img
+                src={viewingFactura.data}
+                alt={viewingFactura.nombre}
+                className="max-w-full h-auto rounded-xl mx-auto"
+              />
+            )}
+          </div>
+          <div className="p-4 border-t border-stone-200 flex gap-3">
+            <Button
+              variant="danger"
+              className="flex-1"
+              onClick={async () => {
+                if (!confirm('¿Eliminar esta factura?')) return;
+                await onDeleteFactura(viewingFactura.id);
+                setViewingFactura(null);
+              }}
+            >
+              Eliminar
+            </Button>
+            <Button variant="secondary" className="flex-1" onClick={() => setViewingFactura(null)}>
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Tab button
   const TabBtn = ({ id, label, icon }) => (
     <button
@@ -2788,7 +3075,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v2.2</span>
+              <span className="text-xs text-stone-400 ml-1">v2.3</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
@@ -2815,6 +3102,8 @@ export default function LingotesTracker({
       {showFuturaModal && <FuturaModal />}
       {showAssignFuturaModal && <AssignFuturaModal />}
       {showMultiCierreModal && <MultiCierreModal />}
+      {showFacturaModal && <FacturaModal />}
+      {viewingFactura && <ViewFacturaModal />}
     </div>
   );
 }

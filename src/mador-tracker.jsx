@@ -69,6 +69,7 @@ export default function MadorTracker() {
     saveLingoteEntrega, deleteLingoteEntrega, updateLingoteEntrega,
     updateLingotesConfig,
     saveLingoteFutura, deleteLingoteFutura, updateLingoteFutura,
+    lingotesFacturas, saveLingoteFactura, deleteLingoteFactura, updateLingoteFactura,
   } = useFirestore();
 
   // Local UI state
@@ -3292,6 +3293,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         exportaciones={lingotesExportaciones}
         entregas={lingotesEntregas}
         futuraLingotes={lingotesFutura}
+        facturas={lingotesFacturas}
         config={lingotesConfig}
         onBack={() => setShowLingotes(false)}
         onSaveExportacion={saveLingoteExportacion}
@@ -3303,6 +3305,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         onSaveFutura={saveLingoteFutura}
         onDeleteFutura={deleteLingoteFutura}
         onUpdateFutura={updateLingoteFutura}
+        onSaveFactura={saveLingoteFactura}
+        onDeleteFactura={deleteLingoteFactura}
+        onUpdateFactura={updateLingoteFactura}
       />
     );
   }
