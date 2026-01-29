@@ -2788,7 +2788,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v2.1</span>
+              <span className="text-xs text-stone-400 ml-1">v2.2</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
