@@ -73,6 +73,8 @@ export default function LingotesTracker({
   const [showCierreModal, setShowCierreModal] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState(null);
   const [selectedLingoteIdx, setSelectedLingoteIdx] = useState(null);
+  const [selectedLingoteIndices, setSelectedLingoteIndices] = useState([]); // For bulk closing
+  const [cierreCantidad, setCierreCantidad] = useState({}); // { entregaId_peso: cantidad }
   const [editingEntregaClienteId, setEditingEntregaClienteId] = useState(null);
   const [entregaFilter, setEntregaFilter] = useState('en_curso');
   const [showFuturaModal, setShowFuturaModal] = useState(false);
@@ -275,33 +277,38 @@ export default function LingotesTracker({
     setShowAssignFuturaModal(false);
   };
 
-  const cerrarLingote = async (entregaId, lingoteIdx, data) => {
+  // Cerrar múltiples lingotes a la vez (bulk)
+  const cerrarLingotes = async (entregaId, lingoteIndices, data) => {
     const entrega = entregas.find(e => e.id === entregaId);
     if (!entrega) return;
     const lingotes = [...entrega.lingotes];
-    const pesoNeto = (lingotes[lingoteIdx].peso || 0) - (data.devolucion || 0);
-    lingotes[lingoteIdx] = {
-      ...lingotes[lingoteIdx],
-      euroOnza: data.euroOnza || null,
-      base: data.base || null,
-      baseCliente: data.baseCliente || null,
-      precioJofisa: data.precioJofisa || null,
-      importeJofisa: data.importeJofisa || 0,
-      margen: data.margen || 0,
-      precio: data.precio,
-      importe: data.precio * pesoNeto,
-      nFactura: data.nFactura,
-      fechaCierre: data.fechaCierre,
-      pesoCerrado: lingotes[lingoteIdx].peso,
-      pesoDevuelto: data.devolucion || 0,
-      estado: 'pendiente_pago',
-      pagado: false,
-    };
+
+    for (const idx of lingoteIndices) {
+      const pesoNeto = (lingotes[idx].peso || 0) - (data.devolucion || 0);
+      lingotes[idx] = {
+        ...lingotes[idx],
+        euroOnza: data.euroOnza || null,
+        base: data.base || null,
+        baseCliente: data.baseCliente || null,
+        precioJofisa: data.precioJofisa || null,
+        importeJofisa: (data.precioJofisa || 0) * pesoNeto,
+        margen: data.margen || 0,
+        precio: data.precio,
+        importe: data.precio * pesoNeto,
+        nFactura: data.nFactura,
+        fechaCierre: data.fechaCierre,
+        pesoCerrado: lingotes[idx].peso,
+        pesoDevuelto: data.devolucion || 0,
+        estado: 'pendiente_pago',
+        pagado: false,
+      };
+    }
     await onUpdateEntrega(entregaId, { lingotes });
 
     setShowCierreModal(false);
     setSelectedEntrega(null);
     setSelectedLingoteIdx(null);
+    setSelectedLingoteIndices([]);
     setSelectedFuturaId(null);
   };
 
@@ -645,30 +652,79 @@ export default function LingotesTracker({
                 const exportacion = getExportacion(entrega.exportacionId);
                 const enCursoList = lingotesEnCurso(entrega);
                 const totalPeso = enCursoList.reduce((s, l) => s + (l.peso || 0), 0);
+
+                // Agrupar lingotes en_curso por peso
+                const porPeso = {};
+                entrega.lingotes.forEach((l, idx) => {
+                  if (l.estado !== 'en_curso') return;
+                  if (!porPeso[l.peso]) porPeso[l.peso] = { peso: l.peso, indices: [] };
+                  porPeso[l.peso].indices.push(idx);
+                });
+                const grupos = Object.values(porPeso);
+
                 return (
                   <div key={entrega.id} className="p-3 rounded-xl bg-amber-50 border border-amber-200">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div>
                         <div className="font-semibold text-stone-800">{enCursoList.length} x {enCursoList[0]?.peso || '?'}g = {totalPeso}g</div>
                         <div className="text-xs text-stone-500">{entrega.fechaEntrega} {exportacion ? `• Exp: ${exportacion.nombre}` : ''}</div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>x</Button>
-                      </div>
+                      <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>x</Button>
                     </div>
-                    <div className="space-y-1">
-                      {entrega.lingotes.map((l, idx) => {
-                        if (l.estado !== 'en_curso') return null;
-                        return (
-                          <div key={idx} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-white/60">
-                            <span className="font-mono text-stone-700">{l.peso}g</span>
-                            <Button size="sm" variant="success" onClick={() => { setSelectedEntrega(entrega); setSelectedLingoteIdx(idx); setShowCierreModal(true); }}>
-                              Cerrar
+                    {/* Por cada grupo de peso */}
+                    {grupos.map(grupo => {
+                      const key = `${entrega.id}_${grupo.peso}`;
+                      const cantidad = cierreCantidad[key] || 1;
+                      const maxCantidad = grupo.indices.length;
+                      const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
+
+                      const handleCerrar = () => {
+                        const indicesToClose = grupo.indices.slice(0, cantidad);
+                        setSelectedEntrega(entrega);
+                        setSelectedLingoteIndices(indicesToClose);
+                        setSelectedLingoteIdx(indicesToClose[0]); // First one for reference
+                        setShowCierreModal(true);
+                      };
+
+                      return (
+                        <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-2">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono font-semibold text-stone-700">{maxCantidad} x {grupo.peso}g</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* Selector de cantidad */}
+                            <div className="flex items-center gap-1">
+                              {quickOptions.map(n => (
+                                <button
+                                  key={n}
+                                  onClick={() => setCierreCantidad({ ...cierreCantidad, [key]: n })}
+                                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                    cantidad === n
+                                      ? 'bg-amber-500 text-white'
+                                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                  }`}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                              {maxCantidad > 4 && (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={maxCantidad}
+                                  value={cantidad}
+                                  onChange={(e) => setCierreCantidad({ ...cierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                  className="w-12 h-7 rounded-lg border border-stone-300 text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                />
+                              )}
+                            </div>
+                            <Button size="sm" variant="success" onClick={handleCerrar}>
+                              Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
                             </Button>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -1707,11 +1763,13 @@ export default function LingotesTracker({
     );
   };
 
-  // Cierre Modal - close a single lingote (entrega or futura standalone)
+  // Cierre Modal - close one or multiple lingotes (entrega or futura standalone)
   const CierreModal = () => {
     const isFuturaCierre = !!selectedFuturaId;
+    const isBulkCierre = selectedLingoteIndices.length > 1;
     const futuraDoc = isFuturaCierre ? (futuraLingotes || []).find(f => f.id === selectedFuturaId) : null;
     const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
+    const cantidadLingotes = isBulkCierre ? selectedLingoteIndices.length : 1;
     const defaultEuroOnza = lingote?.euroOnza || '';
     const defaultPrecioJofisa = lingote?.precioJofisa || '';
     const defaultBaseCliente = lingote?.baseCliente || '';
@@ -1740,6 +1798,7 @@ export default function LingotesTracker({
       setShowCierreModal(false);
       setSelectedEntrega(null);
       setSelectedLingoteIdx(null);
+      setSelectedLingoteIndices([]);
       setSelectedFuturaId(null);
     };
 
@@ -1748,7 +1807,9 @@ export default function LingotesTracker({
 
     const clienteId = isFuturaCierre ? futuraDoc.clienteId : selectedEntrega.clienteId;
     const cliente = getCliente(clienteId);
-    const pesoNeto = (lingote.peso || 0) - formData.devolucion;
+    const pesoUnitario = lingote.peso || 0;
+    const pesoNetoUnitario = pesoUnitario - formData.devolucion;
+    const pesoTotalNeto = pesoNetoUnitario * cantidadLingotes;
 
     // Calculations
     const euroOnzaNum = parseFloat(formData.euroOnza) || 0;
@@ -1756,10 +1817,12 @@ export default function LingotesTracker({
     const base = (euroOnzaConfirmado && euroOnzaNum) ? Math.ceil((euroOnzaNum / 31.10349) * 100) / 100 : 0;
     const baseClienteNum = parseFloat(formData.baseCliente) || 0;
     const precioJofisaNum = parseFloat(formData.precioJofisa) || 0;
-    const importeJofisa = precioJofisaNum * pesoNeto;
+    const importeJofisaUnitario = precioJofisaNum * pesoNetoUnitario;
+    const importeJofisaTotal = importeJofisaUnitario * cantidadLingotes;
     const margenNum = parseFloat(formData.margen) || 0;
     const precioCliente = baseClienteNum ? Math.round((baseClienteNum * (1 + margenNum / 100)) * 100) / 100 : 0;
-    const importeCliente = precioCliente * pesoNeto;
+    const importeClienteUnitario = precioCliente * pesoNetoUnitario;
+    const importeClienteTotal = importeClienteUnitario * cantidadLingotes;
 
     // Auto-fill baseCliente y precioJofisa cuando se confirma euroOnza
     const confirmarEuroOnza = () => {
@@ -1780,7 +1843,7 @@ export default function LingotesTracker({
         base,
         baseCliente: baseClienteNum,
         precioJofisa: precioJofisaNum,
-        importeJofisa,
+        importeJofisa: importeJofisaUnitario,
         margen: margenNum,
         precio: precioCliente,
         fechaCierre: formData.fechaCierre,
@@ -1789,16 +1852,24 @@ export default function LingotesTracker({
       };
       if (isFuturaCierre) {
         cerrarFutura(selectedFuturaId, cierreData);
+      } else if (isBulkCierre) {
+        cerrarLingotes(selectedEntrega.id, selectedLingoteIndices, cierreData);
       } else {
-        cerrarLingote(selectedEntrega.id, selectedLingoteIdx, cierreData);
+        cerrarLingotes(selectedEntrega.id, [selectedLingoteIdx], cierreData);
       }
     };
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeCierreModal}>
         <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-stone-800 mb-2">Cerrar Lingote</h3>
-          <p className="text-stone-500 text-sm mb-6">{cliente?.nombre} • {lingote.peso}g{isFuturaCierre ? ' (FUTURA)' : ''}</p>
+          <h3 className="text-xl font-bold text-stone-800 mb-2">
+            Cerrar {cantidadLingotes > 1 ? `${cantidadLingotes} Lingotes` : 'Lingote'}
+          </h3>
+          <p className="text-stone-500 text-sm mb-6">
+            {cliente?.nombre} • {cantidadLingotes > 1 ? `${cantidadLingotes} x ` : ''}{pesoUnitario}g
+            {cantidadLingotes > 1 ? ` = ${pesoUnitario * cantidadLingotes}g` : ''}
+            {isFuturaCierre ? ' (FUTURA)' : ''}
+          </p>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">€/Onza</label>
@@ -1850,10 +1921,12 @@ export default function LingotesTracker({
             {precioJofisaNum > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-blue-600">Importe Jofisa:</span>
-                  <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisa)}</span>
+                  <span className="text-blue-600">Importe Jofisa{cantidadLingotes > 1 ? ' total' : ''}:</span>
+                  <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisaTotal)}</span>
                 </div>
-                <div className="text-xs text-blue-400 mt-0.5">{pesoNeto}g x {formatNum(precioJofisaNum)} €/g</div>
+                <div className="text-xs text-blue-400 mt-0.5">
+                  {cantidadLingotes > 1 ? `${cantidadLingotes} x ` : ''}{pesoNetoUnitario}g x {formatNum(precioJofisaNum)} €/g
+                </div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -1886,11 +1959,14 @@ export default function LingotesTracker({
               <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-4">
                 <h4 className="font-semibold text-emerald-800 mb-3">Resumen Cliente</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-stone-600">Peso neto:</span><span className="font-mono">{pesoNeto}g</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-stone-600">Peso neto{cantidadLingotes > 1 ? ' total' : ''}:</span>
+                    <span className="font-mono">{cantidadLingotes > 1 ? `${cantidadLingotes} x ${pesoNetoUnitario}g = ` : ''}{pesoTotalNeto}g</span>
+                  </div>
                   <div className="flex justify-between"><span className="text-stone-600">Precio cliente:</span><span className="font-mono">{formatNum(precioCliente)} €/g</span></div>
                   <div className="flex justify-between pt-2 border-t border-emerald-200">
-                    <span className="font-semibold text-emerald-800">IMPORTE CLIENTE:</span>
-                    <span className="font-bold text-emerald-700 text-lg">{formatEur(importeCliente)}</span>
+                    <span className="font-semibold text-emerald-800">IMPORTE CLIENTE{cantidadLingotes > 1 ? ' TOTAL' : ''}:</span>
+                    <span className="font-bold text-emerald-700 text-lg">{formatEur(importeClienteTotal)}</span>
                   </div>
                 </div>
               </div>
