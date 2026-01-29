@@ -1716,10 +1716,11 @@ export default function LingotesTracker({
     const cliente = getCliente(clienteId);
     const pesoNeto = (lingote.peso || 0) - formData.devolucion;
 
-    // Calculations - solo si euroOnza está confirmado
+    // Calculations
     const euroOnzaNum = parseFloat(formData.euroOnza) || 0;
+    // Base solo se calcula si euroOnza está confirmado
     const base = (euroOnzaConfirmado && euroOnzaNum) ? Math.ceil((euroOnzaNum / 31.10349) * 100) / 100 : 0;
-    const baseClienteNum = parseFloat(formData.baseCliente) || base;
+    const baseClienteNum = parseFloat(formData.baseCliente) || 0;
     const precioJofisaNum = parseFloat(formData.precioJofisa) || 0;
     const importeJofisa = precioJofisaNum * pesoNeto;
     const margenNum = parseFloat(formData.margen) || 0;
@@ -1730,10 +1731,11 @@ export default function LingotesTracker({
     const confirmarEuroOnza = () => {
       if (!euroOnzaNum) return;
       const baseCalc = Math.ceil((euroOnzaNum / 31.10349) * 100) / 100;
+      const precioJofisaCalc = Math.round((baseCalc + 0.25) * 100) / 100;
       setFormData(prev => ({
         ...prev,
         baseCliente: prev.baseCliente || baseCalc.toFixed(2),
-        precioJofisa: prev.precioJofisa || baseCalc.toFixed(2),
+        precioJofisa: prev.precioJofisa || precioJofisaCalc.toFixed(2),
       }));
       setEuroOnzaConfirmado(true);
     };
@@ -1795,7 +1797,7 @@ export default function LingotesTracker({
                 </button>
               </div>
             </div>
-            {euroOnzaConfirmado && base > 0 && (
+            {base > 0 && (
               <div className="bg-stone-50 rounded-xl p-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-stone-500">Base (€/Onza ÷ 31,10349):</span>
@@ -1803,39 +1805,35 @@ export default function LingotesTracker({
                 </div>
               </div>
             )}
-            {euroOnzaConfirmado && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
-                  <input type="number" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Igual a base" />
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
+              <input type="number" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Se rellena con OK" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
+              <input type="number" step="0.01" value={formData.precioJofisa} onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Base cliente + 0,25" />
+            </div>
+            {precioJofisaNum > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-blue-600">Importe Jofisa:</span>
+                  <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisa)}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
-                  <input type="number" step="0.01" value={formData.precioJofisa} onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Auto desde base" />
-                </div>
-                {precioJofisaNum > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-blue-600">Importe Jofisa:</span>
-                      <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisa)}</span>
-                    </div>
-                    <div className="text-xs text-blue-400 mt-0.5">{pesoNeto}g x {formatNum(precioJofisaNum)} €/g</div>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Margen %</label>
-                    <input type="number" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Precio Cliente</label>
-                    <div className="w-full border border-stone-200 bg-stone-50 rounded-xl px-4 py-3 font-mono text-stone-800">
-                      {precioCliente ? formatNum(precioCliente) : '-'}
-                    </div>
-                  </div>
-                </div>
-              </>
+                <div className="text-xs text-blue-400 mt-0.5">{pesoNeto}g x {formatNum(precioJofisaNum)} €/g</div>
+              </div>
             )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Margen %</label>
+                <input type="number" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Precio Cliente</label>
+                <div className="w-full border border-stone-200 bg-stone-50 rounded-xl px-4 py-3 font-mono text-stone-800">
+                  {precioCliente ? formatNum(precioCliente) : '-'}
+                </div>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Cierre</label>
               <input type="date" value={formData.fechaCierre} onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" />
