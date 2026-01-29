@@ -164,6 +164,15 @@ export default function LingotesTracker({
     return stockGlobal.reduce((sum, s) => sum + s.cantidad, 0);
   }, [stockGlobal]);
 
+  // Helper para crear logs
+  const createLog = (tipo, descripcion, usuario = 'Usuario') => ({
+    id: Date.now().toString(),
+    tipo, // 'entrega', 'cierre', 'devolucion', 'pago', 'cancelar_devolucion'
+    descripcion,
+    usuario,
+    timestamp: new Date().toISOString(),
+  });
+
   const addEntrega = async (data) => {
     // data.items = [{ peso, cantidad }, ...]
     const items = data.items || [];
@@ -215,11 +224,17 @@ export default function LingotesTracker({
       }
     }
 
+    // Crear log inicial
+    const totalPeso = items.reduce((s, item) => s + (item.peso * item.cantidad), 0);
+    const totalLingotes = items.reduce((s, item) => s + item.cantidad, 0);
+    const initialLog = createLog('entrega', `Entrega creada: ${totalLingotes} lingote${totalLingotes > 1 ? 's' : ''} (${totalPeso}g)`);
+
     await onSaveEntrega({
       clienteId: data.clienteId,
       exportacionId: data.exportacionId,
       fechaEntrega: data.fechaEntrega,
       lingotes,
+      logs: [initialLog],
     });
 
     setShowEntregaModal(false);
@@ -290,6 +305,7 @@ export default function LingotesTracker({
     const entrega = entregas.find(e => e.id === entregaId);
     if (!entrega) return;
     const lingotes = [...entrega.lingotes];
+    const peso = lingotes[lingoteIndices[0]]?.peso || 0;
 
     for (const idx of lingoteIndices) {
       const pesoNeto = (lingotes[idx].peso || 0) - (data.devolucion || 0);
@@ -311,7 +327,13 @@ export default function LingotesTracker({
         pagado: false,
       };
     }
-    await onUpdateEntrega(entregaId, { lingotes });
+
+    // Añadir log
+    const totalPeso = lingoteIndices.length * peso;
+    const log = createLog('cierre', `Cerrado: ${lingoteIndices.length} x ${peso}g (${totalPeso}g) a ${formatNum(data.precio)}€/g`);
+    const logs = [...(entrega.logs || []), log];
+
+    await onUpdateEntrega(entregaId, { lingotes, logs });
 
     setShowCierreModal(false);
     setSelectedEntrega(null);
@@ -348,6 +370,7 @@ export default function LingotesTracker({
     const entrega = entregas.find(e => e.id === entregaId);
     if (!entrega) return;
     const lingotes = [...entrega.lingotes];
+    const peso = lingotes[lingoteIndices[0]]?.peso || 0;
 
     for (const idx of lingoteIndices) {
       lingotes[idx] = {
@@ -356,7 +379,33 @@ export default function LingotesTracker({
         fechaDevolucion: new Date().toISOString().split('T')[0],
       };
     }
-    await onUpdateEntrega(entregaId, { lingotes });
+
+    // Añadir log
+    const totalPeso = lingoteIndices.length * peso;
+    const log = createLog('devolucion', `Devuelto: ${lingoteIndices.length} x ${peso}g (${totalPeso}g)`);
+    const logs = [...(entrega.logs || []), log];
+
+    await onUpdateEntrega(entregaId, { lingotes, logs });
+  };
+
+  // Cancelar devolución: volver a poner lingotes en estado 'en_curso'
+  const cancelarDevolucion = async (entregaId, lingoteIdx) => {
+    const entrega = entregas.find(e => e.id === entregaId);
+    if (!entrega) return;
+    const lingotes = [...entrega.lingotes];
+    const peso = lingotes[lingoteIdx]?.peso || 0;
+
+    lingotes[lingoteIdx] = {
+      ...lingotes[lingoteIdx],
+      estado: 'en_curso',
+      fechaDevolucion: null,
+    };
+
+    // Añadir log
+    const log = createLog('cancelar_devolucion', `Cancelada devolución: 1 x ${peso}g`);
+    const logs = [...(entrega.logs || []), log];
+
+    await onUpdateEntrega(entregaId, { lingotes, logs });
   };
 
   const marcarPagado = async (entregaId, lingoteIdx) => {
@@ -364,14 +413,18 @@ export default function LingotesTracker({
     if (!entrega) return;
     const lingotes = [...entrega.lingotes];
     const l = lingotes[lingoteIdx];
+    let log;
     if (l.estado === 'pendiente_pago') {
       // Mark as paid → finalizado
       lingotes[lingoteIdx] = { ...l, pagado: true, estado: 'finalizado' };
+      log = createLog('pago', `Pagado: 1 x ${l.peso}g (${formatEur(l.importe || 0)})`);
     } else if (l.estado === 'finalizado') {
       // Unmark paid → back to pendiente_pago
       lingotes[lingoteIdx] = { ...l, pagado: false, estado: 'pendiente_pago' };
+      log = createLog('pago', `Desmarcado pago: 1 x ${l.peso}g`);
     }
-    await onUpdateEntrega(entregaId, { lingotes });
+    const logs = [...(entrega.logs || []), log];
+    await onUpdateEntrega(entregaId, { lingotes, logs });
   };
 
   const deleteEntrega = async (entregaId) => {
@@ -821,6 +874,47 @@ export default function LingotesTracker({
                         );
                       })}
                     </div>
+
+                    {/* Lista de lingotes devueltos */}
+                    {(() => {
+                      const devueltos = lingotesDevueltos(entrega);
+                      if (devueltos.length === 0) return null;
+                      return (
+                        <div className="mt-3 pt-3 border-t border-amber-200">
+                          <div className="text-xs font-semibold text-stone-500 mb-2">Devueltos ({devueltos.length})</div>
+                          <div className="space-y-1">
+                            {entrega.lingotes.map((l, idx) => {
+                              if (l.estado !== 'devuelto') return null;
+                              const log = (entrega.logs || []).find(log =>
+                                log.tipo === 'devolucion' &&
+                                log.descripcion.includes(`${l.peso}g`)
+                              );
+                              return (
+                                <div key={idx} className="flex items-center justify-between bg-red-50 rounded-lg p-2 text-xs">
+                                  <div>
+                                    <span className="font-mono font-semibold text-red-700">{l.peso}g</span>
+                                    <span className="text-stone-400 ml-2">
+                                      {l.fechaDevolucion || '-'}
+                                      {log && ` • ${log.usuario}`}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`¿Cancelar devolución del lingote de ${l.peso}g?`)) {
+                                        cancelarDevolucion(entrega.id, idx);
+                                      }
+                                    }}
+                                    className="w-6 h-6 rounded-full bg-red-100 text-red-500 hover:bg-red-200 flex items-center justify-center font-bold"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -898,6 +992,78 @@ export default function LingotesTracker({
             + FUTURA
           </Button>
         </div>
+
+        {/* Historial de actividad */}
+        {(() => {
+          // Recopilar todos los logs de todas las entregas del cliente
+          const allLogs = entregasCliente
+            .flatMap(e => (e.logs || []).map(log => ({ ...log, entregaId: e.id, fechaEntrega: e.fechaEntrega })))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 20); // Últimos 20 logs
+
+          if (allLogs.length === 0) return null;
+
+          const formatLogTime = (timestamp) => {
+            const d = new Date(timestamp);
+            const day = d.getDate();
+            const month = d.getMonth() + 1;
+            const hours = d.getHours().toString().padStart(2, '0');
+            const mins = d.getMinutes().toString().padStart(2, '0');
+            return `${day}/${month} ${hours}:${mins}`;
+          };
+
+          const getLogIcon = (tipo) => {
+            switch (tipo) {
+              case 'entrega': return '📦';
+              case 'cierre': return '✅';
+              case 'devolucion': return '↩️';
+              case 'cancelar_devolucion': return '🔄';
+              case 'pago': return '💰';
+              default: return '📝';
+            }
+          };
+
+          const getLogColor = (tipo) => {
+            switch (tipo) {
+              case 'entrega': return 'bg-blue-50 border-blue-200';
+              case 'cierre': return 'bg-emerald-50 border-emerald-200';
+              case 'devolucion': return 'bg-red-50 border-red-200';
+              case 'cancelar_devolucion': return 'bg-orange-50 border-orange-200';
+              case 'pago': return 'bg-green-50 border-green-200';
+              default: return 'bg-stone-50 border-stone-200';
+            }
+          };
+
+          return (
+            <Card className="mt-4">
+              <h3 className="font-bold text-stone-800 mb-3">Historial</h3>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {allLogs.map((log, i) => (
+                  <div key={log.id || i} className={`flex items-start gap-2 p-2 rounded-lg border ${getLogColor(log.tipo)}`}>
+                    <span className="text-sm">{getLogIcon(log.tipo)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-stone-800">{log.descripcion}</div>
+                      <div className="text-[10px] text-stone-400 flex items-center gap-2">
+                        <span>{formatLogTime(log.timestamp)}</span>
+                        <span>•</span>
+                        <span>{log.usuario}</span>
+                        {log.fechaEntrega && (
+                          <>
+                            <span>•</span>
+                            <span
+                              className="px-1 py-0.5 rounded font-bold"
+                              style={{ backgroundColor: getEntregaColor(log.fechaEntrega) + '20', color: getEntregaColor(log.fechaEntrega) }}
+                            >{formatEntregaShort(log.fechaEntrega)}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          );
+        })()}
       </div>
     );
   };
