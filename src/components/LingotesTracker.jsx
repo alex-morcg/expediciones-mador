@@ -157,35 +157,34 @@ export default function LingotesTracker({
   const addEntrega = async (data) => {
     // data.items = [{ peso, cantidad }, ...]
     const items = data.items || [];
+    const exportacion = exportaciones.find(e => e.id === data.exportacionId);
 
-    // First, validate all items have sufficient stock
+    if (!exportacion) {
+      alert('Selecciona una exportación válida');
+      return;
+    }
+
+    // Validate all items have sufficient stock IN THIS EXPORTACION
     for (const item of items) {
-      const stockDisponible = stockGlobal.find(s => s.peso === item.peso)?.cantidad || 0;
+      const expLingote = (exportacion.lingotes || []).find(l => l.peso === item.peso);
+      const stockDisponible = expLingote?.cantidad || 0;
       if (stockDisponible < item.cantidad) {
-        alert(`No hay suficiente stock de lingotes de ${item.peso}g. Disponibles: ${stockDisponible}, Requeridos: ${item.cantidad}`);
+        alert(`No hay suficiente stock de lingotes de ${item.peso}g en ${exportacion.nombre}. Disponibles: ${stockDisponible}, Requeridos: ${item.cantidad}`);
         return;
       }
     }
 
-    // Deduct from exportaciones stock (FIFO - first exportacion first)
+    // Deduct ONLY from selected exportacion
+    const newLingotes = [...(exportacion.lingotes || [])];
     for (const item of items) {
-      let remaining = item.cantidad;
-      for (const exp of exportaciones) {
-        if (remaining <= 0) break;
-        const expLingotes = exp.lingotes || [];
-        const idx = expLingotes.findIndex(l => l.peso === item.peso && l.cantidad > 0);
-        if (idx !== -1) {
-          const available = expLingotes[idx].cantidad;
-          const toDeduct = Math.min(available, remaining);
-          const newLingotes = [...expLingotes];
-          newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad - toDeduct };
-          // Remove if empty
-          const filtered = newLingotes.filter(l => l.cantidad > 0);
-          await onSaveExportacion({ ...exp, lingotes: filtered }, exp.id);
-          remaining -= toDeduct;
-        }
+      const idx = newLingotes.findIndex(l => l.peso === item.peso && l.cantidad > 0);
+      if (idx !== -1) {
+        newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad - item.cantidad };
       }
     }
+    // Remove empty entries
+    const filtered = newLingotes.filter(l => l.cantidad > 0);
+    await onSaveExportacion({ ...exportacion, lingotes: filtered }, exportacion.id);
 
     // Create the entrega with all lingotes
     const lingotes = [];
@@ -1491,21 +1490,30 @@ export default function LingotesTracker({
   // Entrega Modal - creates multiple lingotes at once, deducting from stock
   const EntregaModal = () => {
     const defaultClienteId = editingEntregaClienteId || clientes[0]?.id || '';
-    const defaultExportacionId = exportaciones[0]?.id || '';
+    // Find first exportacion with stock
+    const exportacionesConStock = exportaciones.filter(e => (e.lingotes || []).some(l => l.cantidad > 0));
+    const defaultExportacionId = exportacionesConStock[0]?.id || exportaciones[0]?.id || '';
     const defaultFecha = new Date().toISOString().split('T')[0];
 
     const [formData, setFormData] = useState({
       clienteId: defaultClienteId,
       exportacionId: defaultExportacionId,
       fechaEntrega: defaultFecha,
-      // items: array of { peso, cantidad } for each type of lingote
-      items: stockGlobal.map(s => ({ peso: s.peso, cantidad: 0 })),
+      items: [], // Will be populated based on selected exportacion
     });
 
-    // Update items when stockGlobal changes (sync available pesos)
-    const itemsWithStock = formData.items.map(item => {
-      const stock = stockGlobal.find(s => s.peso === item.peso);
-      return { ...item, disponible: stock?.cantidad || 0 };
+    // Get stock for selected exportacion
+    const selectedExportacion = exportaciones.find(e => e.id === formData.exportacionId);
+    const stockExportacion = (selectedExportacion?.lingotes || []).filter(l => l.cantidad > 0);
+
+    // Build items list based on selected exportacion's stock
+    const itemsWithStock = stockExportacion.map(l => {
+      const existingItem = formData.items.find(i => i.peso === l.peso);
+      return {
+        peso: l.peso,
+        cantidad: existingItem?.cantidad || 0,
+        disponible: l.cantidad,
+      };
     });
 
     // Check if all items have sufficient stock
@@ -1522,12 +1530,19 @@ export default function LingotesTracker({
       formData.fechaEntrega !== defaultFecha;
 
     const updateItemCantidad = (peso, cantidad) => {
-      setFormData({
-        ...formData,
-        items: formData.items.map(item =>
-          item.peso === peso ? { ...item, cantidad: Math.max(0, cantidad) } : item
-        ),
-      });
+      const existingItems = [...formData.items];
+      const idx = existingItems.findIndex(i => i.peso === peso);
+      if (idx >= 0) {
+        existingItems[idx] = { ...existingItems[idx], cantidad: Math.max(0, cantidad) };
+      } else {
+        existingItems.push({ peso, cantidad: Math.max(0, cantidad) });
+      }
+      setFormData({ ...formData, items: existingItems });
+    };
+
+    const handleExportacionChange = (newExpId) => {
+      // Reset items when changing exportacion
+      setFormData({ ...formData, exportacionId: newExpId, items: [] });
     };
 
     const handleClose = () => {
@@ -1551,14 +1566,31 @@ export default function LingotesTracker({
         <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <h3 className="text-xl font-bold text-stone-800 mb-4">Nueva Entrega</h3>
 
-          {stockGlobal.length === 0 ? (
+          {exportacionesConStock.length === 0 ? (
             <div className="bg-amber-50 rounded-xl p-4 mb-4">
-              <p className="text-amber-600 text-sm text-center">No hay stock. Crea una exportación primero.</p>
+              <p className="text-amber-600 text-sm text-center">No hay stock en ninguna exportación. Crea una exportación primero.</p>
             </div>
           ) : (
             <>
-              {/* Cliente y Fecha */}
+              {/* Exportación, Cliente y Fecha */}
               <div className="space-y-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">📦 Exportación</label>
+                  <select
+                    value={formData.exportacionId}
+                    onChange={(e) => handleExportacionChange(e.target.value)}
+                    className="w-full border border-amber-400 bg-amber-50 rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  >
+                    {exportacionesConStock.map(exp => {
+                      const stockTotal = (exp.lingotes || []).reduce((sum, l) => sum + (l.cantidad * l.peso), 0);
+                      return (
+                        <option key={exp.id} value={exp.id}>
+                          {exp.nombre} — {formatNum(stockTotal, 0)}g disponibles
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1">Cliente</label>
                   <select value={formData.clienteId} onChange={(e) => setFormData({ ...formData, clienteId: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
@@ -1573,9 +1605,11 @@ export default function LingotesTracker({
                 </div>
               </div>
 
-              {/* Lingotes por tipo */}
+              {/* Lingotes por tipo de la exportación seleccionada */}
               <div className="bg-amber-50 rounded-xl p-3 mb-4">
-                <p className="text-xs text-amber-700 font-medium mb-3">📦 Selecciona lingotes por tipo</p>
+                <p className="text-xs text-amber-700 font-medium mb-3">
+                  Stock de "{selectedExportacion?.nombre || '?'}"
+                </p>
                 <div className="space-y-3">
                   {itemsWithStock.map((item, idx) => {
                     const stockInsuficiente = item.cantidad > item.disponible;
