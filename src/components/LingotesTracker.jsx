@@ -2004,16 +2004,6 @@ export default function LingotesTracker({
               <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Cierre</label>
               <input type="date" value={formData.fechaCierre} onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">N Factura</label>
-              <input type="text" value={formData.nFactura} onChange={(e) => setFormData({ ...formData, nFactura: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ej: 2026-1.pdf" />
-            </div>
-            {!isFuturaCierre && (
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Devolucion (gramos)</label>
-                <input type="number" value={formData.devolucion} onChange={(e) => setFormData({ ...formData, devolucion: parseFloat(e.target.value) || 0 })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="0" />
-              </div>
-            )}
             {precioCliente > 0 && (
               <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-4">
                 <h4 className="font-semibold text-emerald-800 mb-3">Resumen Cliente</h4>
