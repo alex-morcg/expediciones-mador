@@ -1955,6 +1955,23 @@ export default function LingotesTracker({
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
               <input type="number" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Se rellena con OK" />
+              {base > 0 && baseClienteNum > 0 && Math.abs(baseClienteNum - base) > 0.001 && (() => {
+                const diff = baseClienteNum - base;
+                const diffTotal = diff * pesoTotalNeto;
+                const isPositive = diff > 0;
+                return (
+                  <div className={`mt-2 px-3 py-2 rounded-lg text-sm ${isPositive ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                    <div className="flex justify-between items-center">
+                      <span className={isPositive ? 'text-emerald-700' : 'text-red-700'}>
+                        {isPositive ? '+' : ''}{formatNum(diff)} €/g vs base
+                      </span>
+                      <span className={`font-bold ${isPositive ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {isPositive ? '+' : ''}{formatEur(diffTotal)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
