@@ -667,7 +667,13 @@ export default function LingotesTracker({
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <div className="font-semibold text-stone-800">{enCursoList.length} x {enCursoList[0]?.peso || '?'}g = {totalPeso}g</div>
-                        <div className="text-xs text-stone-500">{entrega.fechaEntrega} {exportacion ? `• Exp: ${exportacion.nombre}` : ''}</div>
+                        <div className="text-xs text-stone-500 flex items-center gap-1">
+                          <span
+                            className="px-1.5 py-0.5 rounded font-bold"
+                            style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '20', color: getEntregaColor(entrega.fechaEntrega) }}
+                          >{formatEntregaShort(entrega.fechaEntrega)}</span>
+                          {exportacion && <span>• Exp: {exportacion.nombre}</span>}
+                        </div>
                       </div>
                       <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>x</Button>
                     </div>
