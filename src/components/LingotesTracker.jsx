@@ -88,6 +88,7 @@ export default function LingotesTracker({
   const [showFuturaModal, setShowFuturaModal] = useState(false);
   const [showAssignFuturaModal, setShowAssignFuturaModal] = useState(false);
   const [selectedFuturaId, setSelectedFuturaId] = useState(null);
+  const [showHistorial, setShowHistorial] = useState(false);
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -164,12 +165,18 @@ export default function LingotesTracker({
     return stockGlobal.reduce((sum, s) => sum + s.cantidad, 0);
   }, [stockGlobal]);
 
+  // Obtener usuario de la URL
+  const currentUser = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('user') || 'Usuario';
+  }, []);
+
   // Helper para crear logs
-  const createLog = (tipo, descripcion, usuario = 'Usuario') => ({
+  const createLog = (tipo, descripcion) => ({
     id: Date.now().toString(),
     tipo, // 'entrega', 'cierre', 'devolucion', 'pago', 'cancelar_devolucion'
     descripcion,
-    usuario,
+    usuario: currentUser,
     timestamp: new Date().toISOString(),
   });
 
@@ -1036,31 +1043,39 @@ export default function LingotesTracker({
 
           return (
             <Card className="mt-4">
-              <h3 className="font-bold text-stone-800 mb-3">Historial</h3>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {allLogs.map((log, i) => (
-                  <div key={log.id || i} className={`flex items-start gap-2 p-2 rounded-lg border ${getLogColor(log.tipo)}`}>
-                    <span className="text-sm">{getLogIcon(log.tipo)}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs text-stone-800">{log.descripcion}</div>
-                      <div className="text-[10px] text-stone-400 flex items-center gap-2">
-                        <span>{formatLogTime(log.timestamp)}</span>
-                        <span>•</span>
-                        <span>{log.usuario}</span>
-                        {log.fechaEntrega && (
-                          <>
-                            <span>•</span>
-                            <span
-                              className="px-1 py-0.5 rounded font-bold"
-                              style={{ backgroundColor: getEntregaColor(log.fechaEntrega) + '20', color: getEntregaColor(log.fechaEntrega) }}
-                            >{formatEntregaShort(log.fechaEntrega)}</span>
-                          </>
-                        )}
+              <button
+                onClick={() => setShowHistorial(!showHistorial)}
+                className="w-full flex items-center justify-between"
+              >
+                <h3 className="font-bold text-stone-800">Historial ({allLogs.length})</h3>
+                <span className="text-stone-400 text-sm">{showHistorial ? '▲' : '▼'}</span>
+              </button>
+              {showHistorial && (
+                <div className="space-y-2 max-h-64 overflow-y-auto mt-3">
+                  {allLogs.map((log, i) => (
+                    <div key={log.id || i} className={`flex items-start gap-2 p-2 rounded-lg border ${getLogColor(log.tipo)}`}>
+                      <span className="text-sm">{getLogIcon(log.tipo)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-stone-800">{log.descripcion}</div>
+                        <div className="text-[10px] text-stone-400 flex items-center gap-2 flex-wrap">
+                          <span>{formatLogTime(log.timestamp)}</span>
+                          <span>•</span>
+                          <span className="font-semibold text-stone-600">{log.usuario}</span>
+                          {log.fechaEntrega && (
+                            <>
+                              <span>•</span>
+                              <span
+                                className="px-1 py-0.5 rounded font-bold"
+                                style={{ backgroundColor: getEntregaColor(log.fechaEntrega) + '20', color: getEntregaColor(log.fechaEntrega) }}
+                              >{formatEntregaShort(log.fechaEntrega)}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Card>
           );
         })()}
