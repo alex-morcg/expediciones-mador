@@ -2914,13 +2914,22 @@ export default function LingotesTracker({
         createdAt: new Date().toISOString(),
       });
 
-      // Actualizar cada lingote con la factura
+      // Agrupar lingotes por entrega para evitar sobrescribir
+      const porEntrega = {};
       for (const l of selectedLingotes) {
-        const entrega = entregas.find(e => e.id === l.entregaId);
+        if (!porEntrega[l.entregaId]) porEntrega[l.entregaId] = [];
+        porEntrega[l.entregaId].push(l.lingoteIdx);
+      }
+
+      // Actualizar cada entrega una sola vez
+      for (const [entregaId, lingoteIdxs] of Object.entries(porEntrega)) {
+        const entrega = entregas.find(e => e.id === entregaId);
         if (!entrega) continue;
         const lingotes = [...entrega.lingotes];
-        lingotes[l.lingoteIdx] = { ...lingotes[l.lingoteIdx], nFactura: facturaId };
-        await onUpdateEntrega(l.entregaId, { lingotes });
+        for (const idx of lingoteIdxs) {
+          lingotes[idx] = { ...lingotes[idx], nFactura: facturaId };
+        }
+        await onUpdateEntrega(entregaId, { lingotes });
       }
 
       setShowFacturaModal(false);
@@ -3093,7 +3102,7 @@ export default function LingotesTracker({
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v2.5</span>
+              <span className="text-xs text-stone-400 ml-1">v2.6</span>
             </div>
             <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
           </div>
