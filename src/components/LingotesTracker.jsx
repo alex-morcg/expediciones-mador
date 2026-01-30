@@ -3644,7 +3644,10 @@ export default function LingotesTracker({
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
               <span className="text-xs text-stone-400 ml-1">v2.7</span>
             </div>
-            <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
+            <div className="flex items-center gap-3">
+              <span className="text-white/80 text-sm">{currentUser}</span>
+              <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
+            </div>
           </div>
         </header>
 
