@@ -896,12 +896,13 @@ export default function LingotesTracker({
             {/* Últimas 3 entregas FINALIZADAS */}
             {entregasFinalizadasList.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/20">
-                {/* Header de columnas alineado con cuadrados */}
-                <div className="grid grid-cols-4 gap-3 px-2 py-1 text-xs text-white/50 mb-1">
-                  <span className="text-center">📦 Entreg</span>
-                  <span className="text-center">✅ Cerr</span>
-                  <span className="text-center">↩️ Dev</span>
-                  <span className="text-center">⏳ Pend</span>
+                {/* Header de 5 columnas: Entrega + 4 stats */}
+                <div className="grid grid-cols-5 gap-2 px-2 py-1 text-xs text-white/50 mb-1">
+                  <span className="text-left">Entrega</span>
+                  <span className="text-center">📦</span>
+                  <span className="text-center">✅</span>
+                  <span className="text-center">↩️</span>
+                  <span className="text-center">⏳</span>
                 </div>
                 <div className="space-y-1">
                   {entregasFinalizadasList.map(entrega => {
@@ -912,22 +913,20 @@ export default function LingotesTracker({
                       const exportacion = getExportacion(entrega.exportacionId);
                       const nombreEntrega = `${exportacion?.nombre || ''} ${formatEntregaShort(entrega.fechaEntrega)}`.trim();
                       return (
-                        <div key={entrega.id} className="bg-white/10 rounded-lg px-2 py-1.5">
-                          <div className="flex items-center gap-1 mb-1">
+                        <div key={entrega.id} className="grid grid-cols-5 gap-2 bg-white/10 rounded-lg px-2 py-2 items-center">
+                          <div className="flex items-center gap-1">
                             <span className="text-green-300 text-xs">✓</span>
                             <span
-                              className="px-1.5 py-0.5 rounded font-bold text-xs"
+                              className="px-1.5 py-0.5 rounded font-bold text-xs truncate"
                               style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '40', color: 'white' }}
                             >
                               {nombreEntrega}
                             </span>
                           </div>
-                          <div className="grid grid-cols-4 gap-3 text-sm text-white/90 text-center">
-                            <span>{formatNum(eEntregado, 0)}</span>
-                            <span>{formatNum(eCerrado, 0)}</span>
-                            <span>{formatNum(eDevuelto, 0)}</span>
-                            <span>{formatNum(ePendiente, 0)}</span>
-                          </div>
+                          <span className="text-sm text-white/90 text-center">{formatNum(eEntregado, 0)}</span>
+                          <span className="text-sm text-white/90 text-center">{formatNum(eCerrado, 0)}</span>
+                          <span className="text-sm text-white/90 text-center">{formatNum(eDevuelto, 0)}</span>
+                          <span className="text-sm text-white/90 text-center">{formatNum(ePendiente, 0)}</span>
                         </div>
                       );
                     })}
