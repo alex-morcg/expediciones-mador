@@ -1278,8 +1278,22 @@ export default function LingotesTracker({
           <Card>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-stone-800">Cerrados ({allLingotesCerrados.length})</h3>
-              <div className="text-sm text-stone-500">
-                Importe: <span className="font-semibold text-emerald-600">{formatEur(allLingotesCerrados.reduce((s, l) => s + (l.importe || 0), 0))}</span>
+              <div className="flex items-center gap-3">
+                {allLingotesCerrados.filter(l => !l.nFactura).length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setFacturaSelection({});
+                      setFacturaFile(null);
+                      setShowFacturaModal(true);
+                    }}
+                  >
+                    + Subir factura
+                  </Button>
+                )}
+                <div className="text-sm text-stone-500">
+                  Importe: <span className="font-semibold text-emerald-600">{formatEur(allLingotesCerrados.reduce((s, l) => s + (l.importe || 0), 0))}</span>
+                </div>
               </div>
             </div>
             {(() => {
@@ -1340,7 +1354,18 @@ export default function LingotesTracker({
                                 📄
                               </button>
                             ) : (
-                              <span className="text-red-400 text-sm" title="Falta factura">⚠️</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFacturaSelection({});
+                                  setFacturaFile(null);
+                                  setShowFacturaModal(true);
+                                }}
+                                className="text-red-400 hover:text-red-600 text-sm cursor-pointer"
+                                title="Subir factura"
+                              >
+                                ⚠️
+                              </button>
                             )}
                           </td>
                         </tr>
