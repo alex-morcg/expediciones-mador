@@ -523,6 +523,13 @@ export default function LingotesTracker({
     await onUpdateEntrega(entregaId, { lingotes, logs });
   };
 
+  const marcarPagadoFutura = async (futuraId) => {
+    const f = (futuraLingotes || []).find(fl => fl.id === futuraId);
+    if (!f) return;
+    const newPagado = !f.pagado;
+    await onUpdateFutura(futuraId, { pagado: newPagado });
+  };
+
   const deleteEntrega = async (entregaId) => {
     if (confirm('Eliminar esta entrega?')) {
       const entrega = entregas.find(e => e.id === entregaId);
@@ -713,16 +720,30 @@ export default function LingotesTracker({
     // Entregas with en_curso lingotes
     const entregasConEnCurso = entregasFiltered.filter(e => lingotesEnCurso(e).length > 0);
 
+    // FUTURA orphan lingotes for this client
+    const clienteFutura = (futuraLingotes || []).filter(f => f.clienteId === cliente.id);
+    const futuraWeight = clienteFutura.reduce((sum, f) => sum + (f.peso || 0), 0);
+
     // All cerrados (pendiente_pago + finalizado) as flat list with entrega info, sorted by entrega date desc
-    const allLingotesCerrados = [...entregasFiltered]
+    const entregasCerrados = [...entregasFiltered]
       .sort((a, b) => (b.fechaEntrega || '').localeCompare(a.fechaEntrega || ''))
       .flatMap(e =>
         (e.lingotes || []).map((l, idx) => ({ ...l, entregaId: e.id, lingoteIdx: idx, fechaEntrega: e.fechaEntrega }))
       ).filter(l => l.estado === 'pendiente_pago' || l.estado === 'finalizado');
 
-    // FUTURA orphan lingotes for this client
-    const clienteFutura = (futuraLingotes || []).filter(f => f.clienteId === cliente.id);
-    const futuraWeight = clienteFutura.reduce((sum, f) => sum + (f.peso || 0), 0);
+    // FUTURA cerrados (tienen precio)
+    const futuraCerrados = clienteFutura
+      .filter(f => f.precio)
+      .map(f => ({
+        ...f,
+        futuraId: f.id,
+        isFutura: true,
+        estado: f.pagado ? 'finalizado' : 'pendiente_pago',
+        importe: f.importe || (f.precio * f.peso),
+      }));
+
+    // Combinar entregas cerradas + FUTURA cerrados
+    const allLingotesCerrados = [...entregasCerrados, ...futuraCerrados];
 
     const FilterBtn = ({ id, label, count }) => (
       <button
@@ -1112,81 +1133,107 @@ export default function LingotesTracker({
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-stone-800">Cerrados ({allLingotesCerrados.length})</h3>
               <div className="text-sm text-stone-500">
-                Importe: <span className="font-semibold text-emerald-600">{formatEur(filteredImporte)}</span>
+                Importe: <span className="font-semibold text-emerald-600">{formatEur(allLingotesCerrados.reduce((s, l) => s + (l.importe || 0), 0))}</span>
               </div>
             </div>
             {(() => {
-              // Agrupar por entrega
+              // Separar FUTURA de entregas normales
+              const lingotesEntregas = allLingotesCerrados.filter(l => !l.isFutura);
+              const lingotesFutura = allLingotesCerrados.filter(l => l.isFutura);
+
+              // Agrupar entregas por entregaId
               const porEntrega = {};
-              allLingotesCerrados.forEach(l => {
+              lingotesEntregas.forEach(l => {
                 if (!porEntrega[l.entregaId]) {
                   porEntrega[l.entregaId] = { fechaEntrega: l.fechaEntrega, lingotes: [] };
                 }
                 porEntrega[l.entregaId].lingotes.push(l);
               });
 
-              return Object.entries(porEntrega).map(([entregaId, grupo]) => (
-                <div key={entregaId} className="mb-4 last:mb-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="px-2 py-1 rounded-lg font-bold text-sm"
-                      style={{ backgroundColor: getEntregaColor(grupo.fechaEntrega) + '20', color: getEntregaColor(grupo.fechaEntrega) }}
-                    >{formatEntregaShort(grupo.fechaEntrega)}</span>
-                    <span className="text-xs text-stone-400">{grupo.lingotes.length} lingotes</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-stone-200">
-                          <th className="text-left py-1.5 px-1 text-stone-500 font-medium text-xs">Cierre</th>
-                          <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Peso</th>
-                          <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">€/g</th>
-                          <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Importe</th>
-                          <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-10">Pag</th>
-                          <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-10">Fra</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {grupo.lingotes.map((l, i) => (
-                          <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-amber-50/50' : 'hover:bg-stone-50'}`}>
-                            <td className="py-1.5 px-1 text-xs">{l.fechaCierre || '-'}</td>
-                            <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
-                            <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
-                            <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
-                            <td className="py-1.5 px-1 text-center">
+              const renderTabla = (lingotes, isFutura = false) => (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-stone-200">
+                        <th className="text-left py-1.5 px-1 text-stone-500 font-medium text-xs">Cierre</th>
+                        <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Peso</th>
+                        <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">€/g</th>
+                        <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Importe</th>
+                        <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-10">Pag</th>
+                        <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-10">Fra</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lingotes.map((l, i) => (
+                        <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-amber-50/50' : 'hover:bg-stone-50'}`}>
+                          <td className="py-1.5 px-1 text-xs">{l.fechaCierre || '-'}</td>
+                          <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
+                          <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
+                          <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
+                          <td className="py-1.5 px-1 text-center">
+                            <button
+                              onClick={() => isFutura ? marcarPagadoFutura(l.futuraId) : marcarPagado(l.entregaId, l.lingoteIdx)}
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
+                                l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
+                              }`}
+                            >
+                              {l.pagado && '✓'}
+                            </button>
+                          </td>
+                          <td className="py-1.5 px-1 text-center">
+                            {l.nFactura ? (
                               <button
-                                onClick={() => marcarPagado(l.entregaId, l.lingoteIdx)}
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
-                                  l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
-                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const factura = (facturas || []).find(f => f.id === l.nFactura);
+                                  if (factura) setViewingFactura(factura);
+                                }}
+                                className="text-blue-500 hover:text-blue-700 text-sm"
+                                title="Ver factura"
                               >
-                                {l.pagado && '✓'}
+                                📄
                               </button>
-                            </td>
-                            <td className="py-1.5 px-1 text-center">
-                              {l.nFactura ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const factura = (facturas || []).find(f => f.id === l.nFactura);
-                                    if (factura) setViewingFactura(factura);
-                                  }}
-                                  className="text-blue-500 hover:text-blue-700 text-sm"
-                                  title="Ver factura"
-                                >
-                                  📄
-                                </button>
-                              ) : (
-                                <span className="text-red-400 text-sm" title="Falta factura">⚠️</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            ) : (
+                              <span className="text-red-400 text-sm" title="Falta factura">⚠️</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ));
+              );
+
+              return (
+                <>
+                  {/* Entregas normales agrupadas */}
+                  {Object.entries(porEntrega).map(([entregaId, grupo]) => (
+                    <div key={entregaId} className="mb-4 last:mb-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className="px-2 py-1 rounded-lg font-bold text-sm"
+                          style={{ backgroundColor: getEntregaColor(grupo.fechaEntrega) + '20', color: getEntregaColor(grupo.fechaEntrega) }}
+                        >{formatEntregaShort(grupo.fechaEntrega)}</span>
+                        <span className="text-xs text-stone-400">{grupo.lingotes.length} lingotes</span>
+                      </div>
+                      {renderTabla(grupo.lingotes, false)}
+                    </div>
+                  ))}
+
+                  {/* FUTURA cerrados */}
+                  {lingotesFutura.length > 0 && (
+                    <div className="mb-4 last:mb-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-1 rounded-lg font-bold text-sm bg-red-100 text-red-700">
+                          FUTURA
+                        </span>
+                        <span className="text-xs text-stone-400">{lingotesFutura.length} lingotes</span>
+                      </div>
+                      {renderTabla(lingotesFutura, true)}
+                    </div>
+                  )}
+                </>
+              );
             })()}
           </Card>
         )}
@@ -1343,30 +1390,7 @@ export default function LingotesTracker({
                     </div>
                   )}
 
-                  {/* Sección Cerrados - pendientes de factura */}
-                  {futuraCerrados.length > 0 && (
-                    <div className="bg-emerald-50/50 rounded-xl p-3 mb-4 border border-emerald-200">
-                      <div className="text-xs font-semibold text-emerald-700 mb-2">
-                        Cerrados - pendientes de factura ({futuraCerrados.length})
-                      </div>
-                      <div className="space-y-1">
-                        {futuraCerrados.map(f => (
-                          <div key={f.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-white/80">
-                            <span className="font-mono text-emerald-700">{f.peso}g</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-emerald-600 font-semibold">{formatNum(f.precio)} €/g</span>
-                              <span className="text-xs text-stone-500">{formatEur(f.importe || 0)}</span>
-                              <button
-                                onClick={() => onDeleteFutura(f.id)}
-                                className="text-red-400 hover:text-red-600 text-xs px-1"
-                              >✕</button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
+                                  </>
               );
             })()}
 
@@ -3121,23 +3145,42 @@ export default function LingotesTracker({
 
     const allEntregasCliente = entregas.filter(e => e.clienteId === cliente.id);
 
-    // Lingotes cerrados sin factura
-    const lingotesSinFactura = allEntregasCliente
+    // Lingotes cerrados sin factura (entregas normales)
+    const lingotesEntregasSinFactura = allEntregasCliente
       .flatMap(e => e.lingotes.map((l, idx) => ({
         ...l,
         entregaId: e.id,
         lingoteIdx: idx,
         fechaEntrega: e.fechaEntrega,
+        isFutura: false,
       })))
       .filter(l => (l.estado === 'pendiente_pago' || l.estado === 'finalizado') && !l.nFactura);
 
+    // FUTURA cerrados sin factura
+    const clienteFuturaModal = (futuraLingotes || []).filter(f => f.clienteId === cliente.id);
+    const lingotesFuturaSinFactura = clienteFuturaModal
+      .filter(f => f.precio && !f.nFactura)
+      .map(f => ({
+        ...f,
+        futuraId: f.id,
+        isFutura: true,
+        importe: f.importe || (f.precio * f.peso),
+      }));
+
+    // Combinar ambos
+    const lingotesSinFactura = [...lingotesEntregasSinFactura, ...lingotesFuturaSinFactura];
+
     const selectedCount = Object.values(facturaSelection).filter(Boolean).length;
-    const selectedLingotes = lingotesSinFactura.filter(l => facturaSelection[`${l.entregaId}_${l.lingoteIdx}`]);
+    const selectedLingotes = lingotesSinFactura.filter(l => {
+      const key = l.isFutura ? `futura_${l.futuraId}` : `${l.entregaId}_${l.lingoteIdx}`;
+      return facturaSelection[key];
+    });
 
     const selectAll = () => {
       const newSelection = {};
       lingotesSinFactura.forEach(l => {
-        newSelection[`${l.entregaId}_${l.lingoteIdx}`] = true;
+        const key = l.isFutura ? `futura_${l.futuraId}` : `${l.entregaId}_${l.lingoteIdx}`;
+        newSelection[key] = true;
       });
       setFacturaSelection(newSelection);
     };
@@ -3171,9 +3214,13 @@ export default function LingotesTracker({
         createdAt: new Date().toISOString(),
       });
 
-      // Agrupar lingotes por entrega para evitar sobrescribir
+      // Separar entregas normales y FUTURA
+      const selectedEntregas = selectedLingotes.filter(l => !l.isFutura);
+      const selectedFutura = selectedLingotes.filter(l => l.isFutura);
+
+      // Agrupar lingotes de entregas por entregaId
       const porEntrega = {};
-      for (const l of selectedLingotes) {
+      for (const l of selectedEntregas) {
         if (!porEntrega[l.entregaId]) porEntrega[l.entregaId] = [];
         porEntrega[l.entregaId].push(l.lingoteIdx);
       }
@@ -3187,6 +3234,11 @@ export default function LingotesTracker({
           lingotes[idx] = { ...lingotes[idx], nFactura: facturaId };
         }
         await onUpdateEntrega(entregaId, { lingotes });
+      }
+
+      // Actualizar FUTURA con la factura
+      for (const f of selectedFutura) {
+        await onUpdateFutura(f.futuraId, { nFactura: facturaId });
       }
 
       setShowFacturaModal(false);
@@ -3229,7 +3281,7 @@ export default function LingotesTracker({
             ) : (
               <div className="space-y-1">
                 {lingotesSinFactura.map(l => {
-                  const key = `${l.entregaId}_${l.lingoteIdx}`;
+                  const key = l.isFutura ? `futura_${l.futuraId}` : `${l.entregaId}_${l.lingoteIdx}`;
                   const isSelected = facturaSelection[key];
                   return (
                     <div
@@ -3244,10 +3296,14 @@ export default function LingotesTracker({
                       }`}>
                         {isSelected && '✓'}
                       </div>
-                      <span
-                        className="px-1.5 py-0.5 rounded text-xs font-bold"
-                        style={{ backgroundColor: getEntregaColor(l.fechaEntrega) + '20', color: getEntregaColor(l.fechaEntrega) }}
-                      >{formatEntregaShort(l.fechaEntrega)}</span>
+                      {l.isFutura ? (
+                        <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">FUTURA</span>
+                      ) : (
+                        <span
+                          className="px-1.5 py-0.5 rounded text-xs font-bold"
+                          style={{ backgroundColor: getEntregaColor(l.fechaEntrega) + '20', color: getEntregaColor(l.fechaEntrega) }}
+                        >{formatEntregaShort(l.fechaEntrega)}</span>
+                      )}
                       <span className="font-mono text-sm">{l.peso}g</span>
                       <span className="text-xs text-stone-400">{formatEur(l.importe || 0)}</span>
                     </div>
