@@ -2814,7 +2814,7 @@ export default function LingotesTracker({
             )}
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
-              <input type="number" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Se rellena con OK" />
+              <input type="number" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} onClick={e => e.stopPropagation()} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Se rellena con OK" />
               {base > 0 && baseClienteNum > 0 && Math.abs(baseClienteNum - base) > 0.001 && (() => {
                 const diff = baseClienteNum - base;
                 const diffTotal = diff * pesoTotalNeto;
