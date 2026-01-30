@@ -1027,9 +1027,6 @@ export default function LingotesTracker({
           <button onClick={() => setSelectedCliente(null)} className="absolute top-3 left-3 text-white/80 hover:text-white text-sm flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
             ← Volver
           </button>
-          <button onClick={exportarClientePDF} className="absolute top-3 right-3 text-white/80 hover:text-white text-sm flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
-            📄 Export
-          </button>
           <div className="text-center pt-6">
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
             {/* Cuadrados grandes: stats de entregas EN CURSO + FUTURA pendientes */}
@@ -1127,10 +1124,16 @@ export default function LingotesTracker({
         </div>
 
         {/* Filter buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <FilterBtn id="en_curso" label="En Curso" count={countEnCurso} />
           <FilterBtn id="finalizada" label="Finalizadas" count={countFinalizadas} />
-          <FilterBtn id="todas" label="Todas" count={allEntregasCliente.length} />
+          <div className="flex-1" />
+          <button
+            onClick={exportarClientePDF}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-700 text-white hover:bg-stone-800 flex items-center gap-1"
+          >
+            🪪 Resum Cli.
+          </button>
         </div>
 
         {/* FUTURA pendientes de asignar - solo si hay stock (ya llegó exportación) */}
