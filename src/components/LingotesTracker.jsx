@@ -1143,75 +1143,141 @@ export default function LingotesTracker({
             </div>
 
             {/* FUTURA dentro de En Curso - solo cuando no hay stock */}
-            {futuraGrupos.length > 0 && (
+            {stockRealTotal === 0 && (
               <div className="p-3 rounded-xl bg-red-50 border-2 border-red-300 mt-3">
                 {/* Header: Etiqueta FUTURA */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span
-                      className="px-2 py-1 rounded-lg font-bold text-base bg-red-100 text-red-700"
-                    >FUTURA</span>
+                    <span className="px-2 py-1 rounded-lg font-bold text-base bg-red-100 text-red-700">FUTURA</span>
                     <span className="text-xs text-red-600">Sin stock físico</span>
                   </div>
-                  <span className="font-mono text-sm text-stone-600">
-                    {futuraSinCerrar.length} x {futuraSinCerrar[0]?.peso || '?'}g = {futuraSinCerrar.reduce((s, f) => s + (f.peso || 0), 0)}g
-                  </span>
+                  {futuraSinCerrar.length > 0 && (
+                    <span className="font-mono text-sm text-stone-600">
+                      {futuraSinCerrar.reduce((s, f) => s + (f.peso || 0), 0)}g
+                    </span>
+                  )}
                 </div>
 
-                {/* Sección CERRAR */}
-                <div className="mb-2">
-                  <div className="text-xs font-semibold text-stone-500 mb-1">Cerrar</div>
-                  {futuraGrupos.map(grupo => {
-                    const key = `futura_${cliente.id}_${grupo.peso}`;
-                    const cantidad = futuraCierreCantidad[key] || 1;
-                    const maxCantidad = grupo.ids.length;
-                    const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
+                {/* Sección CERRAR - solo si hay FUTURA */}
+                {futuraGrupos.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-stone-500 mb-1">Cerrar</div>
+                    {futuraGrupos.map(grupo => {
+                      const key = `futura_${cliente.id}_${grupo.peso}`;
+                      const cantidad = futuraCierreCantidad[key] || 1;
+                      const maxCantidad = grupo.ids.length;
+                      const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
 
-                    const handleCerrar = () => {
-                      const idsToClose = grupo.ids.slice(0, cantidad);
-                      setSelectedFuturaIds(idsToClose);
-                      setSelectedFuturaId(idsToClose[0]);
-                      setShowCierreModal(true);
-                    };
+                      const handleCerrar = () => {
+                        const idsToClose = grupo.ids.slice(0, cantidad);
+                        setSelectedFuturaIds(idsToClose);
+                        setSelectedFuturaId(idsToClose[0]);
+                        setShowCierreModal(true);
+                      };
 
-                    return (
-                      <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
-                        <span className="font-mono font-semibold text-red-700">{maxCantidad} x {grupo.peso}g</span>
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1">
-                            {quickOptions.map(n => (
-                              <button
-                                key={n}
-                                onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
-                                className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                                  cantidad === n
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                                }`}
-                              >
-                                {n}
-                              </button>
-                            ))}
-                            {maxCantidad > 1 && (
-                              <input
-                                type="number"
-                                min="1"
-                                max={maxCantidad}
-                                value={cantidad}
-                                onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                                  !quickOptions.includes(cantidad) ? 'border-red-400 bg-red-50' : 'border-stone-300'
-                                }`}
-                              />
-                            )}
+                      return (
+                        <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
+                          <span className="font-mono font-semibold text-red-700">{maxCantidad} x {grupo.peso}g</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              {quickOptions.map(n => (
+                                <button
+                                  key={n}
+                                  onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
+                                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                    cantidad === n
+                                      ? 'bg-red-500 text-white'
+                                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                  }`}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                              {maxCantidad > 1 && (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={maxCantidad}
+                                  value={cantidad}
+                                  onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                  className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                                    !quickOptions.includes(cantidad) ? 'border-red-400 bg-red-50' : 'border-stone-300'
+                                  }`}
+                                />
+                              )}
+                            </div>
+                            <Button size="sm" variant="success" onClick={handleCerrar}>
+                              Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
+                            </Button>
                           </div>
-                          <Button size="sm" variant="success" onClick={handleCerrar}>
-                            Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
-                          </Button>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Añadir lingotes FUTURA directamente */}
+                <div className="border-t border-red-200 pt-3">
+                  <div className="text-xs font-semibold text-stone-500 mb-2">Añadir</div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 4].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`add_${cliente.id}`]: n })}
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                            (futuraCierreCantidad[`add_${cliente.id}`] || 1) === n
+                              ? 'bg-red-500 text-white'
+                              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                      <input
+                        type="number"
+                        min="1"
+                        max={99}
+                        value={futuraCierreCantidad[`add_${cliente.id}`] || 1}
+                        onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`add_${cliente.id}`]: Math.min(99, Math.max(1, parseInt(e.target.value) || 1)) })}
+                        className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                          ![1, 2, 4].includes(futuraCierreCantidad[`add_${cliente.id}`] || 1) ? 'border-red-400 bg-red-50' : 'border-stone-300'
+                        }`}
+                      />
+                      <span className="text-xs text-stone-500">x</span>
+                      <select
+                        value={futuraCierreCantidad[`addPeso_${cliente.id}`] || 50}
+                        onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`addPeso_${cliente.id}`]: parseInt(e.target.value) })}
+                        className="h-7 rounded-lg border border-stone-300 text-xs font-bold px-2 focus:outline-none focus:ring-2 focus:ring-red-400"
+                      >
+                        <option value={50}>50g</option>
+                        <option value={100}>100g</option>
+                      </select>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={async () => {
+                        const cant = futuraCierreCantidad[`add_${cliente.id}`] || 1;
+                        const peso = futuraCierreCantidad[`addPeso_${cliente.id}`] || 50;
+                        for (let i = 0; i < cant; i++) {
+                          await onSaveFutura({
+                            clienteId: cliente.id,
+                            peso,
+                            precio: null,
+                            importe: 0,
+                            nFactura: null,
+                            fechaCierre: null,
+                            pagado: false,
+                            estado: 'futura',
+                            fechaCreacion: new Date().toISOString(),
+                          });
+                        }
+                      }}
+                    >
+                      + Añadir
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1398,19 +1464,10 @@ export default function LingotesTracker({
           );
         })()}
 
-        {/* Botón Nueva Entrega o Nueva FUTURA */}
-        {(stockRealTotal > 0 || filteredPendiente > 0) ? (
+        {/* Botón Nueva Entrega - solo si hay stock */}
+        {(stockRealTotal > 0 || filteredPendiente > 0) && (
           <Button className="w-full" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
             + Nueva Entrega
-          </Button>
-        ) : (
-          <Button
-            variant="danger"
-            className="w-full"
-            size="lg"
-            onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}
-          >
-            + Nueva FUTURA
           </Button>
         )}
 
@@ -2765,21 +2822,16 @@ export default function LingotesTracker({
     );
   };
 
-  // Futura Modal - record an orphan sale (lingote sold without physical stock)
+  // Futura Modal - añadir lingotes sin stock físico
   const FuturaModal = () => {
     const defaultClienteId = editingEntregaClienteId || clientes[0]?.id || '';
     const [formData, setFormData] = useState({
       clienteId: defaultClienteId,
       cantidad: 1,
       pesoUnitario: 50,
-      precio: '',
-      nFactura: '',
-      fechaCierre: new Date().toISOString().split('T')[0],
     });
 
-    // Check if form has meaningful changes
     const hasChanges = formData.cantidad !== 1 || formData.pesoUnitario !== 50 ||
-      formData.precio !== '' || formData.nFactura !== '' ||
       formData.clienteId !== defaultClienteId;
 
     const handleClose = () => {
@@ -2789,16 +2841,15 @@ export default function LingotesTracker({
     };
 
     const pesoTotal = formData.cantidad * formData.pesoUnitario;
-    const importeTotal = formData.precio ? pesoTotal * parseFloat(formData.precio) : 0;
 
     const handleSave = async () => {
       for (let i = 0; i < formData.cantidad; i++) {
         await addFuturaLingote({
           clienteId: formData.clienteId,
           peso: formData.pesoUnitario,
-          precio: formData.precio ? parseFloat(formData.precio) : null,
-          nFactura: formData.nFactura || null,
-          fechaCierre: formData.precio ? formData.fechaCierre : null,
+          precio: null,
+          nFactura: null,
+          fechaCierre: null,
           pagado: false,
         });
       }
@@ -2806,18 +2857,12 @@ export default function LingotesTracker({
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-red-800 mb-2">FUTURA</h3>
-          <p className="text-sm text-stone-500 mb-6">Registrar lingotes vendidos sin entrega fisica.</p>
+        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-red-800 mb-2">Nueva FUTURA</h3>
+          <p className="text-sm text-stone-500 mb-6">Añadir lingotes sin stock físico. Ciérralos después con el selector.</p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Cliente</label>
-              <select value={formData.clienteId} onChange={e => setFormData({ ...formData, clienteId: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400">
-                {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Cantidad de lingotes</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Cantidad</label>
               <div className="flex gap-2">
                 {[1, 2, 4, 6, 10].map(q => (
                   <button key={q} onClick={() => setFormData({ ...formData, cantidad: q })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.cantidad === q ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
@@ -2827,7 +2872,7 @@ export default function LingotesTracker({
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Peso por lingote (gramos)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Peso por lingote</label>
               <div className="flex gap-2">
                 {[50, 100].map(p => (
                   <button key={p} onClick={() => setFormData({ ...formData, pesoUnitario: p })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.pesoUnitario === p ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
@@ -2836,34 +2881,14 @@ export default function LingotesTracker({
                 ))}
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Precio €/g <span className="text-stone-400">(opcional)</span></label>
-              <input type="number" step="0.01" value={formData.precio} onChange={(e) => setFormData({ ...formData, precio: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400" placeholder="Ej: 136.63" />
-            </div>
-            {formData.precio && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">N Factura</label>
-                  <input type="text" value={formData.nFactura} onChange={(e) => setFormData({ ...formData, nFactura: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400" placeholder="Ej: 2026-15.pdf" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Cierre</label>
-                  <input type="date" value={formData.fechaCierre} onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400" />
-                </div>
-              </>
-            )}
             <div className="bg-red-50 rounded-xl p-3 text-center">
-              <span className="text-red-500 text-sm">FUTURA: </span>
               <span className="font-bold text-red-800">{formData.cantidad} x {formData.pesoUnitario}g = {pesoTotal}g</span>
-              {formData.precio && (
-                <div className="text-sm text-red-600 mt-1">Importe: {formatEur(importeTotal)}</div>
-              )}
             </div>
           </div>
           <div className="flex gap-3 mt-6">
             <Button variant="secondary" className="flex-1" onClick={handleClose}>Cancelar</Button>
             <Button variant="danger" className="flex-1" onClick={handleSave}>
-              Registrar
+              Añadir
             </Button>
           </div>
         </div>
