@@ -47,7 +47,10 @@ const COLORES_USUARIO = [
 
 
 export default function MadorTracker() {
-  // Firestore data & CRUD
+  // Local UI state - definido primero para usar en useFirestore
+  const [showLingotes, setShowLingotes] = useState(false);
+
+  // Firestore data & CRUD - con lazy loading basado en sección activa
   const {
     categorias, clientes, expediciones, paquetes, estadosPaquete, usuarios,
     expedicionActualId, loading, setExpedicionActualId,
@@ -70,10 +73,9 @@ export default function MadorTracker() {
     updateLingotesConfig,
     saveLingoteFutura, deleteLingoteFutura, updateLingoteFutura,
     lingotesFacturas, saveLingoteFactura, deleteLingoteFactura, updateLingoteFactura,
-  } = useFirestore();
+  } = useFirestore(showLingotes ? 'lingotes' : 'expediciones');
 
   // Local UI state
-  const [showLingotes, setShowLingotes] = useState(false);
   const [activeTab, setActiveTab] = useState('expediciones');
   const [statsExpDesde, setStatsExpDesde] = useState(null);
   const [statsExpHasta, setStatsExpHasta] = useState(null);

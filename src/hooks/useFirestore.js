@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   collection,
   doc,
@@ -11,6 +11,7 @@ import {
   getDocs,
   query,
   where,
+  orderBy,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -204,7 +205,15 @@ async function seedDatabase() {
   console.log('Database seeded successfully!');
 }
 
-export function useFirestore() {
+// Fecha hace 6 meses para filtrar
+const getSixMonthsAgo = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 6);
+  return d.toISOString().split('T')[0];
+};
+
+export function useFirestore(activeSection = 'expediciones') {
+  // Core data - siempre cargado
   const [categorias, setCategorias] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [expediciones, setExpediciones] = useState([]);
@@ -212,33 +221,32 @@ export function useFirestore() {
   const [estadosPaquete, setEstadosPaquete] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [expedicionActualId, setExpedicionActualIdState] = useState(null);
+  const [matriculas, setMatriculas] = useState([]);
+
+  // Lingotes data - solo cuando activeSection === 'lingotes'
   const [lingotesExportaciones, setLingotesExportaciones] = useState([]);
   const [lingotesEntregas, setLingotesEntregas] = useState([]);
   const [lingotesConfig, setLingotesConfig] = useState({ stockMador: 0, umbralRojo: 200, umbralNaranja: 500, umbralAmarillo: 1000 });
   const [lingotesFutura, setLingotesFutura] = useState([]);
   const [lingotesFacturas, setLingotesFacturas] = useState([]);
-  const [matriculas, setMatriculas] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const seedTriggered = useRef(false);
+  const lingotesUnsubscribers = useRef([]);
+  const lingotesLoaded = useRef(false);
 
-  // Set up real-time listeners immediately — seed only if DB is empty
+  // Core listeners - siempre activos
   useEffect(() => {
-    console.log('[useFirestore] Effect running, setting up listeners...');
-
-    // Quick connectivity test
-    getDocs(collection(db, 'categorias'))
-      .then(snap => console.log('[useFirestore] getDocs test OK, docs:', snap.size))
-      .catch(err => console.error('[useFirestore] getDocs test FAILED:', err));
+    console.log('[useFirestore] Setting up core listeners...');
 
     let cancelled = false;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 13;
+    const totalCoreCollections = 8; // categorias, clientes, expediciones, paquetes, estadosPaquete, usuarios, config, matriculas
 
     const checkLoaded = () => {
       loadedCount++;
-      console.log(`[useFirestore] checkLoaded ${loadedCount}/${totalCollections}`);
-      if (loadedCount >= totalCollections && !cancelled) {
+      if (loadedCount >= totalCoreCollections && !cancelled) {
         setLoading(false);
       }
     };
@@ -248,7 +256,6 @@ export function useFirestore() {
       onSnapshot(collection(db, 'categorias'), (snap) => {
         if (!cancelled) setCategorias(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         checkLoaded();
-        // Seed if empty and not already triggered
         if (snap.empty && !seedTriggered.current) {
           seedTriggered.current = true;
           seedDatabase().catch(err => console.error('[useFirestore] Seed error:', err));
@@ -323,59 +330,6 @@ export function useFirestore() {
       })
     );
 
-    // Lingotes listeners
-    unsubscribers.push(
-      onSnapshot(collection(db, 'lingotes_exportaciones'), (snap) => {
-        if (!cancelled) setLingotesExportaciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        checkLoaded();
-      }, (error) => {
-        console.error('Firestore error (lingotes_exportaciones):', error);
-        checkLoaded();
-      })
-    );
-
-    unsubscribers.push(
-      onSnapshot(collection(db, 'lingotes_entregas'), (snap) => {
-        if (!cancelled) setLingotesEntregas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        checkLoaded();
-      }, (error) => {
-        console.error('Firestore error (lingotes_entregas):', error);
-        checkLoaded();
-      })
-    );
-
-    unsubscribers.push(
-      onSnapshot(doc(db, 'lingotes_config', 'settings'), (snap) => {
-        if (!cancelled && snap.exists()) {
-          setLingotesConfig(snap.data());
-        }
-        checkLoaded();
-      }, (error) => {
-        console.error('Firestore error (lingotes_config):', error);
-        checkLoaded();
-      })
-    );
-
-    unsubscribers.push(
-      onSnapshot(collection(db, 'lingotes_futura'), (snap) => {
-        if (!cancelled) setLingotesFutura(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        checkLoaded();
-      }, (error) => {
-        console.error('Firestore error (lingotes_futura):', error);
-        checkLoaded();
-      })
-    );
-
-    unsubscribers.push(
-      onSnapshot(collection(db, 'lingotes_facturas'), (snap) => {
-        if (!cancelled) setLingotesFacturas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        checkLoaded();
-      }, (error) => {
-        console.error('Firestore error (lingotes_facturas):', error);
-        checkLoaded();
-      })
-    );
-
     unsubscribers.push(
       onSnapshot(collection(db, 'matriculas'), (snap) => {
         if (!cancelled) setMatriculas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -391,6 +345,85 @@ export function useFirestore() {
       unsubscribers.forEach(unsub => unsub());
     };
   }, []);
+
+  // Lingotes listeners - solo cuando activeSection === 'lingotes'
+  useEffect(() => {
+    if (activeSection !== 'lingotes') {
+      // Desuscribirse de lingotes cuando salimos de la sección
+      if (lingotesUnsubscribers.current.length > 0) {
+        console.log('[useFirestore] Unsubscribing from lingotes listeners');
+        lingotesUnsubscribers.current.forEach(unsub => unsub());
+        lingotesUnsubscribers.current = [];
+        lingotesLoaded.current = false;
+      }
+      return;
+    }
+
+    // Ya está cargado, no hacer nada
+    if (lingotesLoaded.current) return;
+
+    console.log('[useFirestore] Setting up lingotes listeners...');
+    lingotesLoaded.current = true;
+
+    // Query filtrado: entregas de últimos 6 meses
+    const sixMonthsAgo = getSixMonthsAgo();
+
+    lingotesUnsubscribers.current.push(
+      onSnapshot(collection(db, 'lingotes_exportaciones'), (snap) => {
+        setLingotesExportaciones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, (error) => {
+        console.error('Firestore error (lingotes_exportaciones):', error);
+      })
+    );
+
+    // Entregas filtradas por fecha (últimos 6 meses) o sin finalizar
+    lingotesUnsubscribers.current.push(
+      onSnapshot(collection(db, 'lingotes_entregas'), (snap) => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Filtrar: entregas de últimos 6 meses O entregas no finalizadas
+        const filtered = all.filter(e => {
+          if (!e.fechaEntrega) return true; // Sin fecha = incluir
+          if (e.fechaEntrega >= sixMonthsAgo) return true; // Últimos 6 meses
+          // Entregas antiguas pero con lingotes pendientes
+          const tieneActivos = (e.lingotes || []).some(l => l.estado === 'activo' || l.estado === 'pendiente_pago');
+          return tieneActivos;
+        });
+        setLingotesEntregas(filtered);
+      }, (error) => {
+        console.error('Firestore error (lingotes_entregas):', error);
+      })
+    );
+
+    lingotesUnsubscribers.current.push(
+      onSnapshot(doc(db, 'lingotes_config', 'settings'), (snap) => {
+        if (snap.exists()) {
+          setLingotesConfig(snap.data());
+        }
+      }, (error) => {
+        console.error('Firestore error (lingotes_config):', error);
+      })
+    );
+
+    lingotesUnsubscribers.current.push(
+      onSnapshot(collection(db, 'lingotes_futura'), (snap) => {
+        setLingotesFutura(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, (error) => {
+        console.error('Firestore error (lingotes_futura):', error);
+      })
+    );
+
+    lingotesUnsubscribers.current.push(
+      onSnapshot(collection(db, 'lingotes_facturas'), (snap) => {
+        setLingotesFacturas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, (error) => {
+        console.error('Firestore error (lingotes_facturas):', error);
+      })
+    );
+
+    return () => {
+      // Cleanup se maneja en el próximo efecto cuando cambie activeSection
+    };
+  }, [activeSection]);
 
   // --- CRUD functions ---
 
