@@ -50,10 +50,17 @@ const lingotesPendientePago = (entrega) => (entrega.lingotes || []).filter(l => 
 const lingotesFinalizados = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'finalizado');
 const lingotesCerrados = (entrega) => (entrega.lingotes || []).filter(l => isCerrado(l));
 const lingotesDevueltos = (entrega) => (entrega.lingotes || []).filter(l => l.estado === 'devuelto');
-// An entrega is "finalizada" when ALL lingotes are cerrados (pendiente_pago or finalizado) or devueltos
+// An entrega is "finalizada" when ALL lingotes are:
+// - devueltos, OR
+// - cerrados + con factura + pagados (estado === 'finalizado')
 const isEntregaFinalizada = (entrega) => {
   const all = entrega.lingotes || [];
-  return all.length > 0 && all.every(l => isCerrado(l) || l.estado === 'devuelto');
+  if (all.length === 0) return false;
+  return all.every(l => {
+    if (l.estado === 'devuelto') return true;
+    // Cerrado, pagado Y con factura
+    return l.estado === 'finalizado' && l.nFactura;
+  });
 };
 const isEntregaEnCurso = (entrega) => !isEntregaFinalizada(entrega);
 
