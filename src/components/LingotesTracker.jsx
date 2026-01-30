@@ -87,11 +87,13 @@ export default function LingotesTracker({
   const [selectedLingoteIndices, setSelectedLingoteIndices] = useState([]); // For bulk closing
   const [cierreCantidad, setCierreCantidad] = useState({}); // { entregaId_peso: cantidad }
   const [devolucionCantidad, setDevolucionCantidad] = useState({}); // { entregaId_peso: cantidad }
+  const [futuraCierreCantidad, setFuturaCierreCantidad] = useState({}); // { clienteId_peso: cantidad }
   const [editingEntregaClienteId, setEditingEntregaClienteId] = useState(null);
   const [entregaFilter, setEntregaFilter] = useState('en_curso');
   const [showFuturaModal, setShowFuturaModal] = useState(false);
   const [showAssignFuturaModal, setShowAssignFuturaModal] = useState(false);
   const [selectedFuturaId, setSelectedFuturaId] = useState(null);
+  const [selectedFuturaIds, setSelectedFuturaIds] = useState([]); // For bulk FUTURA closing
   const [showHistorial, setShowHistorial] = useState(false);
   const [showMultiCierreModal, setShowMultiCierreModal] = useState(false);
   const [multiCierreSelection, setMultiCierreSelection] = useState({}); // { entregaId_idx: true }
@@ -432,6 +434,33 @@ export default function LingotesTracker({
     setSelectedLingoteIdx(null);
   };
 
+  // Cerrar múltiples lingotes FUTURA a la vez
+  const cerrarFuturaMultiple = async (futuraIds, data) => {
+    for (const futuraId of futuraIds) {
+      const f = (futuraLingotes || []).find(fl => fl.id === futuraId);
+      if (!f) continue;
+      const pesoNeto = (f.peso || 0) - (data.devolucion || 0);
+      await onUpdateFutura(futuraId, {
+        euroOnza: data.euroOnza || null,
+        base: data.base || null,
+        baseCliente: data.baseCliente || null,
+        precioJofisa: data.precioJofisa || null,
+        importeJofisa: (data.precioJofisa || 0) * pesoNeto,
+        margen: data.margen || 0,
+        precio: data.precio,
+        importe: data.precio * pesoNeto,
+        nFactura: data.nFactura || null,
+        fechaCierre: data.fechaCierre || null,
+      });
+    }
+
+    setShowCierreModal(false);
+    setSelectedFuturaId(null);
+    setSelectedFuturaIds([]);
+    setSelectedEntrega(null);
+    setSelectedLingoteIdx(null);
+  };
+
   // Devolver lingotes: marcarlos como devueltos (no vuelven al stock)
   const devolverLingotes = async (entregaId, lingoteIndices) => {
     const entrega = entregas.find(e => e.id === entregaId);
@@ -756,21 +785,99 @@ export default function LingotesTracker({
                 {clienteFutura.length} lingotes &bull; {formatNum(futuraWeight, 0)}g
               </div>
             </div>
-            <p className="text-xs text-amber-700 mb-3">Hay stock disponible. Asigna estos lingotes a una entrega.</p>
-            <div className="space-y-1 mb-3">
-              {clienteFutura.map((f) => (
-                <div key={f.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-white/60">
-                  <span className="font-mono text-amber-700">{f.peso}g</span>
-                  <div className="flex items-center gap-2">
-                    {f.precio ? (
-                      <span className="text-xs text-emerald-600 font-semibold">✓ cerrado {formatNum(f.precio)} €/g</span>
-                    ) : (
-                      <span className="text-xs text-amber-600">sin cerrar</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-xs text-amber-700 mb-3">Hay stock disponible. Asigna estos lingotes a una entrega o ciérralos.</p>
+
+            {/* Lingotes FUTURA - agrupados por peso con selector de cantidad */}
+            {(() => {
+              const futuraSinCerrar = clienteFutura.filter(f => !f.precio);
+              const futuraCerrados = clienteFutura.filter(f => f.precio);
+
+              // Agrupar sin cerrar por peso
+              const porPeso = {};
+              futuraSinCerrar.forEach(f => {
+                if (!porPeso[f.peso]) porPeso[f.peso] = { peso: f.peso, ids: [] };
+                porPeso[f.peso].ids.push(f.id);
+              });
+              const grupos = Object.values(porPeso);
+
+              return (
+                <>
+                  {/* Sección Cerrar - con selectores de cantidad */}
+                  {grupos.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-xs font-semibold text-stone-500 mb-2">Cerrar</div>
+                      {grupos.map(grupo => {
+                        const key = `futura_${cliente.id}_${grupo.peso}`;
+                        const cantidad = futuraCierreCantidad[key] || 1;
+                        const maxCantidad = grupo.ids.length;
+                        const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
+
+                        const handleCerrar = () => {
+                          const idsToClose = grupo.ids.slice(0, cantidad);
+                          setSelectedFuturaIds(idsToClose);
+                          setSelectedFuturaId(idsToClose[0]);
+                          setShowCierreModal(true);
+                        };
+
+                        return (
+                          <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
+                            <span className="font-mono font-semibold text-amber-700">{maxCantidad} x {grupo.peso}g</span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                {quickOptions.map(n => (
+                                  <button
+                                    key={n}
+                                    onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                      cantidad === n
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                    }`}
+                                  >
+                                    {n}
+                                  </button>
+                                ))}
+                                {maxCantidad > 1 && (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={maxCantidad}
+                                    value={cantidad}
+                                    onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                                      !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
+                                    }`}
+                                  />
+                                )}
+                              </div>
+                              <Button size="sm" variant="success" onClick={handleCerrar}>
+                                Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Sección Cerrados */}
+                  {futuraCerrados.length > 0 && (
+                    <div className="mb-3 p-2 bg-emerald-50/50 rounded-lg border border-emerald-200">
+                      <div className="text-xs font-semibold text-emerald-700 mb-1">
+                        Cerrados ({futuraCerrados.length})
+                      </div>
+                      {futuraCerrados.map(f => (
+                        <div key={f.id} className="flex items-center justify-between text-sm py-1 px-2">
+                          <span className="font-mono text-emerald-700">{f.peso}g</span>
+                          <span className="text-xs text-emerald-600 font-semibold">{formatNum(f.precio)} €/g</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
             <Button className="w-full" onClick={() => setShowAssignFuturaModal(true)}>
               Asignar a nueva entrega
             </Button>
@@ -1163,37 +1270,105 @@ export default function LingotesTracker({
               No hay stock disponible. Puedes registrar ventas que se asignarán cuando llegue la próxima exportación.
             </p>
 
-            {/* Lingotes FUTURA existentes */}
-            {clienteFutura.length > 0 && (
-              <div className="bg-white/60 rounded-xl p-3 mb-4">
-                <div className="text-sm font-semibold text-red-800 mb-2">
-                  Lingotes pendientes de exportación: {clienteFutura.length} ({formatNum(futuraWeight, 0)}g)
-                </div>
-                <div className="space-y-1">
-                  {clienteFutura.map((f) => (
-                    <div key={f.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-white/80">
-                      <span className="font-mono text-red-700">{f.peso}g</span>
-                      <div className="flex items-center gap-2">
-                        {f.precio ? (
-                          <span className="text-xs text-emerald-600 font-semibold">✓ {formatNum(f.precio)} €/g</span>
-                        ) : (
-                          <>
-                            <span className="text-xs text-amber-600">sin cerrar</span>
-                            <Button size="sm" variant="success" onClick={() => { setSelectedFuturaId(f.id); setShowCierreModal(true); }}>
-                              Cerrar
-                            </Button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => onDeleteFutura(f.id)}
-                          className="text-red-400 hover:text-red-600 text-xs px-1"
-                        >✕</button>
+            {/* Lingotes FUTURA existentes - agrupados por peso con selector de cantidad */}
+            {(() => {
+              const futuraSinCerrar = clienteFutura.filter(f => !f.precio);
+              const futuraCerrados = clienteFutura.filter(f => f.precio);
+
+              // Agrupar sin cerrar por peso
+              const porPeso = {};
+              futuraSinCerrar.forEach(f => {
+                if (!porPeso[f.peso]) porPeso[f.peso] = { peso: f.peso, ids: [] };
+                porPeso[f.peso].ids.push(f.id);
+              });
+              const grupos = Object.values(porPeso);
+
+              return (
+                <>
+                  {/* Sección Cerrar - con selectores de cantidad */}
+                  {grupos.length > 0 && (
+                    <div className="bg-white/60 rounded-xl p-3 mb-4">
+                      <div className="text-xs font-semibold text-stone-500 mb-2">Cerrar</div>
+                      {grupos.map(grupo => {
+                        const key = `futura_${cliente.id}_${grupo.peso}`;
+                        const cantidad = futuraCierreCantidad[key] || 1;
+                        const maxCantidad = grupo.ids.length;
+                        const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
+
+                        const handleCerrar = () => {
+                          const idsToClose = grupo.ids.slice(0, cantidad);
+                          setSelectedFuturaIds(idsToClose);
+                          setSelectedFuturaId(idsToClose[0]);
+                          setShowCierreModal(true);
+                        };
+
+                        return (
+                          <div key={grupo.peso} className="flex items-center justify-between bg-white/80 rounded-lg p-2 mb-1">
+                            <span className="font-mono font-semibold text-red-700">{maxCantidad} x {grupo.peso}g</span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                {quickOptions.map(n => (
+                                  <button
+                                    key={n}
+                                    onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                      cantidad === n
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                    }`}
+                                  >
+                                    {n}
+                                  </button>
+                                ))}
+                                {maxCantidad > 1 && (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={maxCantidad}
+                                    value={cantidad}
+                                    onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                                      !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
+                                    }`}
+                                  />
+                                )}
+                              </div>
+                              <Button size="sm" variant="success" onClick={handleCerrar}>
+                                Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Sección Cerrados - pendientes de factura */}
+                  {futuraCerrados.length > 0 && (
+                    <div className="bg-emerald-50/50 rounded-xl p-3 mb-4 border border-emerald-200">
+                      <div className="text-xs font-semibold text-emerald-700 mb-2">
+                        Cerrados - pendientes de factura ({futuraCerrados.length})
+                      </div>
+                      <div className="space-y-1">
+                        {futuraCerrados.map(f => (
+                          <div key={f.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-white/80">
+                            <span className="font-mono text-emerald-700">{f.peso}g</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-emerald-600 font-semibold">{formatNum(f.precio)} €/g</span>
+                              <span className="text-xs text-stone-500">{formatEur(f.importe || 0)}</span>
+                              <button
+                                onClick={() => onDeleteFutura(f.id)}
+                                className="text-red-400 hover:text-red-600 text-xs px-1"
+                              >✕</button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  )}
+                </>
+              );
+            })()}
 
             {/* Botón añadir FUTURA */}
             <Button
@@ -2311,6 +2486,7 @@ export default function LingotesTracker({
     const isFuturaCierre = !!selectedFuturaId;
     const isMultiEntregaCierre = selectedEntrega?._allEntregasIndices?.length > 1;
     const isBulkCierre = selectedLingoteIndices.length > 1 || isMultiEntregaCierre;
+    const isBulkFuturaCierre = isFuturaCierre && selectedFuturaIds.length > 1;
     const futuraDoc = isFuturaCierre ? (futuraLingotes || []).find(f => f.id === selectedFuturaId) : null;
     const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
 
@@ -2318,7 +2494,10 @@ export default function LingotesTracker({
     let cantidadLingotes = 1;
     let pesoTotalMulti = 0;
     let resumenMulti = '';
-    if (isMultiEntregaCierre) {
+    if (isBulkFuturaCierre) {
+      // Múltiples FUTURA
+      cantidadLingotes = selectedFuturaIds.length;
+    } else if (isMultiEntregaCierre) {
       const allIndices = selectedEntrega._allEntregasIndices;
       const todosLingotes = allIndices.flatMap(({ entregaId, indices }) => {
         const e = entregas.find(x => x.id === entregaId);
@@ -2416,7 +2595,11 @@ export default function LingotesTracker({
         devolucion: formData.devolucion,
       };
       if (isFuturaCierre) {
-        cerrarFutura(selectedFuturaId, cierreData);
+        if (selectedFuturaIds.length > 1) {
+          cerrarFuturaMultiple(selectedFuturaIds, cierreData);
+        } else {
+          cerrarFutura(selectedFuturaId, cierreData);
+        }
       } else if (isBulkCierre) {
         cerrarLingotes(selectedEntrega.id, selectedLingoteIndices, cierreData);
       } else {
