@@ -863,57 +863,66 @@ export default function LingotesTracker({
           <div className="text-center pt-6">
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
             {/* Cuadrados grandes: stats de entregas EN CURSO */}
-            <div className="grid grid-cols-4 gap-3 mt-4">
-              <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(enCursoEntregado, 0)}</div>
-                <div className="text-xs text-white/70">Entregado</div>
-              </div>
-              <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(enCursoCerrado, 0)}</div>
-                <div className="text-xs text-white/70">Cerrado</div>
-              </div>
-              <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(enCursoDevuelto, 0)}</div>
-                <div className="text-xs text-white/70">Devuelto</div>
-              </div>
-              <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(enCursoPendiente, 0)}</div>
-                <div className="text-xs text-white/70">Pendiente</div>
-              </div>
-            </div>
+            {(() => {
+              const fechasEnCurso = entregasEnCursoList.map(e => formatEntregaShort(e.fechaEntrega)).join(' · ');
+              return (
+                <>
+                  {/* Fechas de entregas en curso */}
+                  {fechasEnCurso && (
+                    <div className="text-xs text-white/60 mt-2 mb-1">{fechasEnCurso}</div>
+                  )}
+                  <div className="grid grid-cols-4 gap-3 mt-2">
+                    <div className="bg-white/20 rounded-xl p-2">
+                      <div className="text-lg font-bold">📦 {formatNum(enCursoEntregado, 0)}</div>
+                      <div className="text-xs text-white/70">Entregado</div>
+                    </div>
+                    <div className="bg-white/20 rounded-xl p-2">
+                      <div className="text-lg font-bold">✅ {formatNum(enCursoCerrado, 0)}</div>
+                      <div className="text-xs text-white/70">Cerrado</div>
+                    </div>
+                    <div className="bg-white/20 rounded-xl p-2">
+                      <div className="text-lg font-bold">↩️ {formatNum(enCursoDevuelto, 0)}</div>
+                      <div className="text-xs text-white/70">Devuelto</div>
+                    </div>
+                    <div className="bg-white/20 rounded-xl p-2">
+                      <div className="text-lg font-bold">⏳ {formatNum(enCursoPendiente, 0)}</div>
+                      <div className="text-xs text-white/70">Pendiente</div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Últimas 3 entregas FINALIZADAS */}
             {entregasFinalizadasList.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/20">
-                {/* Header de columnas */}
-                <div className="flex items-center gap-2 px-3 py-1 text-xs text-white/50 mb-1">
-                  <span className="w-20 text-left">Entrega</span>
-                  <div className="flex-1 grid grid-cols-4 gap-2 text-center">
-                    <span>Entreg</span>
-                    <span>Cerr</span>
-                    <span>Dev</span>
-                    <span>Pend</span>
-                  </div>
+                {/* Header de columnas alineado con cuadrados */}
+                <div className="grid grid-cols-4 gap-3 px-2 py-1 text-xs text-white/50 mb-1">
+                  <span className="text-center">📦 Entreg</span>
+                  <span className="text-center">✅ Cerr</span>
+                  <span className="text-center">↩️ Dev</span>
+                  <span className="text-center">⏳ Pend</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {entregasFinalizadasList.map(entrega => {
                       const eEntregado = pesoEntrega(entrega);
                       const eCerrado = pesoCerrado(entrega);
                       const eDevuelto = pesoDevuelto(entrega);
                       const ePendiente = eEntregado - eCerrado - eDevuelto;
                       const exportacion = getExportacion(entrega.exportacionId);
-                      const nombreEntrega = exportacion?.nombre || '';
+                      const nombreEntrega = `${exportacion?.nombre || ''} ${formatEntregaShort(entrega.fechaEntrega)}`.trim();
                       return (
-                        <div key={entrega.id} className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
-                          <span className="text-green-300 text-xs">✓</span>
-                          <span
-                            className="w-16 px-2 py-0.5 rounded font-bold text-xs text-center truncate"
-                            style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '40', color: 'white' }}
-                            title={`${nombreEntrega} ${formatEntregaShort(entrega.fechaEntrega)}`}
-                          >
-                            {nombreEntrega} {formatEntregaShort(entrega.fechaEntrega)}
-                          </span>
-                          <div className="flex-1 grid grid-cols-4 gap-2 text-xs text-white/80 text-center">
+                        <div key={entrega.id} className="bg-white/10 rounded-lg px-2 py-1.5">
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="text-green-300 text-xs">✓</span>
+                            <span
+                              className="px-1.5 py-0.5 rounded font-bold text-xs"
+                              style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '40', color: 'white' }}
+                            >
+                              {nombreEntrega}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-3 text-sm text-white/90 text-center">
                             <span>{formatNum(eEntregado, 0)}</span>
                             <span>{formatNum(eCerrado, 0)}</span>
                             <span>{formatNum(eDevuelto, 0)}</span>
