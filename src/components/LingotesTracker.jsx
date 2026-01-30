@@ -862,25 +862,39 @@ export default function LingotesTracker({
           </button>
           <div className="text-center pt-6">
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
-            {/* Cuadrados grandes: stats de entregas EN CURSO */}
+            {/* Cuadrados grandes: stats de entregas EN CURSO + FUTURA pendientes */}
             {(() => {
+              // FUTURA sin cerrar (pendientes)
+              const futuraPendientes = clienteFutura.filter(f => !f.precio);
+              const futuraPendienteWeight = futuraPendientes.reduce((sum, f) => sum + (f.peso || 0), 0);
+              const futuraCerradosWeight = clienteFutura.filter(f => f.precio).reduce((sum, f) => sum + (f.peso || 0), 0);
+
+              // Nombres para mostrar
               const nombresEnCurso = entregasEnCursoList.map(e => {
                 const exp = getExportacion(e.exportacionId);
                 return `${exp?.nombre || ''} ${formatEntregaShort(e.fechaEntrega)}`.trim();
-              }).join(' · ');
+              });
+              const hasFuturaPendiente = futuraPendientes.length > 0;
+              const todosNombres = [...nombresEnCurso, ...(hasFuturaPendiente ? ['FUTURA'] : [])].join(' · ');
+
+              // Stats combinadas
+              const totalEntregado = enCursoEntregado + futuraPendienteWeight;
+              const totalCerrado = enCursoCerrado + futuraCerradosWeight;
+              const totalPendiente = enCursoPendiente + futuraPendienteWeight;
+
               return (
                 <div className="grid grid-cols-5 gap-2 mt-4">
-                  {/* Primera columna: nombres de entregas en curso */}
+                  {/* Primera columna: nombres de entregas en curso + FUTURA */}
                   <div className="flex items-center justify-center">
                     <span
                       className="px-1.5 py-0.5 rounded font-bold text-xs"
-                      style={{ backgroundColor: entregasEnCursoList[0] ? getEntregaColor(entregasEnCursoList[0].fechaEntrega) + '40' : 'transparent' }}
+                      style={{ backgroundColor: entregasEnCursoList[0] ? getEntregaColor(entregasEnCursoList[0].fechaEntrega) + '40' : hasFuturaPendiente ? 'rgba(239,68,68,0.3)' : 'transparent' }}
                     >
-                      {nombresEnCurso || '-'}
+                      {todosNombres || '-'}
                     </span>
                   </div>
                   <div className="bg-white/20 rounded-xl p-2">
-                    <div className="text-lg font-bold">📦 {formatNum(enCursoEntregado, 0)}</div>
+                    <div className="text-lg font-bold">📦 {formatNum(totalEntregado, 0)}</div>
                     <div className="text-xs text-white/70">Entregado</div>
                   </div>
                   <div className="bg-white/20 rounded-xl p-2">
@@ -892,7 +906,7 @@ export default function LingotesTracker({
                     <div className="text-xs text-white/70">Devuelto</div>
                   </div>
                   <div className="bg-white/20 rounded-xl p-2">
-                    <div className="text-lg font-bold">⏳ {formatNum(enCursoPendiente, 0)}</div>
+                    <div className="text-lg font-bold">⏳ {formatNum(totalPendiente, 0)}</div>
                     <div className="text-xs text-white/70">Pendiente</div>
                   </div>
                 </div>
