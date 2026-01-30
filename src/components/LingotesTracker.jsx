@@ -3184,46 +3184,56 @@ export default function LingotesTracker({
     const handleSubir = async () => {
       if (!facturaFile || selectedCount === 0) return;
 
-      // Guardar factura en Firestore
-      const facturaId = await onSaveFactura({
-        clienteId: cliente.id,
-        nombre: facturaFile.name,
-        tipo: facturaFile.type,
-        data: facturaFile.data,
-        lingotesCount: selectedCount,
-        createdAt: new Date().toISOString(),
-      });
+      try {
+        // Guardar factura en Firestore
+        const facturaId = await onSaveFactura({
+          clienteId: cliente.id,
+          nombre: facturaFile.name,
+          tipo: facturaFile.type,
+          data: facturaFile.data,
+          lingotesCount: selectedCount,
+          createdAt: new Date().toISOString(),
+        });
 
-      // Separar entregas normales y FUTURA
-      const selectedEntregas = selectedLingotes.filter(l => !l.isFutura);
-      const selectedFutura = selectedLingotes.filter(l => l.isFutura);
-
-      // Agrupar lingotes de entregas por entregaId
-      const porEntrega = {};
-      for (const l of selectedEntregas) {
-        if (!porEntrega[l.entregaId]) porEntrega[l.entregaId] = [];
-        porEntrega[l.entregaId].push(l.lingoteIdx);
-      }
-
-      // Actualizar cada entrega una sola vez
-      for (const [entregaId, lingoteIdxs] of Object.entries(porEntrega)) {
-        const entrega = entregas.find(e => e.id === entregaId);
-        if (!entrega) continue;
-        const lingotes = [...entrega.lingotes];
-        for (const idx of lingoteIdxs) {
-          lingotes[idx] = { ...lingotes[idx], nFactura: facturaId };
+        if (!facturaId) {
+          alert('Error al guardar factura');
+          return;
         }
-        await onUpdateEntrega(entregaId, { lingotes });
-      }
 
-      // Actualizar FUTURA con la factura
-      for (const f of selectedFutura) {
-        await onUpdateFutura(f.futuraId, { nFactura: facturaId });
-      }
+        // Separar entregas normales y FUTURA
+        const selectedEntregas = selectedLingotes.filter(l => !l.isFutura);
+        const selectedFutura = selectedLingotes.filter(l => l.isFutura);
 
-      setShowFacturaModal(false);
-      setFacturaFile(null);
-      setFacturaSelection({});
+        // Agrupar lingotes de entregas por entregaId
+        const porEntrega = {};
+        for (const l of selectedEntregas) {
+          if (!porEntrega[l.entregaId]) porEntrega[l.entregaId] = [];
+          porEntrega[l.entregaId].push(l.lingoteIdx);
+        }
+
+        // Actualizar cada entrega una sola vez
+        for (const [entregaId, lingoteIdxs] of Object.entries(porEntrega)) {
+          const entrega = entregas.find(e => e.id === entregaId);
+          if (!entrega) continue;
+          const lingotes = [...entrega.lingotes];
+          for (const idx of lingoteIdxs) {
+            lingotes[idx] = { ...lingotes[idx], nFactura: facturaId };
+          }
+          await onUpdateEntrega(entregaId, { lingotes });
+        }
+
+        // Actualizar FUTURA con la factura
+        for (const f of selectedFutura) {
+          await onUpdateFutura(f.futuraId, { nFactura: facturaId });
+        }
+
+        setShowFacturaModal(false);
+        setFacturaFile(null);
+        setFacturaSelection({});
+      } catch (error) {
+        console.error('Error subiendo factura:', error);
+        alert('Error: ' + error.message);
+      }
     };
 
     return (
