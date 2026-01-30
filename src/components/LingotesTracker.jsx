@@ -791,6 +791,41 @@ export default function LingotesTracker({
                 <div className="text-xs text-white/70">Pendiente</div>
               </div>
             </div>
+
+            {/* Últimas 3 entregas */}
+            {allEntregasCliente.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/20">
+                <div className="space-y-2">
+                  {[...allEntregasCliente]
+                    .sort((a, b) => (b.fechaEntrega || '').localeCompare(a.fechaEntrega || ''))
+                    .slice(0, 3)
+                    .map(entrega => {
+                      const eEntregado = pesoEntrega(entrega);
+                      const eCerrado = pesoCerrado(entrega);
+                      const eDevuelto = pesoDevuelto(entrega);
+                      const ePendiente = eEntregado - eCerrado - eDevuelto;
+                      const finalizada = isEntregaFinalizada(entrega);
+                      return (
+                        <div key={entrega.id} className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+                          {finalizada && <span className="text-green-300">✓</span>}
+                          <span
+                            className="px-2 py-0.5 rounded font-bold text-xs"
+                            style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '40', color: 'white' }}
+                          >
+                            {formatEntregaShort(entrega.fechaEntrega)}
+                          </span>
+                          <div className="flex-1 grid grid-cols-4 gap-2 text-xs text-white/80">
+                            <span>{formatNum(eEntregado, 0)}</span>
+                            <span>{formatNum(eCerrado, 0)}</span>
+                            <span>{formatNum(eDevuelto, 0)}</span>
+                            <span>{formatNum(ePendiente, 0)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
