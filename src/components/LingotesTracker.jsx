@@ -2437,24 +2437,16 @@ export default function LingotesTracker({
 
   // Parametros View
   const ParametrosView = () => {
-    const [tempStock, setTempStock] = useState(stockMador.toString());
     const [tempUmbrales, setTempUmbrales] = useState({
       rojo: umbralStock.rojo.toString(),
       naranja: umbralStock.naranja.toString(),
       amarillo: umbralStock.amarillo.toString(),
     });
 
-    const stockChanged = tempStock !== stockMador.toString();
     const umbralesChanged =
       tempUmbrales.rojo !== umbralStock.rojo.toString() ||
       tempUmbrales.naranja !== umbralStock.naranja.toString() ||
       tempUmbrales.amarillo !== umbralStock.amarillo.toString();
-
-    const guardarStock = async () => {
-      const valor = parseFloat(tempStock) || 0;
-      await onUpdateConfig({ stockMador: valor });
-      setTempStock(valor.toString());
-    };
 
     const guardarUmbrales = async () => {
       const nuevos = {
@@ -2465,32 +2457,9 @@ export default function LingotesTracker({
       await onUpdateConfig(nuevos);
     };
 
-    const previewStock = parseFloat(tempStock) || 0;
-    const previewUmbrales = {
-      rojo: parseFloat(tempUmbrales.rojo) || 0,
-      naranja: parseFloat(tempUmbrales.naranja) || 0,
-      amarillo: parseFloat(tempUmbrales.amarillo) || 0,
-    };
-    const getPreviewColor = (stock) => {
-      if (stock < previewUmbrales.rojo) return { bg: 'from-red-600 via-red-500 to-red-600', label: 'CRITICO' };
-      if (stock < previewUmbrales.naranja) return { bg: 'from-orange-600 via-orange-500 to-orange-600', label: 'BAJO' };
-      if (stock < previewUmbrales.amarillo) return { bg: 'from-amber-500 via-yellow-500 to-amber-500', label: 'MEDIO' };
-      return { bg: 'from-emerald-600 via-green-500 to-emerald-600', label: 'OK' };
-    };
-    const previewColor = getPreviewColor(previewStock);
-
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-stone-800">Ajustes</h2>
-
-        <Card>
-          <h3 className="font-bold text-stone-800 mb-4">Stock Ma d'Or Actual</h3>
-          <div className="flex items-center gap-3">
-            <input type="text" inputMode="numeric" value={tempStock} onChange={(e) => setTempStock(e.target.value)} className="flex-1 border border-stone-300 rounded-xl px-4 py-3 text-2xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            <span className="text-stone-500">g</span>
-            <Button onClick={guardarStock} disabled={!stockChanged} variant={stockChanged ? 'primary' : 'secondary'}>Guardar</Button>
-          </div>
-        </Card>
 
         <Card>
           <h3 className="font-bold text-stone-800 mb-4">Umbrales de Color del Stock</h3>
@@ -2532,13 +2501,6 @@ export default function LingotesTracker({
             <Button onClick={guardarUmbrales} disabled={!umbralesChanged} variant={umbralesChanged ? 'primary' : 'secondary'} className="w-full">
               {umbralesChanged ? 'Guardar Umbrales' : 'Sin cambios'}
             </Button>
-          </div>
-          <div className="mt-6 pt-4 border-t border-stone-200">
-            <p className="text-sm text-stone-500 mb-3">Vista previa:</p>
-            <div className={`bg-gradient-to-br ${previewColor.bg} rounded-xl p-4 text-white text-center`}>
-              <div className="text-2xl font-black">{formatNum(previewStock, 0)} g</div>
-              <div className="text-sm opacity-80">{previewColor.label}</div>
-            </div>
           </div>
         </Card>
 
