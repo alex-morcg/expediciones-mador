@@ -2543,57 +2543,113 @@ export default function LingotesTracker({
 
     // Stats por año - agrupar entregas por año de entrega y cliente
     const statsPorAnyo = useMemo(() => {
-      const byYear = {}; // { year: { clienteId: { entregado, cerrado, devuelto, importe } } }
-      const years = new Set();
+      // Mapeo de IDs de cliente
+      const clienteIds = {
+        'Gemma': 'LYn5VsQMazDk4qjT6r6M',
+        'Milla': 'N6nDJCoBzFxhshm5dB6A',
+        'NJ': 'i4s6s7L68w9ErFKxQ3qQ',
+        'Orcash': 'yZTyXNSpM0jJvJRYj0Y7',
+        'Gaudia': 'Uu5XbiExWFB0d5AiugIi',
+        'Suissa': 'qZ29q4Iu7Qs94q1mqxBR',
+      };
 
-      // Procesar entregas
+      // Datos históricos hardcodeados (2023-2025): peso y mgn (margen en €)
+      const historicDataAnual = {
+        '2023': {
+          [clienteIds.Gemma]: { peso: 0, mgn: 0 },
+          [clienteIds.Milla]: { peso: 700, mgn: 615 },
+          [clienteIds.NJ]: { peso: 1800, mgn: 969 },
+          [clienteIds.Orcash]: { peso: 200, mgn: 610 },
+          [clienteIds.Gaudia]: { peso: 0, mgn: 0 },
+          [clienteIds.Suissa]: { peso: 0, mgn: 0 },
+        },
+        '2024': {
+          [clienteIds.Gemma]: { peso: 350, mgn: 1470 },
+          [clienteIds.Milla]: { peso: 550, mgn: 2136 },
+          [clienteIds.NJ]: { peso: 2550, mgn: 10165 },
+          [clienteIds.Orcash]: { peso: 1200, mgn: 4853 },
+          [clienteIds.Gaudia]: { peso: 150, mgn: 645 },
+          [clienteIds.Suissa]: { peso: 200, mgn: 898 },
+        },
+        '2025': {
+          [clienteIds.Gemma]: { peso: 450, mgn: 2547 },
+          [clienteIds.Milla]: { peso: 605, mgn: 3416 },
+          [clienteIds.NJ]: { peso: 5900, mgn: 34033 },
+          [clienteIds.Orcash]: { peso: 859, mgn: 5499 },
+          [clienteIds.Gaudia]: { peso: 3500, mgn: 21379 },
+          [clienteIds.Suissa]: { peso: 0, mgn: 0 },
+        },
+      };
+
+      const byYear = {}; // { year: { clienteId: { peso, mgn } } }
+      const years = new Set(['2023', '2024', '2025']);
+
+      // Inicializar con datos históricos
+      Object.keys(historicDataAnual).forEach(year => {
+        byYear[year] = { ...historicDataAnual[year] };
+      });
+
+      // Procesar entregas de 2026 en adelante (dinámico)
       entregas.forEach(entrega => {
-        const year = entrega.fechaEntrega ? entrega.fechaEntrega.substring(0, 4) : 'N/A';
-        if (year.length !== 4 || isNaN(parseInt(year))) return; // Ignorar años inválidos
-        years.add(year);
-
-        if (!byYear[year]) byYear[year] = {};
-
         (entrega.lingotes || []).forEach(l => {
+          if (l.estado !== 'finalizado' && l.estado !== 'pendiente_pago') return;
+          const fecha = l.fechaCierre || entrega.fechaEntrega;
+          if (!fecha) return;
+          const year = fecha.substring(0, 4);
+          if (year < '2026') return; // Solo 2026+
+
+          years.add(year);
+          if (!byYear[year]) byYear[year] = {};
+
           const clienteId = entrega.clienteId;
           if (!byYear[year][clienteId]) {
-            byYear[year][clienteId] = { entregado: 0, cerrado: 0, devuelto: 0, importe: 0 };
+            byYear[year][clienteId] = { peso: 0, mgn: 0 };
           }
 
-          const peso = l.peso || 0;
-          byYear[year][clienteId].entregado += peso;
-
-          if (l.estado === 'devuelto') {
-            byYear[year][clienteId].devuelto += peso;
-          } else if (l.estado === 'finalizado' || l.estado === 'pendiente_pago') {
-            byYear[year][clienteId].cerrado += peso;
-            byYear[year][clienteId].importe += l.importe || 0;
-          }
+          const peso = (l.peso || 0) - (l.pesoDevuelto || 0);
+          byYear[year][clienteId].peso += peso;
+          byYear[year][clienteId].mgn += l.margenCierre || 0;
         });
+      });
+
+      // FUTURA cerrados de 2026+
+      (futuraLingotes || []).forEach(f => {
+        if (!f.precio || !f.fechaCierre) return;
+        const year = f.fechaCierre.substring(0, 4);
+        if (year < '2026') return;
+
+        years.add(year);
+        if (!byYear[year]) byYear[year] = {};
+
+        const clienteId = f.clienteId;
+        if (!byYear[year][clienteId]) {
+          byYear[year][clienteId] = { peso: 0, mgn: 0 };
+        }
+
+        byYear[year][clienteId].peso += f.peso || 0;
+        byYear[year][clienteId].mgn += f.margenCierre || 0;
       });
 
       // Ordenar años
       const sortedYears = [...years].sort();
 
-      // Crear estructura para la tabla
+      // Crear lista de clientes con datos
       const clientesConDatos = clientes.filter(c => {
-        return sortedYears.some(year => byYear[year]?.[c.id]?.entregado > 0);
+        return sortedYears.some(year => byYear[year]?.[c.id]?.peso > 0);
       });
 
       // Calcular totales por año
       const totalesPorAnyo = {};
       sortedYears.forEach(year => {
-        totalesPorAnyo[year] = { entregado: 0, cerrado: 0, devuelto: 0, importe: 0 };
+        totalesPorAnyo[year] = { peso: 0, mgn: 0 };
         Object.values(byYear[year] || {}).forEach(data => {
-          totalesPorAnyo[year].entregado += data.entregado;
-          totalesPorAnyo[year].cerrado += data.cerrado;
-          totalesPorAnyo[year].devuelto += data.devuelto;
-          totalesPorAnyo[year].importe += data.importe;
+          totalesPorAnyo[year].peso += data.peso || 0;
+          totalesPorAnyo[year].mgn += data.mgn || 0;
         });
       });
 
       return { byYear, sortedYears, clientesConDatos, totalesPorAnyo };
-    }, [entregas, clientes]);
+    }, [entregas, futuraLingotes, clientes]);
 
     // Stats por mes para gráfico stacked - DATOS HISTÓRICOS HARDCODEADOS
     const statsPorMes = useMemo(() => {
@@ -2798,126 +2854,111 @@ export default function LingotesTracker({
             <p className="text-stone-400 text-center py-6">No hay datos todavía.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-stone-200">
-                    <th className="text-left py-2 px-1 font-semibold text-stone-600 sticky left-0 bg-white">Cliente</th>
+                  <tr className="border-b-2 border-stone-300">
+                    <th rowSpan={2} className="text-left py-2 px-2 font-semibold text-stone-600 sticky left-0 bg-white border-r border-stone-200">Cliente</th>
                     {statsPorAnyo.sortedYears.map(year => (
-                      <th key={year} className="text-center py-2 px-2 font-semibold text-stone-600 min-w-[80px]">{year}</th>
+                      <th key={year} colSpan={3} className="text-center py-1 px-1 font-bold text-stone-700 border-r border-stone-200 bg-stone-50">{year}</th>
                     ))}
-                    <th className="text-center py-2 px-2 font-semibold text-stone-800 bg-stone-50 min-w-[80px]">TOTAL</th>
+                    <th colSpan={3} className="text-center py-1 px-1 font-bold text-stone-800 bg-amber-50 border-l-2 border-amber-300">Suma total</th>
+                  </tr>
+                  <tr className="border-b border-stone-200 text-[10px]">
+                    {statsPorAnyo.sortedYears.map(year => (
+                      <React.Fragment key={year}>
+                        <th className="py-1 px-1 text-stone-500 font-medium">Peso</th>
+                        <th className="py-1 px-1 text-stone-500 font-medium">MGN</th>
+                        <th className="py-1 px-1 text-stone-500 font-medium border-r border-stone-200">%</th>
+                      </React.Fragment>
+                    ))}
+                    <th className="py-1 px-1 text-amber-700 font-semibold">Peso</th>
+                    <th className="py-1 px-1 text-amber-700 font-semibold">MGN</th>
+                    <th className="py-1 px-1 text-amber-700 font-semibold">%</th>
                   </tr>
                 </thead>
                 <tbody>
                   {statsPorAnyo.clientesConDatos.map(cliente => {
-                    let clienteTotal = { entregado: 0, cerrado: 0, devuelto: 0 };
+                    let clienteTotal = { peso: 0, mgn: 0 };
+                    // Calcular totales primero para el %
+                    statsPorAnyo.sortedYears.forEach(year => {
+                      const data = statsPorAnyo.byYear[year]?.[cliente.id] || { peso: 0, mgn: 0 };
+                      clienteTotal.peso += data.peso || 0;
+                      clienteTotal.mgn += data.mgn || 0;
+                    });
+                    const grandTotalMgn = Object.values(statsPorAnyo.totalesPorAnyo).reduce((sum, t) => sum + (t.mgn || 0), 0);
+
                     return (
-                      <tr key={cliente.id} className="border-b border-stone-100">
-                        <td className="py-2 px-1 sticky left-0 bg-white">
+                      <tr key={cliente.id} className="border-b border-stone-100 hover:bg-stone-50">
+                        <td className="py-2 px-2 sticky left-0 bg-white border-r border-stone-200">
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cliente.color }} />
                             <span className="font-medium text-stone-800 truncate">{cliente.nombre}</span>
                           </div>
                         </td>
                         {statsPorAnyo.sortedYears.map(year => {
-                          const data = statsPorAnyo.byYear[year]?.[cliente.id] || { entregado: 0, cerrado: 0, devuelto: 0 };
-                          clienteTotal.entregado += data.entregado;
-                          clienteTotal.cerrado += data.cerrado;
-                          clienteTotal.devuelto += data.devuelto;
+                          const data = statsPorAnyo.byYear[year]?.[cliente.id] || { peso: 0, mgn: 0 };
+                          const yearTotal = statsPorAnyo.totalesPorAnyo[year];
+                          const pct = yearTotal.mgn > 0 ? ((data.mgn || 0) / yearTotal.mgn * 100) : 0;
                           return (
-                            <td key={year} className="text-center py-2 px-1">
-                              {data.entregado > 0 ? (
-                                <div className="flex flex-col">
-                                  <span className="font-mono text-stone-700">{formatNum(data.entregado, 0)}</span>
-                                  <span className="text-[10px] text-stone-400">
-                                    {data.cerrado > 0 && <span className="text-emerald-600">V{formatNum(data.cerrado, 0)}</span>}
-                                    {data.devuelto > 0 && <span className="text-red-500 ml-1">D{formatNum(data.devuelto, 0)}</span>}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-stone-300">-</span>
-                              )}
-                            </td>
+                            <React.Fragment key={year}>
+                              <td className="text-center py-2 px-1 font-mono text-stone-700">
+                                {data.peso > 0 ? formatNum(data.peso, 0) : <span className="text-stone-300">-</span>}
+                              </td>
+                              <td className="text-center py-2 px-1 font-mono text-emerald-700">
+                                {data.mgn > 0 ? formatNum(data.mgn, 0) : <span className="text-stone-300">-</span>}
+                              </td>
+                              <td className="text-center py-2 px-1 font-mono text-stone-500 border-r border-stone-200">
+                                {data.mgn > 0 ? `${formatNum(pct, 0)}%` : <span className="text-stone-300">-</span>}
+                              </td>
+                            </React.Fragment>
                           );
                         })}
-                        <td className="text-center py-2 px-1 bg-stone-50 font-semibold">
-                          <div className="flex flex-col">
-                            <span className="font-mono text-stone-800">{formatNum(clienteTotal.entregado, 0)}</span>
-                            <span className="text-[10px]">
-                              <span className="text-emerald-600">V{formatNum(clienteTotal.cerrado, 0)}</span>
-                              {clienteTotal.devuelto > 0 && <span className="text-red-500 ml-1">D{formatNum(clienteTotal.devuelto, 0)}</span>}
-                            </span>
-                          </div>
+                        <td className="text-center py-2 px-1 font-mono font-semibold text-stone-800 bg-amber-50">
+                          {formatNum(clienteTotal.peso, 0)}
+                        </td>
+                        <td className="text-center py-2 px-1 font-mono font-semibold text-emerald-700 bg-amber-50">
+                          {formatNum(clienteTotal.mgn, 0)}
+                        </td>
+                        <td className="text-center py-2 px-1 font-mono font-semibold text-stone-600 bg-amber-50">
+                          {grandTotalMgn > 0 ? `${formatNum(clienteTotal.mgn / grandTotalMgn * 100, 0)}%` : '-'}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-amber-50 font-semibold border-t-2 border-amber-200">
-                    <td className="py-2 px-1 text-stone-800 sticky left-0 bg-amber-50">TOTAL</td>
+                  <tr className="bg-amber-100 font-bold border-t-2 border-amber-300">
+                    <td className="py-2 px-2 text-stone-800 sticky left-0 bg-amber-100 border-r border-stone-200">Suma total</td>
                     {statsPorAnyo.sortedYears.map(year => {
                       const t = statsPorAnyo.totalesPorAnyo[year];
                       return (
-                        <td key={year} className="text-center py-2 px-1">
-                          <div className="flex flex-col">
-                            <span className="font-mono text-stone-800">{formatNum(t.entregado, 0)}g</span>
-                            <span className="text-[10px]">
-                              <span className="text-emerald-600">V{formatNum(t.cerrado, 0)}</span>
-                              {t.devuelto > 0 && <span className="text-red-500 ml-1">D{formatNum(t.devuelto, 0)}</span>}
-                            </span>
-                          </div>
-                        </td>
+                        <React.Fragment key={year}>
+                          <td className="text-center py-2 px-1 font-mono text-stone-800">{formatNum(t.peso, 0)}</td>
+                          <td className="text-center py-2 px-1 font-mono text-emerald-800">{formatNum(t.mgn, 0)}</td>
+                          <td className="text-center py-2 px-1 font-mono text-stone-600 border-r border-stone-200">100%</td>
+                        </React.Fragment>
                       );
                     })}
-                    <td className="text-center py-2 px-1 bg-amber-100">
-                      {(() => {
-                        const grandTotal = Object.values(statsPorAnyo.totalesPorAnyo).reduce(
-                          (acc, t) => ({ entregado: acc.entregado + t.entregado, cerrado: acc.cerrado + t.cerrado, devuelto: acc.devuelto + t.devuelto }),
-                          { entregado: 0, cerrado: 0, devuelto: 0 }
-                        );
-                        return (
-                          <div className="flex flex-col">
-                            <span className="font-mono text-stone-900">{formatNum(grandTotal.entregado, 0)}g</span>
-                            <span className="text-[10px]">
-                              <span className="text-emerald-700">V{formatNum(grandTotal.cerrado, 0)}</span>
-                              {grandTotal.devuelto > 0 && <span className="text-red-600 ml-1">D{formatNum(grandTotal.devuelto, 0)}</span>}
-                            </span>
-                          </div>
-                        );
-                      })()}
-                    </td>
+                    {(() => {
+                      const grandTotal = Object.values(statsPorAnyo.totalesPorAnyo).reduce(
+                        (acc, t) => ({ peso: acc.peso + (t.peso || 0), mgn: acc.mgn + (t.mgn || 0) }),
+                        { peso: 0, mgn: 0 }
+                      );
+                      return (
+                        <>
+                          <td className="text-center py-2 px-1 font-mono text-stone-900 bg-amber-200">{formatNum(grandTotal.peso, 0)}</td>
+                          <td className="text-center py-2 px-1 font-mono text-emerald-900 bg-amber-200">{formatNum(grandTotal.mgn, 0)}</td>
+                          <td className="text-center py-2 px-1 font-mono text-stone-700 bg-amber-200">100%</td>
+                        </>
+                      );
+                    })()}
                   </tr>
                 </tfoot>
               </table>
-              <p className="text-[10px] text-stone-400 mt-2">Valores en gramos. V=Vendido (cerrado), D=Devuelto</p>
+              <p className="text-[10px] text-stone-400 mt-2">Peso en gramos, MGN = Margen en €, % = Porcentaje sobre total del año</p>
             </div>
           )}
         </Card>
-
-        {/* Importe por Año */}
-        {statsPorAnyo.sortedYears.length > 0 && (
-          <Card>
-            <h3 className="text-sm font-semibold text-stone-600 mb-3">💶 Importe por Año</h3>
-            <div className="flex flex-wrap gap-2">
-              {statsPorAnyo.sortedYears.map(year => {
-                const t = statsPorAnyo.totalesPorAnyo[year];
-                return (
-                  <div key={year} className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl px-3 py-2 text-center min-w-[70px]">
-                    <p className="text-xs text-emerald-700 font-medium">{year}</p>
-                    <p className="text-sm font-bold text-emerald-800">{formatEur(t.importe)}</p>
-                  </div>
-                );
-              })}
-              <div className="bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl px-3 py-2 text-center min-w-[80px]">
-                <p className="text-xs text-amber-700 font-medium">TOTAL</p>
-                <p className="text-sm font-bold text-amber-900">
-                  {formatEur(Object.values(statsPorAnyo.totalesPorAnyo).reduce((sum, t) => sum + t.importe, 0))}
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
 
         {/* Márgenes por Cliente (existente) */}
         <Card>
