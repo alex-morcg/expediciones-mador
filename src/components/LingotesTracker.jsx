@@ -885,8 +885,7 @@ export default function LingotesTracker({
 
       // Tabla resumen
       const resumenData = entregasEnCursoList.map(e => {
-        const exp = getExportacion(e.exportacionId);
-        const nombre = `${exp?.nombre || ''} ${formatEntregaShort(e.fechaEntrega)}`.trim();
+        const nombre = formatEntregaShort(e.fechaEntrega);
         return [nombre, pesoEntrega(e), pesoCerrado(e), pesoEntrega(e) - pesoCerrado(e) - pesoDevuelto(e)];
       });
       // Añadir FUTURA pendientes si hay
@@ -1031,8 +1030,7 @@ export default function LingotesTracker({
 
               // Nombres para mostrar
               const nombresEnCurso = entregasEnCursoList.map(e => {
-                const exp = getExportacion(e.exportacionId);
-                return `${exp?.nombre || ''} ${formatEntregaShort(e.fechaEntrega)}`.trim();
+                return formatEntregaShort(e.fechaEntrega);
               });
               const hasFuturaPendiente = futuraPendientes.length > 0;
               const todosNombres = [...nombresEnCurso, ...(hasFuturaPendiente ? ['FUTURA'] : [])].join(' · ');
