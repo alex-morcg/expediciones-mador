@@ -745,6 +745,19 @@ export default function LingotesTracker({
     const filteredPendiente = filteredEntregado - filteredCerrado - filteredDevuelto;
     const filteredImporte = entregasFiltered.reduce((sum, e) => sum + importeEntrega(e), 0);
 
+    // Stats solo de entregas EN CURSO (para los cuadrados grandes del resumen)
+    const entregasEnCursoList = allEntregasCliente.filter(e => isEntregaEnCurso(e));
+    const enCursoEntregado = entregasEnCursoList.reduce((sum, e) => sum + pesoEntrega(e), 0);
+    const enCursoCerrado = entregasEnCursoList.reduce((sum, e) => sum + pesoCerrado(e), 0);
+    const enCursoDevuelto = entregasEnCursoList.reduce((sum, e) => sum + pesoDevuelto(e), 0);
+    const enCursoPendiente = enCursoEntregado - enCursoCerrado - enCursoDevuelto;
+
+    // Últimas 3 entregas FINALIZADAS (para las líneas del resumen)
+    const entregasFinalizadasList = allEntregasCliente
+      .filter(e => isEntregaFinalizada(e))
+      .sort((a, b) => (b.fechaEntrega || '').localeCompare(a.fechaEntrega || ''))
+      .slice(0, 3);
+
     // Entregas with en_curso lingotes
     const entregasConEnCurso = entregasFiltered.filter(e => lingotesEnCurso(e).length > 0);
 
@@ -794,48 +807,58 @@ export default function LingotesTracker({
           </button>
           <div className="text-center pt-6">
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
+            {/* Cuadrados grandes: stats de entregas EN CURSO */}
             <div className="grid grid-cols-4 gap-3 mt-4">
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(filteredEntregado, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(enCursoEntregado, 0)}</div>
                 <div className="text-xs text-white/70">Entregado</div>
               </div>
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(filteredCerrado, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(enCursoCerrado, 0)}</div>
                 <div className="text-xs text-white/70">Cerrado</div>
               </div>
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(filteredDevuelto, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(enCursoDevuelto, 0)}</div>
                 <div className="text-xs text-white/70">Devuelto</div>
               </div>
               <div className="bg-white/20 rounded-xl p-2">
-                <div className="text-lg font-bold">{formatNum(filteredPendiente, 0)}</div>
+                <div className="text-lg font-bold">{formatNum(enCursoPendiente, 0)}</div>
                 <div className="text-xs text-white/70">Pendiente</div>
               </div>
             </div>
 
-            {/* Últimas 3 entregas */}
-            {allEntregasCliente.length > 0 && (
+            {/* Últimas 3 entregas FINALIZADAS */}
+            {entregasFinalizadasList.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/20">
+                {/* Header de columnas */}
+                <div className="flex items-center gap-2 px-3 py-1 text-xs text-white/50 mb-1">
+                  <span className="w-20">Entrega</span>
+                  <div className="flex-1 grid grid-cols-4 gap-2 text-center">
+                    <span>Entreg</span>
+                    <span>Cerr</span>
+                    <span>Dev</span>
+                    <span>Pend</span>
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  {[...allEntregasCliente]
-                    .sort((a, b) => (b.fechaEntrega || '').localeCompare(a.fechaEntrega || ''))
-                    .slice(0, 3)
-                    .map(entrega => {
+                  {entregasFinalizadasList.map(entrega => {
                       const eEntregado = pesoEntrega(entrega);
                       const eCerrado = pesoCerrado(entrega);
                       const eDevuelto = pesoDevuelto(entrega);
                       const ePendiente = eEntregado - eCerrado - eDevuelto;
-                      const finalizada = isEntregaFinalizada(entrega);
+                      const exportacion = getExportacion(entrega.exportacionId);
+                      const nombreEntrega = exportacion?.nombre ? `${exportacion.nombre} ${formatEntregaShort(entrega.fechaEntrega)}` : formatEntregaShort(entrega.fechaEntrega);
                       return (
                         <div key={entrega.id} className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
-                          {finalizada && <span className="text-green-300">✓</span>}
+                          <span className="text-green-300 text-xs">✓</span>
                           <span
-                            className="px-2 py-0.5 rounded font-bold text-xs"
+                            className="w-16 px-2 py-0.5 rounded font-bold text-xs truncate"
                             style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '40', color: 'white' }}
+                            title={nombreEntrega}
                           >
-                            {formatEntregaShort(entrega.fechaEntrega)}
+                            {nombreEntrega}
                           </span>
-                          <div className="flex-1 grid grid-cols-4 gap-2 text-xs text-white/80">
+                          <div className="flex-1 grid grid-cols-4 gap-2 text-xs text-white/80 text-center">
                             <span>{formatNum(eEntregado, 0)}</span>
                             <span>{formatNum(eCerrado, 0)}</span>
                             <span>{formatNum(eDevuelto, 0)}</span>
