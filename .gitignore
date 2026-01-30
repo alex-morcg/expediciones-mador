@@ -2,3 +2,7 @@ node_modules
 dist
 .env
 .env.local
+
+# Scripts con credenciales
+add-codigos-usuarios.mjs
+*.mjs
