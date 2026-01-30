@@ -909,7 +909,8 @@ export default function LingotesTracker({
         {(() => {
           // FUTURA sin cerrar (solo mostrar cuando no hay stock)
           const futuraSinCerrar = stockRealTotal === 0 ? clienteFutura.filter(f => !f.precio) : [];
-          const showEnCurso = entregasConEnCurso.length > 0 || futuraSinCerrar.length > 0;
+          // Mostrar sección si: hay entregas en curso, hay FUTURA sin cerrar, o no hay stock (para poder añadir)
+          const showEnCurso = entregasConEnCurso.length > 0 || futuraSinCerrar.length > 0 || stockRealTotal === 0;
 
           if (!showEnCurso) return null;
 
