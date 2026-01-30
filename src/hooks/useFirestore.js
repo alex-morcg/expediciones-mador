@@ -41,6 +41,49 @@ const calcularTotalFraPaquete = (paquete, cliente) => {
   return totalFra;
 };
 
+// Helper para comparar pesos del paquete con los extraídos por la IA
+// Retorna { pesosCuadran, observaciones }
+const compararPesosConIA = (lineasPaquete, pesosIA) => {
+  if (!pesosIA || !pesosIA.length) {
+    return { pesosCuadran: true, observaciones: 'Sin pesos de IA para comparar' };
+  }
+
+  // Crear copia de pesos IA para ir marcando los que coinciden
+  const pesosIARestantes = [...pesosIA];
+  const discrepancias = [];
+
+  // Para cada línea del paquete, buscar coincidencia en pesos IA
+  for (const linea of lineasPaquete) {
+    const bruto = Math.abs(linea.bruto); // Ignorar signo para comparar
+    const ley = linea.ley;
+
+    // Buscar coincidencia exacta o aproximada (tolerancia 0.5g en bruto, 5 en ley)
+    const idx = pesosIARestantes.findIndex(p => {
+      const brutoIA = Math.abs(p.bruto);
+      const leyIA = p.ley;
+      return Math.abs(brutoIA - bruto) < 0.5 && Math.abs(leyIA - ley) < 5;
+    });
+
+    if (idx >= 0) {
+      // Encontrado, quitar de la lista
+      pesosIARestantes.splice(idx, 1);
+    } else {
+      // No encontrado en factura
+      discrepancias.push(`Línea ${bruto}g x ${ley} no está en factura`);
+    }
+  }
+
+  // Los pesos IA restantes son los que están en factura pero no en paquete
+  for (const p of pesosIARestantes) {
+    discrepancias.push(`Línea ${p.bruto}g en factura vs 0.00g en datos`);
+  }
+
+  const pesosCuadran = discrepancias.length === 0;
+  const observaciones = discrepancias.length > 0 ? discrepancias.join('; ') : 'Pesos coinciden';
+
+  return { pesosCuadran, observaciones };
+};
+
 // Seed data — used only on first run when Firestore is empty
 const seedCategorias = [
   { nombre: 'Lingote Chatarra 18K', esFino: false },
@@ -644,10 +687,15 @@ export function useFirestore(activeSection = 'expediciones') {
         const diferenciaAnterior = paq.verificacionIA.diferencia;
         const nuevaDiferencia = paq.verificacionIA.totalFactura - nuevoTotalPaquete;
 
+        // Comparar pesos con los extraídos por la IA
+        const { pesosCuadran, observaciones } = compararPesosConIA(newLineas, paq.verificacionIA.pesos);
+
         updateData.verificacionIA = {
           ...paq.verificacionIA,
           totalPaquete: nuevoTotalPaquete,
           diferencia: nuevaDiferencia,
+          pesosCuadran,
+          observaciones,
           validado: false, // Invalidar al cambiar
         };
 
@@ -657,7 +705,7 @@ export function useFirestore(activeSection = 'expediciones') {
           fecha: modificacion.fecha,
           usuario: usuarioActivo,
           accion: 'recalcular_verificacion',
-          detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia },
+          detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia, pesosCuadran },
         };
         updateData.logs = [...updateData.logs, logRecalculo];
       }
@@ -696,10 +744,15 @@ export function useFirestore(activeSection = 'expediciones') {
         const diferenciaAnterior = paq.verificacionIA.diferencia;
         const nuevaDiferencia = paq.verificacionIA.totalFactura - nuevoTotalPaquete;
 
+        // Comparar pesos con los extraídos por la IA
+        const { pesosCuadran, observaciones } = compararPesosConIA(newLineas, paq.verificacionIA.pesos);
+
         updateData.verificacionIA = {
           ...paq.verificacionIA,
           totalPaquete: nuevoTotalPaquete,
           diferencia: nuevaDiferencia,
+          pesosCuadran,
+          observaciones,
           validado: false,
         };
 
@@ -708,7 +761,7 @@ export function useFirestore(activeSection = 'expediciones') {
           fecha: modificacion.fecha,
           usuario: usuarioActivo,
           accion: 'recalcular_verificacion',
-          detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia },
+          detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia, pesosCuadran },
         };
         updateData.logs = [...updateData.logs, logRecalculo];
       }
