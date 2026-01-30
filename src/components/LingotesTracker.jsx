@@ -185,6 +185,60 @@ export default function LingotesTracker({
     return stockGlobal.reduce((sum, s) => sum + s.cantidad, 0);
   }, [stockGlobal]);
 
+  // Comprimir imagen para que no supere el límite de Firestore (1MB)
+  const comprimirImagen = (file, maxSizeKB = 500) => {
+    return new Promise((resolve) => {
+      // Si no es imagen, devolver tal cual
+      if (!file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result });
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        // Calcular dimensiones máximas manteniendo aspect ratio
+        let { width, height } = img;
+        const maxDim = 1600; // Máximo 1600px en cualquier dimensión
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height / width) * maxDim;
+            width = maxDim;
+          } else {
+            width = (width / height) * maxDim;
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Comprimir iterativamente hasta estar bajo el límite
+        let quality = 0.8;
+        let result = canvas.toDataURL('image/jpeg', quality);
+
+        while (result.length > maxSizeKB * 1024 * 1.37 && quality > 0.1) { // 1.37 = factor base64
+          quality -= 0.1;
+          result = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        resolve({
+          name: file.name.replace(/\.[^.]+$/, '.jpg'),
+          type: 'image/jpeg',
+          data: result,
+        });
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   // Helper para crear logs
   const createLog = (tipo, descripcion) => ({
     id: Date.now().toString(),
@@ -1713,27 +1767,24 @@ export default function LingotesTracker({
       if (!file) return;
       setUploadingFactura(expId);
       try {
-        // Convert to base64 for storage (simple approach)
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const base64 = e.target.result;
-          const exp = exportaciones.find(ex => ex.id === expId);
-          if (exp) {
-            await onSaveExportacion({
-              ...exp,
-              factura: {
-                nombre: file.name,
-                tipo: file.type,
-                data: base64,
-                fecha: new Date().toISOString(),
-              }
-            }, expId);
-          }
-          setUploadingFactura(null);
-        };
-        reader.readAsDataURL(file);
+        // Comprimir imagen si es necesario
+        const comprimido = await comprimirImagen(file, 500);
+        const exp = exportaciones.find(ex => ex.id === expId);
+        if (exp) {
+          await onSaveExportacion({
+            ...exp,
+            factura: {
+              nombre: comprimido.name,
+              tipo: comprimido.type,
+              data: comprimido.data,
+              fecha: new Date().toISOString(),
+            }
+          }, expId);
+        }
+        setUploadingFactura(null);
       } catch (err) {
         console.error('Error uploading factura:', err);
+        alert('Error al subir factura: ' + err.message);
         setUploadingFactura(null);
       }
     };
@@ -3193,19 +3244,12 @@ export default function LingotesTracker({
       setFacturaSelection(newSelection);
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
       const file = e.target.files?.[0];
       if (file) {
-        // Convert to base64 for storage
-        const reader = new FileReader();
-        reader.onload = () => {
-          setFacturaFile({
-            name: file.name,
-            type: file.type,
-            data: reader.result,
-          });
-        };
-        reader.readAsDataURL(file);
+        // Comprimir imagen si es necesario (máx 500KB para Firestore)
+        const comprimido = await comprimirImagen(file, 500);
+        setFacturaFile(comprimido);
       }
     };
 
