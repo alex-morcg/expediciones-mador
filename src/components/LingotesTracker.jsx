@@ -2595,63 +2595,125 @@ export default function LingotesTracker({
       return { byYear, sortedYears, clientesConDatos, totalesPorAnyo };
     }, [entregas, clientes]);
 
-    // Stats por mes para gráfico stacked
+    // Stats por mes para gráfico stacked - DATOS HISTÓRICOS HARDCODEADOS
     const statsPorMes = useMemo(() => {
-      const byMonth = {}; // { 'YYYY-MM': { clienteId: gramos } }
+      // Mapeo de nombres a IDs de cliente
+      const clienteIds = {
+        'Gemma': 'LYn5VsQMazDk4qjT6r6M',
+        'Milla': 'N6nDJCoBzFxhshm5dB6A',
+        'NJ': 'i4s6s7L68w9ErFKxQ3qQ',
+        'Orcash': 'yZTyXNSpM0jJvJRYj0Y7',
+        'Gaudia': 'Uu5XbiExWFB0d5AiugIi',
+        'Suissa': 'qZ29q4Iu7Qs94q1mqxBR',
+      };
 
-      // Procesar entregas - usar fechaCierre de cada lingote cerrado
+      // Datos históricos hardcodeados (hasta 2025-dic)
+      const historicData = {
+        '2023-01': { Milla: 200 },
+        '2023-02': { Milla: 50, NJ: 150 },
+        '2023-03': { Milla: 50, NJ: 100 },
+        '2023-04': { NJ: 350 },
+        '2023-05': { NJ: 150 },
+        '2023-06': { NJ: 350 },
+        '2023-07': { NJ: 100 },
+        '2023-08': { NJ: 50 },
+        '2023-09': { Milla: 150, NJ: 150 },
+        '2023-10': { NJ: 50 },
+        '2023-11': { NJ: 250 },
+        '2023-12': { Milla: 250, NJ: 100, Orcash: 200 },
+        '2024-01': { Gemma: 50, NJ: 100, Orcash: 50 },
+        '2024-02': { Milla: 200, NJ: 550 },
+        '2024-03': { Milla: 50, NJ: 250 },
+        '2024-04': { Gemma: 100, NJ: 400, Orcash: 800 },
+        '2024-05': { NJ: 100, Orcash: 50 },
+        '2024-06': { Orcash: 150, Suissa: 200 },
+        '2024-07': { NJ: 50 },
+        '2024-08': { Milla: 50, NJ: 350, Orcash: 50, Gaudia: 50 },
+        '2024-09': { Milla: 150, Orcash: 100 },
+        '2024-10': { Gemma: 50, Milla: 50, NJ: 250, Gaudia: 100 },
+        '2024-11': { Milla: 50, NJ: 200 },
+        '2024-12': { Gemma: 150, NJ: 300 },
+        '2025-01': { Milla: 50, Gaudia: 50 },
+        '2025-02': { NJ: 100 },
+        '2025-03': { Gemma: 100, NJ: 450, Gaudia: 100 },
+        '2025-04': { Gemma: 50, NJ: 950, Gaudia: 100 },
+        '2025-05': { NJ: 800 },
+        '2025-06': { Gemma: 50, Milla: 250, NJ: 400, Gaudia: 150 },
+        '2025-07': { Gaudia: 150 },
+        '2025-08': { Gemma: 50, Milla: 150, NJ: 150, Gaudia: 200 },
+        '2025-09': { Gemma: 100, NJ: 1050, Orcash: 158.5, Gaudia: 250 },
+        '2025-10': { Gemma: 50, NJ: 1300, Orcash: 300, Gaudia: 2050 },
+        '2025-11': { Milla: 50, NJ: 350, Orcash: 400, Gaudia: 200 },
+        '2025-12': { Gemma: 50, Milla: 105, NJ: 350, Gaudia: 250 },
+      };
+
+      // Combinar datos históricos con datos calculados de 2026+
+      const byMonth = { ...historicData };
+
+      // Procesar entregas de 2026 en adelante
       entregas.forEach(entrega => {
         (entrega.lingotes || []).forEach(l => {
-          // Solo contar cerrados (vendidos)
           if (l.estado !== 'finalizado' && l.estado !== 'pendiente_pago') return;
-
-          // Usar fechaCierre si existe, sino fechaEntrega
           const fecha = l.fechaCierre || entrega.fechaEntrega;
           if (!fecha) return;
-
-          const month = fecha.substring(0, 7); // 'YYYY-MM'
-          if (month.length !== 7) return;
+          const month = fecha.substring(0, 7);
+          if (month.length !== 7 || month < '2026-01') return;
 
           if (!byMonth[month]) byMonth[month] = {};
-
-          const clienteId = entrega.clienteId;
-          if (!byMonth[month][clienteId]) byMonth[month][clienteId] = 0;
-
-          const pesoNeto = (l.peso || 0) - (l.pesoDevuelto || 0);
-          byMonth[month][clienteId] += pesoNeto;
+          const cliente = clientes.find(c => c.id === entrega.clienteId);
+          const clienteName = cliente?.nombre === 'Nova Joia' ? 'NJ' :
+                             cliente?.nombre === 'La Milla d\'Or' ? 'Milla' :
+                             cliente?.nombre === 'OrCash' ? 'Orcash' :
+                             cliente?.nombre === 'Gemma d\'Or' ? 'Gemma' :
+                             cliente?.nombre || entrega.clienteId;
+          if (!byMonth[month][clienteName]) byMonth[month][clienteName] = 0;
+          byMonth[month][clienteName] += (l.peso || 0) - (l.pesoDevuelto || 0);
         });
       });
 
-      // También incluir FUTURA cerrados
+      // FUTURA cerrados de 2026+
       (futuraLingotes || []).forEach(f => {
         if (!f.precio || !f.fechaCierre) return;
         const month = f.fechaCierre.substring(0, 7);
-        if (month.length !== 7) return;
-
+        if (month.length !== 7 || month < '2026-01') return;
         if (!byMonth[month]) byMonth[month] = {};
-        if (!byMonth[month][f.clienteId]) byMonth[month][f.clienteId] = 0;
-        byMonth[month][f.clienteId] += f.peso || 0;
+        const cliente = clientes.find(c => c.id === f.clienteId);
+        const clienteName = cliente?.nombre === 'Nova Joia' ? 'NJ' :
+                           cliente?.nombre === 'La Milla d\'Or' ? 'Milla' :
+                           cliente?.nombre === 'OrCash' ? 'Orcash' :
+                           cliente?.nombre === 'Gemma d\'Or' ? 'Gemma' :
+                           cliente?.nombre || f.clienteId;
+        if (!byMonth[month][clienteName]) byMonth[month][clienteName] = 0;
+        byMonth[month][clienteName] += f.peso || 0;
       });
 
-      // Ordenar meses y convertir a formato para recharts
       const sortedMonths = Object.keys(byMonth).sort();
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-      // Obtener lista de clientes que tienen datos
-      const clientesConVentas = clientes.filter(c =>
-        sortedMonths.some(m => byMonth[m]?.[c.id] > 0)
-      );
+      // Lista de clientes para el gráfico (orden fijo)
+      const clienteOrder = ['Gemma', 'Milla', 'NJ', 'Orcash', 'Gaudia', 'Suissa'];
+      const clientesConVentas = clienteOrder
+        .filter(name => sortedMonths.some(m => byMonth[m]?.[name] > 0))
+        .map(name => ({
+          id: clienteIds[name],
+          nombre: name === 'NJ' ? 'Nova Joia' :
+                  name === 'Milla' ? 'La Milla d\'Or' :
+                  name === 'Orcash' ? 'OrCash' :
+                  name === 'Gaudia' ? 'Gaudia' :
+                  name === 'Gemma' ? 'Gemma d\'Or' : name,
+          color: clientes.find(c => c.id === clienteIds[name])?.color || '#888',
+          shortName: name,
+        }));
 
-      // Crear datos para el gráfico
       const chartData = sortedMonths.map(month => {
         const [year, mes] = month.split('-');
-        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const label = `${monthNames[parseInt(mes) - 1]} ${year.slice(2)}`;
-
         const entry = { month, label };
         let total = 0;
         clientesConVentas.forEach(c => {
-          entry[c.id] = byMonth[month]?.[c.id] || 0;
-          total += entry[c.id];
+          const val = byMonth[month]?.[c.shortName] || 0;
+          entry[c.shortName] = val;
+          total += val;
         });
         entry.total = total;
         return entry;
@@ -2689,7 +2751,7 @@ export default function LingotesTracker({
                     />
                     <Tooltip
                       formatter={(value, name) => {
-                        const cliente = clientes.find(c => c.id === name);
+                        const cliente = statsPorMes.clientesConVentas.find(c => c.shortName === name);
                         return [`${formatNum(value, 0)}g`, cliente?.nombre || name];
                       }}
                       labelFormatter={(label) => `Mes: ${label}`}
@@ -2697,18 +2759,18 @@ export default function LingotesTracker({
                     />
                     <Legend
                       formatter={(value) => {
-                        const cliente = clientes.find(c => c.id === value);
+                        const cliente = statsPorMes.clientesConVentas.find(c => c.shortName === value);
                         return cliente?.nombre || value;
                       }}
                       wrapperStyle={{ fontSize: 10, paddingTop: 10 }}
                     />
                     {statsPorMes.clientesConVentas.map((cliente) => (
                       <Bar
-                        key={cliente.id}
-                        dataKey={cliente.id}
+                        key={cliente.shortName}
+                        dataKey={cliente.shortName}
                         stackId="ventas"
                         fill={cliente.color || '#8884d8'}
-                        name={cliente.id}
+                        name={cliente.shortName}
                       />
                     ))}
                   </BarChart>
