@@ -1092,7 +1092,8 @@ export function useFirestore(activeSection = 'expediciones') {
 
   // Lingotes Futura CRUD
   const saveLingoteFutura = async (data) => {
-    await addDoc(collection(db, 'lingotes_futura'), data);
+    const docRef = await addDoc(collection(db, 'lingotes_futura'), data);
+    return docRef.id;
   };
 
   const deleteLingoteFutura = async (id) => {

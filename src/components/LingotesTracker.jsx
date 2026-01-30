@@ -1152,82 +1152,18 @@ export default function LingotesTracker({
                     <span className="px-2 py-1 rounded-lg font-bold text-base bg-red-100 text-red-700">FUTURA</span>
                     <span className="text-xs text-red-600">Sin stock físico</span>
                   </div>
-                  {futuraSinCerrar.length > 0 && (
-                    <span className="font-mono text-sm text-stone-600">
-                      {futuraSinCerrar.reduce((s, f) => s + (f.peso || 0), 0)}g
-                    </span>
-                  )}
                 </div>
 
-                {/* Sección CERRAR - solo si hay FUTURA */}
-                {futuraGrupos.length > 0 && (
-                  <div className="mb-3">
-                    <div className="text-xs font-semibold text-stone-500 mb-1">Cerrar</div>
-                    {futuraGrupos.map(grupo => {
-                      const key = `futura_${cliente.id}_${grupo.peso}`;
-                      const cantidad = futuraCierreCantidad[key] || 1;
-                      const maxCantidad = grupo.ids.length;
-                      const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
-
-                      const handleCerrar = () => {
-                        const idsToClose = grupo.ids.slice(0, cantidad);
-                        setSelectedFuturaIds(idsToClose);
-                        setSelectedFuturaId(idsToClose[0]);
-                        setShowCierreModal(true);
-                      };
-
-                      return (
-                        <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
-                          <span className="font-mono font-semibold text-red-700">{maxCantidad} x {grupo.peso}g</span>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1">
-                              {quickOptions.map(n => (
-                                <button
-                                  key={n}
-                                  onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
-                                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                                    cantidad === n
-                                      ? 'bg-red-500 text-white'
-                                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                                  }`}
-                                >
-                                  {n}
-                                </button>
-                              ))}
-                              {maxCantidad > 1 && (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max={maxCantidad}
-                                  value={cantidad}
-                                  onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                  className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                                    !quickOptions.includes(cantidad) ? 'border-red-400 bg-red-50' : 'border-stone-300'
-                                  }`}
-                                />
-                              )}
-                            </div>
-                            <Button size="sm" variant="success" onClick={handleCerrar}>
-                              Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Añadir lingotes FUTURA directamente */}
-                <div className="border-t border-red-200 pt-3">
-                  <div className="text-xs font-semibold text-stone-500 mb-2">Añadir</div>
+                {/* Selector directo: cantidad + peso + Cerrar */}
+                <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1">
                       {[1, 2, 4].map(n => (
                         <button
                           key={n}
-                          onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`add_${cliente.id}`]: n })}
+                          onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`new_${cliente.id}`]: n })}
                           className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                            (futuraCierreCantidad[`add_${cliente.id}`] || 1) === n
+                            (futuraCierreCantidad[`new_${cliente.id}`] || 1) === n
                               ? 'bg-red-500 text-white'
                               : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                           }`}
@@ -1239,46 +1175,55 @@ export default function LingotesTracker({
                         type="number"
                         min="1"
                         max={99}
-                        value={futuraCierreCantidad[`add_${cliente.id}`] || 1}
-                        onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`add_${cliente.id}`]: Math.min(99, Math.max(1, parseInt(e.target.value) || 1)) })}
+                        value={futuraCierreCantidad[`new_${cliente.id}`] || 1}
+                        onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`new_${cliente.id}`]: Math.min(99, Math.max(1, parseInt(e.target.value) || 1)) })}
                         className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                          ![1, 2, 4].includes(futuraCierreCantidad[`add_${cliente.id}`] || 1) ? 'border-red-400 bg-red-50' : 'border-stone-300'
+                          ![1, 2, 4].includes(futuraCierreCantidad[`new_${cliente.id}`] || 1) ? 'border-red-400 bg-red-50' : 'border-stone-300'
                         }`}
                       />
-                      <span className="text-xs text-stone-500">x</span>
-                      <select
-                        value={futuraCierreCantidad[`addPeso_${cliente.id}`] || 50}
-                        onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`addPeso_${cliente.id}`]: parseInt(e.target.value) })}
-                        className="h-7 rounded-lg border border-stone-300 text-xs font-bold px-2 focus:outline-none focus:ring-2 focus:ring-red-400"
-                      >
-                        <option value={50}>50g</option>
-                        <option value={100}>100g</option>
-                      </select>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={async () => {
-                        const cant = futuraCierreCantidad[`add_${cliente.id}`] || 1;
-                        const peso = futuraCierreCantidad[`addPeso_${cliente.id}`] || 50;
-                        for (let i = 0; i < cant; i++) {
-                          await onSaveFutura({
-                            clienteId: cliente.id,
-                            peso,
-                            precio: null,
-                            importe: 0,
-                            nFactura: null,
-                            fechaCierre: null,
-                            pagado: false,
-                            estado: 'futura',
-                            fechaCreacion: new Date().toISOString(),
-                          });
-                        }
-                      }}
+                    <span className="text-xs text-stone-500">x</span>
+                    <select
+                      value={futuraCierreCantidad[`newPeso_${cliente.id}`] || 50}
+                      onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`newPeso_${cliente.id}`]: parseInt(e.target.value) })}
+                      className="h-7 rounded-lg border border-stone-300 text-xs font-bold px-2 focus:outline-none focus:ring-2 focus:ring-red-400"
                     >
-                      + Añadir
-                    </Button>
+                      <option value={50}>50g</option>
+                      <option value={100}>100g</option>
+                    </select>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="success"
+                    onClick={async () => {
+                      const cant = futuraCierreCantidad[`new_${cliente.id}`] || 1;
+                      const peso = futuraCierreCantidad[`newPeso_${cliente.id}`] || 50;
+                      // Crear los FUTURA
+                      const newIds = [];
+                      for (let i = 0; i < cant; i++) {
+                        const newId = await onSaveFutura({
+                          clienteId: cliente.id,
+                          peso,
+                          precio: null,
+                          importe: 0,
+                          nFactura: null,
+                          fechaCierre: null,
+                          pagado: false,
+                          estado: 'futura',
+                          fechaCreacion: new Date().toISOString(),
+                        });
+                        if (newId) newIds.push(newId);
+                      }
+                      // Abrir modal de cierre con los nuevos IDs
+                      if (newIds.length > 0) {
+                        setSelectedFuturaIds(newIds);
+                        setSelectedFuturaId(newIds[0]);
+                        setShowCierreModal(true);
+                      }
+                    }}
+                  >
+                    Cerrar {(futuraCierreCantidad[`new_${cliente.id}`] || 1) > 1 ? `(${futuraCierreCantidad[`new_${cliente.id}`]})` : ''}
+                  </Button>
                 </div>
               </div>
             )}
