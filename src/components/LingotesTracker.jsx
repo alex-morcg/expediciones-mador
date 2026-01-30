@@ -913,9 +913,12 @@ export default function LingotesTracker({
                                   />
                                 )}
                               </div>
-                              <Button size="sm" variant="success" onClick={handleCerrar}>
+                              <button
+                                onClick={handleCerrar}
+                                className="px-3 py-1.5 text-xs rounded-xl font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                              >
                                 Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
-                              </Button>
+                              </button>
                             </div>
                           </div>
                         );
@@ -1072,9 +1075,12 @@ export default function LingotesTracker({
                                   />
                                 )}
                               </div>
-                              <Button size="sm" variant="success" onClick={handleCerrar}>
+                              <button
+                                onClick={handleCerrar}
+                                className="px-3 py-1.5 text-xs rounded-xl font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                              >
                                 Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
-                              </Button>
+                              </button>
                             </div>
                           </div>
                         );
