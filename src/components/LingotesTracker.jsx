@@ -865,28 +865,56 @@ export default function LingotesTracker({
       // Header con logo imagen
       doc.addImage(LOGO_MADOR_BASE64, 'JPEG', 14, 10, 55, 30);
 
-      // Datos del cliente a la derecha del logo
+      // Datos del cliente
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
-      let yPosCliente = 15;
-      const xCliente = 80;
-      if (cliente.razonSocial) { doc.text(cliente.razonSocial, xCliente, yPosCliente); yPosCliente += 5; }
-      else { doc.text(cliente.nombre, xCliente, yPosCliente); yPosCliente += 5; }
-      if (cliente.direccion) { doc.text(cliente.direccion, xCliente, yPosCliente); yPosCliente += 5; }
-      if (cliente.ciudad) { doc.text(`${cliente.codigoPostal || ''} ${cliente.ciudad}`.trim(), xCliente, yPosCliente); yPosCliente += 5; }
-      if (cliente.pais) { doc.text(cliente.pais, xCliente, yPosCliente); yPosCliente += 5; }
-      if (cliente.nrt) { doc.text(`NRT. ${cliente.nrt}`, xCliente, yPosCliente); yPosCliente += 5; }
-
-      // Fecha del documento
-      doc.setFontSize(9);
-      doc.text(`Data: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - 14, 15, { align: 'right' });
-
       let yPos = 50;
+      if (cliente.razonSocial) { doc.text(cliente.razonSocial, 14, yPos); yPos += 5; }
+      else { doc.text(cliente.nombre, 14, yPos); yPos += 5; }
+      if (cliente.direccion) { doc.text(cliente.direccion, 14, yPos); yPos += 5; }
+      if (cliente.ciudad) { doc.text(`${cliente.codigoPostal || ''} ${cliente.ciudad}`.trim(), 14, yPos); yPos += 5; }
+      if (cliente.pais) { doc.text(cliente.pais, 14, yPos); yPos += 5; }
+      if (cliente.nrt) { doc.text(`NRT. ${cliente.nrt}`, 14, yPos); yPos += 5; }
 
-      // Recopilar TODOS los lingotes de entregas en curso (una línea por lingote)
-      const lingotesData = [];
+      // Resumen entregas en curso
+      yPos += 10;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Resumen entregas en curso', pageWidth / 2, yPos, { align: 'center' });
+      yPos += 5;
+
+      // Tabla resumen
+      const resumenData = entregasEnCursoList.map(e => {
+        const nombre = formatEntregaShort(e.fechaEntrega);
+        return [nombre, pesoEntrega(e), pesoCerrado(e), pesoEntrega(e) - pesoCerrado(e) - pesoDevuelto(e)];
+      });
+      // Añadir FUTURA pendientes si hay
       const futuraPendientes = clienteFutura.filter(f => !f.precio);
+      if (futuraPendientes.length > 0) {
+        const futuraPeso = futuraPendientes.reduce((sum, f) => sum + (f.peso || 0), 0);
+        resumenData.push(['FUTURA', futuraPeso, 0, futuraPeso]);
+      }
+      // Total
+      const totalEntregado = resumenData.reduce((sum, r) => sum + r[1], 0);
+      const totalCerrado = resumenData.reduce((sum, r) => sum + r[2], 0);
+      const totalPendiente = resumenData.reduce((sum, r) => sum + r[3], 0);
 
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Entregas vivas', 'Peso Entregado', 'Peso Cerrado', 'Pendiente']],
+        body: [...resumenData, ['TOTAL', totalEntregado, totalCerrado, totalPendiente]],
+        theme: 'grid',
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 0: { cellWidth: 40 }, 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' } },
+        margin: { left: 80 },
+        tableWidth: 110,
+      });
+
+      yPos = (doc).lastAutoTable.finalY + 15;
+
+      // Detalle de lingotes - TODOS los lingotes con sus datos
+      const lingotesData = [];
       entregasEnCursoList.forEach(entrega => {
         const nombreEntrega = formatEntregaShort(entrega.fechaEntrega);
         (entrega.lingotes || []).forEach(l => {
@@ -904,7 +932,7 @@ export default function LingotesTracker({
             fechaCierre = l.fechaCierre || '';
             pagado = l.pagado ? '✓' : '';
           }
-          // en_curso no tiene info adicional
+          // en_curso: sin datos adicionales
 
           lingotesData.push([
             nombreEntrega,
@@ -917,7 +945,6 @@ export default function LingotesTracker({
           ]);
         });
       });
-
       // Añadir FUTURA pendientes
       futuraPendientes.forEach(f => {
         lingotesData.push([
@@ -940,11 +967,11 @@ export default function LingotesTracker({
           headStyles: { fillColor: [218, 165, 32], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
           bodyStyles: { fontSize: 8 },
           columnStyles: {
-            0: { cellWidth: 25 },
-            1: { halign: 'center', cellWidth: 20 },
+            0: { cellWidth: 22 },
+            1: { halign: 'center', cellWidth: 18 },
             2: { halign: 'center', cellWidth: 28 },
-            3: { halign: 'center', cellWidth: 25 },
-            4: { halign: 'right', cellWidth: 30 },
+            3: { halign: 'center', cellWidth: 22 },
+            4: { halign: 'right', cellWidth: 28 },
             5: { halign: 'center', cellWidth: 28 },
             6: { halign: 'center', cellWidth: 18 },
           },
@@ -952,20 +979,9 @@ export default function LingotesTracker({
         yPos = (doc).lastAutoTable.finalY + 15;
       }
 
-      // Resumen totales
-      const totalPeso = entregasEnCursoList.reduce((sum, e) => sum + pesoEntrega(e), 0) + futuraPendientes.reduce((sum, f) => sum + (f.peso || 0), 0);
-      const totalCerrado = entregasEnCursoList.reduce((sum, e) => sum + pesoCerrado(e), 0);
-      const totalDevuelto = entregasEnCursoList.reduce((sum, e) => sum + pesoDevuelto(e), 0);
-      const totalPendiente = totalPeso - totalCerrado - totalDevuelto;
-
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Total: ${totalPeso}g | Cerrado: ${totalCerrado}g | Devuelto: ${totalDevuelto}g | Pendiente: ${totalPendiente}g`, 14, yPos);
-      yPos += 15;
-
       // Texto legal
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
       doc.text("El client respon de la custòdia, assegurança i de qualsevol pèrdua, robatori, dany o", 14, yPos);
       yPos += 4;
       doc.text("eventualitat dels lingots.", 14, yPos);
