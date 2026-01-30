@@ -2607,7 +2607,7 @@ export default function LingotesTracker({
         'Suissa': 'qZ29q4Iu7Qs94q1mqxBR',
       };
 
-      // Datos históricos hardcodeados (hasta 2026-ene)
+      // Datos históricos hardcodeados (hasta 2025-dic)
       const historicData = {
         '2023-01': { Milla: 200 },
         '2023-02': { Milla: 50, NJ: 150 },
@@ -2645,20 +2645,19 @@ export default function LingotesTracker({
         '2025-10': { Gemma: 50, NJ: 1300, Orcash: 300, Gaudia: 2050 },
         '2025-11': { Milla: 50, NJ: 350, Orcash: 400, Gaudia: 200 },
         '2025-12': { Gemma: 50, Milla: 105, NJ: 350, Gaudia: 250 },
-        '2026-01': { Gemma: 100, NJ: 900, Gaudia: 1500 },
       };
 
-      // Combinar datos históricos con datos calculados de 2026-02+
+      // Combinar datos históricos con datos calculados de 2026+
       const byMonth = { ...historicData };
 
-      // Procesar entregas de 2026-02 en adelante (2026-01 ya está hardcodeado)
+      // Procesar entregas de 2026 en adelante
       entregas.forEach(entrega => {
         (entrega.lingotes || []).forEach(l => {
           if (l.estado !== 'finalizado' && l.estado !== 'pendiente_pago') return;
           const fecha = l.fechaCierre || entrega.fechaEntrega;
           if (!fecha) return;
           const month = fecha.substring(0, 7);
-          if (month.length !== 7 || month <= '2026-01') return;
+          if (month.length !== 7 || month < '2026-01') return;
 
           if (!byMonth[month]) byMonth[month] = {};
           const cliente = clientes.find(c => c.id === entrega.clienteId);
@@ -2672,11 +2671,11 @@ export default function LingotesTracker({
         });
       });
 
-      // FUTURA cerrados de 2026-02+
+      // FUTURA cerrados de 2026+
       (futuraLingotes || []).forEach(f => {
         if (!f.precio || !f.fechaCierre) return;
         const month = f.fechaCierre.substring(0, 7);
-        if (month.length !== 7 || month <= '2026-01') return;
+        if (month.length !== 7 || month < '2026-01') return;
         if (!byMonth[month]) byMonth[month] = {};
         const cliente = clientes.find(c => c.id === f.clienteId);
         const clienteName = cliente?.nombre === 'Nova Joia' ? 'NJ' :
