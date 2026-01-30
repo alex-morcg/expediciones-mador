@@ -1392,65 +1392,6 @@ export default function LingotesTracker({
           </Card>
         )}
 
-        {/* Sección Facturas */}
-        {(() => {
-          // Lingotes cerrados sin factura de este cliente
-          const lingotesSinFactura = allLingotesCerrados.filter(l => !l.nFactura);
-          // Facturas de este cliente
-          const facturasCliente = (facturas || []).filter(f => f.clienteId === cliente.id);
-
-          return (
-            <Card>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-stone-800">Facturas</h3>
-                {lingotesSinFactura.length > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setFacturaSelection({});
-                      setFacturaFile(null);
-                      setShowFacturaModal(true);
-                    }}
-                  >
-                    + Subir factura
-                  </Button>
-                )}
-              </div>
-
-              {facturasCliente.length === 0 && lingotesSinFactura.length === 0 && (
-                <p className="text-stone-400 text-sm text-center py-4">No hay facturas ni lingotes pendientes de factura</p>
-              )}
-
-              {lingotesSinFactura.length > 0 && (
-                <div className="mb-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
-                  <div className="text-sm text-amber-700">
-                    <span className="font-bold">{lingotesSinFactura.length}</span> lingotes cerrados sin factura
-                  </div>
-                </div>
-              )}
-
-              {facturasCliente.length > 0 && (
-                <div className="space-y-2">
-                  {facturasCliente.map(f => (
-                    <div
-                      key={f.id}
-                      className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200 cursor-pointer hover:bg-stone-100"
-                      onClick={() => setViewingFactura(f)}
-                    >
-                      <div>
-                        <div className="font-semibold text-stone-800">{f.nombre}</div>
-                        <div className="text-xs text-stone-500">
-                          {f.lingotesCount || 0} lingotes • {new Date(f.createdAt).toLocaleDateString('es-ES')}
-                        </div>
-                      </div>
-                      <span className="text-stone-400">👁</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          );
-        })()}
 
         {/* Botón Nueva Entrega - solo si hay stock */}
         {(stockRealTotal > 0 || filteredPendiente > 0) && (
