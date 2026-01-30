@@ -3319,12 +3319,6 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
   });
   const logisticaPendienteCount = expedicionesLogisticaPendiente.length;
 
-  // Nombre del usuario activo para logs
-  const nombreUsuarioActivo = useMemo(() => {
-    const usuario = usuarios.find(u => u.id === usuarioActivo);
-    return usuario?.nombre || 'Usuario';
-  }, [usuarioActivo, usuarios]);
-
   if (showLingotes) {
     return (
       <LingotesTracker
@@ -3334,7 +3328,6 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         futuraLingotes={lingotesFutura}
         facturas={lingotesFacturas}
         config={lingotesConfig}
-        currentUser={nombreUsuarioActivo}
         onBack={() => setShowLingotes(false)}
         onSaveExportacion={saveLingoteExportacion}
         onDeleteExportacion={deleteLingoteExportacion}
