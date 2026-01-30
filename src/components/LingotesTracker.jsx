@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { LOGO_MADOR_BASE64 } from '../assets/logo';
 
 const formatNum = (num, decimals = 2) => {
   if (num === null || num === undefined || isNaN(num)) return '-';
@@ -861,21 +862,13 @@ export default function LingotesTracker({
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
 
-      // Header con logo (texto simulado) y datos empresa
-      doc.setFillColor(61, 55, 48);
-      doc.rect(14, 10, 60, 25, 'F');
-      doc.setTextColor(212, 175, 55);
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text("MA D'OR", 20, 22);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text("MAYORISTAS DE JOYERIA", 20, 28);
+      // Header con logo imagen
+      doc.addImage(LOGO_MADOR_BASE64, 'JPEG', 14, 10, 55, 30);
 
       // Datos del cliente
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
-      let yPos = 45;
+      let yPos = 50;
       if (cliente.razonSocial) { doc.text(cliente.razonSocial, 14, yPos); yPos += 5; }
       else { doc.text(cliente.nombre, 14, yPos); yPos += 5; }
       if (cliente.direccion) { doc.text(cliente.direccion, 14, yPos); yPos += 5; }
