@@ -906,13 +906,30 @@ export default function LingotesTracker({
         )}
 
         {/* En Curso */}
-        {entregasConEnCurso.length > 0 && (
+        {(() => {
+          // FUTURA sin cerrar (solo mostrar cuando no hay stock)
+          const futuraSinCerrar = stockRealTotal === 0 ? clienteFutura.filter(f => !f.precio) : [];
+          const showEnCurso = entregasConEnCurso.length > 0 || futuraSinCerrar.length > 0;
+
+          if (!showEnCurso) return null;
+
+          // Agrupar FUTURA sin cerrar por peso
+          const futuraPorPeso = {};
+          futuraSinCerrar.forEach(f => {
+            if (!futuraPorPeso[f.peso]) futuraPorPeso[f.peso] = { peso: f.peso, ids: [] };
+            futuraPorPeso[f.peso].ids.push(f.id);
+          });
+          const futuraGrupos = Object.values(futuraPorPeso);
+
+          const totalLingotesEnCurso = entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0) + futuraSinCerrar.length;
+
+          return (
           <Card>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-stone-800">En Curso</h3>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-stone-500">
-                  {entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0)} lingotes
+                  {totalLingotesEnCurso} lingotes
                 </span>
                 {entregasConEnCurso.length > 1 && (
                   <Button
@@ -1124,8 +1141,83 @@ export default function LingotesTracker({
                 );
               })}
             </div>
+
+            {/* FUTURA dentro de En Curso - solo cuando no hay stock */}
+            {futuraGrupos.length > 0 && (
+              <div className="p-3 rounded-xl bg-red-50 border-2 border-red-300 mt-3">
+                {/* Header: Etiqueta FUTURA */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="px-2 py-1 rounded-lg font-bold text-base bg-red-100 text-red-700"
+                    >FUTURA</span>
+                    <span className="text-xs text-red-600">Sin stock físico</span>
+                  </div>
+                  <span className="font-mono text-sm text-stone-600">
+                    {futuraSinCerrar.length} x {futuraSinCerrar[0]?.peso || '?'}g = {futuraSinCerrar.reduce((s, f) => s + (f.peso || 0), 0)}g
+                  </span>
+                </div>
+
+                {/* Sección CERRAR */}
+                <div className="mb-2">
+                  <div className="text-xs font-semibold text-stone-500 mb-1">Cerrar</div>
+                  {futuraGrupos.map(grupo => {
+                    const key = `futura_${cliente.id}_${grupo.peso}`;
+                    const cantidad = futuraCierreCantidad[key] || 1;
+                    const maxCantidad = grupo.ids.length;
+                    const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
+
+                    const handleCerrar = () => {
+                      const idsToClose = grupo.ids.slice(0, cantidad);
+                      setSelectedFuturaIds(idsToClose);
+                      setSelectedFuturaId(idsToClose[0]);
+                      setShowCierreModal(true);
+                    };
+
+                    return (
+                      <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
+                        <span className="font-mono font-semibold text-red-700">{maxCantidad} x {grupo.peso}g</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            {quickOptions.map(n => (
+                              <button
+                                key={n}
+                                onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
+                                className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                  cantidad === n
+                                    ? 'bg-red-500 text-white'
+                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                }`}
+                              >
+                                {n}
+                              </button>
+                            ))}
+                            {maxCantidad > 1 && (
+                              <input
+                                type="number"
+                                min="1"
+                                max={maxCantidad}
+                                value={cantidad}
+                                onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
+                                className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                                  !quickOptions.includes(cantidad) ? 'border-red-400 bg-red-50' : 'border-stone-300'
+                                }`}
+                              />
+                            )}
+                          </div>
+                          <Button size="sm" variant="success" onClick={handleCerrar}>
+                            Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </Card>
-        )}
+          );
+        })()}
 
         {/* Cerrados agrupados por entrega */}
         {allLingotesCerrados.length > 0 && (
@@ -1306,110 +1398,19 @@ export default function LingotesTracker({
           );
         })()}
 
-        {/* Módulo FUTURA Exportación - solo si stock = 0 */}
-        {stockRealTotal === 0 && filteredPendiente === 0 && (
-          <div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">⚠️</span>
-              <h3 className="font-bold text-red-800 text-lg">FUTURA Exportación</h3>
-            </div>
-            <p className="text-sm text-red-700 mb-4">
-              No hay stock disponible. Puedes registrar ventas que se asignarán cuando llegue la próxima exportación.
-            </p>
-
-            {/* Lingotes FUTURA existentes - agrupados por peso con selector de cantidad */}
-            {(() => {
-              const futuraSinCerrar = clienteFutura.filter(f => !f.precio);
-              const futuraCerrados = clienteFutura.filter(f => f.precio);
-
-              // Agrupar sin cerrar por peso
-              const porPeso = {};
-              futuraSinCerrar.forEach(f => {
-                if (!porPeso[f.peso]) porPeso[f.peso] = { peso: f.peso, ids: [] };
-                porPeso[f.peso].ids.push(f.id);
-              });
-              const grupos = Object.values(porPeso);
-
-              return (
-                <>
-                  {/* Sección Cerrar - con selectores de cantidad */}
-                  {grupos.length > 0 && (
-                    <div className="bg-white/60 rounded-xl p-3 mb-4">
-                      <div className="text-xs font-semibold text-stone-500 mb-2">Cerrar</div>
-                      {grupos.map(grupo => {
-                        const key = `futura_${cliente.id}_${grupo.peso}`;
-                        const cantidad = futuraCierreCantidad[key] || 1;
-                        const maxCantidad = grupo.ids.length;
-                        const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
-
-                        const handleCerrar = () => {
-                          const idsToClose = grupo.ids.slice(0, cantidad);
-                          setSelectedFuturaIds(idsToClose);
-                          setSelectedFuturaId(idsToClose[0]);
-                          setShowCierreModal(true);
-                        };
-
-                        return (
-                          <div key={grupo.peso} className="flex items-center justify-between bg-white/80 rounded-lg p-2 mb-1">
-                            <span className="font-mono font-semibold text-red-700">{maxCantidad} x {grupo.peso}g</span>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
-                                {quickOptions.map(n => (
-                                  <button
-                                    key={n}
-                                    onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
-                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                                      cantidad === n
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                                    }`}
-                                  >
-                                    {n}
-                                  </button>
-                                ))}
-                                {maxCantidad > 1 && (
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max={maxCantidad}
-                                    value={cantidad}
-                                    onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                                      !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
-                                    }`}
-                                  />
-                                )}
-                              </div>
-                              <Button size="sm" variant="success" onClick={handleCerrar}>
-                                Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                                  </>
-              );
-            })()}
-
-            {/* Botón añadir FUTURA */}
-            <Button
-              variant="danger"
-              className="w-full"
-              size="lg"
-              onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}
-            >
-              + Añadir venta FUTURA
-            </Button>
-          </div>
-        )}
-
-        {/* Botón Nueva Entrega - solo si hay stock */}
-        {(stockRealTotal > 0 || filteredPendiente > 0) && (
+        {/* Botón Nueva Entrega o Nueva FUTURA */}
+        {(stockRealTotal > 0 || filteredPendiente > 0) ? (
           <Button className="w-full" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
             + Nueva Entrega
+          </Button>
+        ) : (
+          <Button
+            variant="danger"
+            className="w-full"
+            size="lg"
+            onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}
+          >
+            + Nueva FUTURA
           </Button>
         )}
 
