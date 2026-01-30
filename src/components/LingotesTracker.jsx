@@ -2275,6 +2275,152 @@ export default function LingotesTracker({
     );
   };
 
+  // Estadisticas View
+  const EstadisticasView = () => {
+    // Calcular stats por cliente desde entregas cerradas
+    const statsClientes = clientes.map(cliente => {
+      const entregasCliente = entregas.filter(e => e.clienteId === cliente.id);
+
+      // Sumar gramos vendidos (cerrados: pendiente_pago + finalizado)
+      let gramosVendidos = 0;
+      let margenTotal = 0;
+      let margenCierre = 0;
+
+      entregasCliente.forEach(entrega => {
+        (entrega.lingotes || []).forEach(l => {
+          if (l.estado === 'pendiente_pago' || l.estado === 'finalizado') {
+            const pesoNeto = (l.peso || 0) - (l.pesoDevuelto || 0);
+            gramosVendidos += pesoNeto;
+            // Usar valores guardados si existen, sino calcular
+            if (l.margenTotal !== undefined) {
+              margenTotal += l.margenTotal;
+              margenCierre += l.margenCierre || 0;
+            } else if (l.precio && l.precioJofisa) {
+              // Fallback para lingotes cerrados antes de v6
+              const importeCliente = l.precio * pesoNeto;
+              const importeJofisa = l.precioJofisa * pesoNeto;
+              margenTotal += importeCliente - importeJofisa;
+              if (l.baseCliente && l.base) {
+                margenCierre += (l.baseCliente - l.base) * pesoNeto;
+              }
+            }
+          }
+        });
+      });
+
+      // También sumar FUTURA cerrados
+      const futuraCliente = (futuraLingotes || []).filter(f => f.clienteId === cliente.id && f.precio);
+      futuraCliente.forEach(f => {
+        gramosVendidos += f.peso || 0;
+        if (f.margenTotal !== undefined) {
+          margenTotal += f.margenTotal;
+          margenCierre += f.margenCierre || 0;
+        } else if (f.precio && f.precioJofisa) {
+          const importeCliente = f.precio * f.peso;
+          const importeJofisa = f.precioJofisa * f.peso;
+          margenTotal += importeCliente - importeJofisa;
+          if (f.baseCliente && f.base) {
+            margenCierre += (f.baseCliente - f.base) * f.peso;
+          }
+        }
+      });
+
+      const pctMargenCierre = margenTotal > 0 ? (margenCierre / margenTotal) * 100 : 0;
+
+      return {
+        id: cliente.id,
+        nombre: cliente.nombre,
+        color: cliente.color,
+        gramosVendidos,
+        margenTotal,
+        margenCierre,
+        pctMargenCierre,
+      };
+    }).filter(c => c.gramosVendidos > 0);
+
+    // Totales
+    const totalGramos = statsClientes.reduce((sum, c) => sum + c.gramosVendidos, 0);
+    const totalMargen = statsClientes.reduce((sum, c) => sum + c.margenTotal, 0);
+    const totalMargenCierre = statsClientes.reduce((sum, c) => sum + c.margenCierre, 0);
+    const totalPctCierre = totalMargen > 0 ? (totalMargenCierre / totalMargen) * 100 : 0;
+
+    return (
+      <div className="space-y-4">
+        <Card>
+          <h2 className="text-lg font-bold text-stone-800 mb-4">💰 Márgenes por Cliente</h2>
+
+          {statsClientes.length === 0 ? (
+            <p className="text-stone-400 text-center py-6">No hay lingotes cerrados todavía.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-stone-200">
+                    <th className="text-left py-2 px-1 font-semibold text-stone-600">Cliente</th>
+                    <th className="text-right py-2 px-1 font-semibold text-stone-600">Vendido</th>
+                    <th className="text-right py-2 px-1 font-semibold text-stone-600">Margen</th>
+                    <th className="text-right py-2 px-1 font-semibold text-stone-600">% Cierre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsClientes.map(c => (
+                    <tr key={c.id} className="border-b border-stone-100">
+                      <td className="py-3 px-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }} />
+                          <span className="font-medium text-stone-800">{c.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="text-right py-3 px-1 font-mono text-stone-700">{formatNum(c.gramosVendidos, 0)}g</td>
+                      <td className="text-right py-3 px-1 font-mono font-semibold text-emerald-600">{formatEur(c.margenTotal)}</td>
+                      <td className="text-right py-3 px-1">
+                        <span className="font-mono text-stone-600">{formatNum(c.pctMargenCierre, 1)}%</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-stone-50 font-semibold">
+                    <td className="py-3 px-1 text-stone-800">TOTAL</td>
+                    <td className="text-right py-3 px-1 font-mono text-stone-800">{formatNum(totalGramos, 0)}g</td>
+                    <td className="text-right py-3 px-1 font-mono text-emerald-700">{formatEur(totalMargen)}</td>
+                    <td className="text-right py-3 px-1 font-mono text-stone-700">{formatNum(totalPctCierre, 1)}%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {totalMargen > 0 && (
+          <Card>
+            <h3 className="text-sm font-semibold text-stone-600 mb-3">Desglose del Margen Total</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-stone-600">Margen Cierre (diff. base)</span>
+                <span className="font-mono font-semibold text-amber-600">{formatEur(totalMargenCierre)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-stone-600">Margen Operativo</span>
+                <span className="font-mono font-semibold text-emerald-600">{formatEur(totalMargen - totalMargenCierre)}</span>
+              </div>
+              <div className="h-3 bg-stone-200 rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500"
+                  style={{ width: `${totalPctCierre}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-stone-500">
+                <span>Cierre: {formatNum(totalPctCierre, 1)}%</span>
+                <span>Operativo: {formatNum(100 - totalPctCierre, 1)}%</span>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
   // Parametros View
   const ParametrosView = () => {
     const [tempStock, setTempStock] = useState(stockMador.toString());
@@ -2735,6 +2881,10 @@ export default function LingotesTracker({
     };
 
     const handleConfirm = () => {
+      // Margen cierre = diferencia base cliente vs base calculada × peso
+      const margenCierre = (baseClienteNum - base) * pesoTotalNeto;
+      // Margen total = importe cliente - importe jofisa
+      const margenTotal = importeClienteTotal - importeJofisaTotal;
       const cierreData = {
         euroOnza: euroOnzaNum,
         base,
@@ -2745,6 +2895,8 @@ export default function LingotesTracker({
         fechaCierre: formData.fechaCierre,
         nFactura: formData.nFactura,
         devolucion: formData.devolucion,
+        margenCierre: Math.round(margenCierre * 100) / 100,
+        margenTotal: Math.round(margenTotal * 100) / 100,
       };
       if (isFuturaCierre) {
         if (selectedFuturaIds.length > 1) {
@@ -3524,6 +3676,7 @@ export default function LingotesTracker({
         <nav className="bg-white border-b border-amber-200 flex shadow-sm">
           <TabBtn id="stock" label="Stock" icon="📊" />
           <TabBtn id="exportaciones" label="Exportaciones" icon="📦" />
+          <TabBtn id="estadisticas" label="Stats" icon="💰" />
           <TabBtn id="parametros" label="Ajustes" icon="⚙️" />
         </nav>
       </div>
@@ -3532,6 +3685,7 @@ export default function LingotesTracker({
       <main className="max-w-2xl mx-auto p-4 pb-24">
         {activeTab === 'stock' && <StockOverview />}
         {activeTab === 'exportaciones' && <ExportacionesView />}
+        {activeTab === 'estadisticas' && <EstadisticasView />}
         {activeTab === 'parametros' && <ParametrosView />}
       </main>
 
