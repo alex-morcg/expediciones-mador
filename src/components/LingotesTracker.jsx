@@ -266,6 +266,7 @@ export default function LingotesTracker({
 
   const addFuturaLingote = async (data) => {
     // data: { clienteId, peso, precio, nFactura, fechaCierre, pagado }
+    // FUTURA = lingotes vendidos sin stock físico, marcados como "futura" hasta que se asigne exportación
     const importe = data.precio ? data.peso * data.precio : 0;
     await onSaveFutura({
       clienteId: data.clienteId,
@@ -275,6 +276,8 @@ export default function LingotesTracker({
       nFactura: data.nFactura || null,
       fechaCierre: data.fechaCierre || null,
       pagado: data.pagado || false,
+      estado: 'futura', // Estado especial: vendido sin exportación asignada
+      fechaCreacion: new Date().toISOString(),
     });
 
     setShowFuturaModal(false);
@@ -1387,6 +1390,24 @@ export default function LingotesTracker({
           await onSaveExportacion(data, editingExp.id);
         } else {
           await onSaveExportacion(data);
+
+          // Check if there are FUTURA lingotes pending assignment
+          const totalFutura = (futuraLingotes || []).length;
+          if (totalFutura > 0) {
+            // Group by client
+            const futuraByClient = {};
+            (futuraLingotes || []).forEach(f => {
+              const cliente = getCliente(f.clienteId);
+              const nombre = cliente?.nombre || 'Desconocido';
+              if (!futuraByClient[nombre]) futuraByClient[nombre] = [];
+              futuraByClient[nombre].push(f);
+            });
+            const clientesList = Object.entries(futuraByClient)
+              .map(([nombre, lingotes]) => `${nombre}: ${lingotes.length} lingotes (${formatNum(lingotes.reduce((s,l) => s + (l.peso||0), 0), 0)}g)`)
+              .join('\n');
+
+            alert(`Hay ${totalFutura} lingotes FUTURA pendientes de asignar:\n\n${clientesList}\n\nPuedes asignarlos desde la ficha de cada cliente.`);
+          }
         }
 
         setShowNew(false);

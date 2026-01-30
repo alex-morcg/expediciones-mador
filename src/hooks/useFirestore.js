@@ -16,6 +16,31 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// Helper para calcular fino de una línea (mismo cálculo que en mador-tracker.jsx)
+const calcularFinoLinea = (bruto, ley) => {
+  const fino = bruto * (ley / 1000);
+  return Math.trunc(fino * 100) / 100;
+};
+
+// Helper para calcular totales de un paquete (versión simplificada para recálculo)
+const calcularTotalFraPaquete = (paquete, cliente) => {
+  const noCuentaNegativas = cliente?.lineasNegativasNoCuentanPeso ?? true;
+
+  // Para cálculo de €: incluimos TODAS las líneas (incluso negativas)
+  const finoTotalCalculo = paquete.lineas.reduce((sum, l) => sum + calcularFinoLinea(l.bruto, l.ley), 0);
+
+  const precioEfectivo = paquete.precioFino || null;
+  if (!precioEfectivo) return null;
+
+  const base = finoTotalCalculo * precioEfectivo;
+  const descuento = base * (paquete.descuento / 100);
+  const baseCliente = base - descuento;
+  const igi = baseCliente * (paquete.igi / 100);
+  const totalFra = baseCliente + igi;
+
+  return totalFra;
+};
+
 // Seed data — used only on first run when Firestore is empty
 const seedCategorias = [
   { nombre: 'Lingote Chatarra 18K', esFino: false },
@@ -44,11 +69,22 @@ const seedExpediciones = [
   { nombre: 'E53', precioOro: 138 },
 ];
 
+// Generar código único de 8 caracteres alfanuméricos
+const generarCodigoUsuario = () => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let codigo = '';
+  for (let i = 0; i < 8; i++) {
+    codigo += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return codigo;
+};
+
 const seedUsuarios = [
-  { id: 'maria', nombre: 'María' },
-  { id: 'pedro', nombre: 'Pedro' },
-  { id: 'ana', nombre: 'Ana' },
-  { id: 'carlos', nombre: 'Carlos' },
+  { id: 'alex', nombre: 'Alex', codigo: 'admin001' }, // alex es especial - puede editar usuarios
+  { id: 'maria', nombre: 'María', codigo: 'm4r1a001' },
+  { id: 'pedro', nombre: 'Pedro', codigo: 'p3dr0001' },
+  { id: 'ana', nombre: 'Ana', codigo: 'an4a0001' },
+  { id: 'carlos', nombre: 'Carlos', codigo: 'c4rl0s01' },
 ];
 
 const seedEstados = [
@@ -169,9 +205,9 @@ async function seedDatabase() {
     expIds.push(ref.id);
   }
 
-  // Seed usuarios (with fixed IDs)
+  // Seed usuarios (with fixed IDs and codes)
   for (const usr of seedUsuarios) {
-    await setDoc(doc(db, 'usuarios', usr.id), { nombre: usr.nombre });
+    await setDoc(doc(db, 'usuarios', usr.id), { nombre: usr.nombre, codigo: usr.codigo });
   }
 
   // Seed estados (with fixed IDs)
@@ -517,9 +553,42 @@ export function useFirestore(activeSection = 'expediciones') {
         nombre: nuevoNombre,
         ultimaModificacion: modificacion,
       };
+
+      let logs = [...(oldPaq.logs || [])];
       if (log) {
-        updateData.logs = [...(oldPaq.logs || []), log];
+        logs.push(log);
       }
+
+      // Recalcular verificación si existe y cambiaron datos que afectan al total
+      const cambioAfectaTotal = oldPaq.descuento !== data.descuento || oldPaq.igi !== data.igi;
+      if (cambioAfectaTotal && oldPaq.verificacionIA && oldPaq.verificacionIA.totalFactura != null) {
+        const cliente = getCliente(data.clienteId);
+        const paqActualizado = { ...oldPaq, ...data, lineas: oldPaq.lineas };
+        const nuevoTotalPaquete = calcularTotalFraPaquete(paqActualizado, cliente);
+
+        if (nuevoTotalPaquete != null) {
+          const diferenciaAnterior = oldPaq.verificacionIA.diferencia;
+          const nuevaDiferencia = oldPaq.verificacionIA.totalFactura - nuevoTotalPaquete;
+
+          updateData.verificacionIA = {
+            ...oldPaq.verificacionIA,
+            totalPaquete: nuevoTotalPaquete,
+            diferencia: nuevaDiferencia,
+            validado: false,
+          };
+
+          const logRecalculo = {
+            id: Date.now() + 1,
+            fecha: modificacion.fecha,
+            usuario: usuarioActivo,
+            accion: 'recalcular_verificacion',
+            detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia },
+          };
+          logs.push(logRecalculo);
+        }
+      }
+
+      updateData.logs = logs;
       await updateDoc(doc(db, 'paquetes', editingItem.id), updateData);
     } else {
       const log = {
@@ -557,11 +626,44 @@ export function useFirestore(activeSection = 'expediciones') {
       accion: 'añadir_linea',
       detalles: { bruto: linea.bruto, ley: linea.ley },
     };
-    await updateDoc(doc(db, 'paquetes', paqueteId), {
-      lineas: [...paq.lineas, { id: Date.now(), ...linea }],
+
+    const newLineas = [...paq.lineas, { id: Date.now(), ...linea }];
+    const updateData = {
+      lineas: newLineas,
       ultimaModificacion: modificacion,
       logs: [...(paq.logs || []), log],
-    });
+    };
+
+    // Recalcular verificación si existe
+    if (paq.verificacionIA && paq.verificacionIA.totalFactura != null) {
+      const cliente = clientes.find(c => c.id === paq.clienteId);
+      const paqConNuevasLineas = { ...paq, lineas: newLineas };
+      const nuevoTotalPaquete = calcularTotalFraPaquete(paqConNuevasLineas, cliente);
+
+      if (nuevoTotalPaquete != null) {
+        const diferenciaAnterior = paq.verificacionIA.diferencia;
+        const nuevaDiferencia = paq.verificacionIA.totalFactura - nuevoTotalPaquete;
+
+        updateData.verificacionIA = {
+          ...paq.verificacionIA,
+          totalPaquete: nuevoTotalPaquete,
+          diferencia: nuevaDiferencia,
+          validado: false, // Invalidar al cambiar
+        };
+
+        // Añadir log del recálculo
+        const logRecalculo = {
+          id: Date.now() + 1,
+          fecha: modificacion.fecha,
+          usuario: usuarioActivo,
+          accion: 'recalcular_verificacion',
+          detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia },
+        };
+        updateData.logs = [...updateData.logs, logRecalculo];
+      }
+    }
+
+    await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
   };
 
   const removeLineaFromPaquete = async (paqueteId, lineaId, usuarioActivo) => {
@@ -576,11 +678,43 @@ export function useFirestore(activeSection = 'expediciones') {
       accion: 'eliminar_linea',
       detalles: linea ? { bruto: linea.bruto, ley: linea.ley } : null,
     };
-    await updateDoc(doc(db, 'paquetes', paqueteId), {
-      lineas: paq.lineas.filter(l => l.id !== lineaId),
+
+    const newLineas = paq.lineas.filter(l => l.id !== lineaId);
+    const updateData = {
+      lineas: newLineas,
       ultimaModificacion: modificacion,
       logs: [...(paq.logs || []), log],
-    });
+    };
+
+    // Recalcular verificación si existe
+    if (paq.verificacionIA && paq.verificacionIA.totalFactura != null) {
+      const cliente = clientes.find(c => c.id === paq.clienteId);
+      const paqConNuevasLineas = { ...paq, lineas: newLineas };
+      const nuevoTotalPaquete = calcularTotalFraPaquete(paqConNuevasLineas, cliente);
+
+      if (nuevoTotalPaquete != null) {
+        const diferenciaAnterior = paq.verificacionIA.diferencia;
+        const nuevaDiferencia = paq.verificacionIA.totalFactura - nuevoTotalPaquete;
+
+        updateData.verificacionIA = {
+          ...paq.verificacionIA,
+          totalPaquete: nuevoTotalPaquete,
+          diferencia: nuevaDiferencia,
+          validado: false,
+        };
+
+        const logRecalculo = {
+          id: Date.now() + 1,
+          fecha: modificacion.fecha,
+          usuario: usuarioActivo,
+          accion: 'recalcular_verificacion',
+          detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia },
+        };
+        updateData.logs = [...updateData.logs, logRecalculo];
+      }
+    }
+
+    await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
   };
 
   const updatePaqueteCierre = async (paqueteId, precioFino, cierreJofisa, usuarioActivo) => {
@@ -604,12 +738,44 @@ export function useFirestore(activeSection = 'expediciones') {
         cierreJofisa: { antes: paq.cierreJofisa, despues: cierreJofisa },
       },
     };
-    await updateDoc(doc(db, 'paquetes', paqueteId), {
+
+    let logs = [...(paq.logs || []), log];
+    const updateData = {
       precioFino,
       cierreJofisa,
       ultimaModificacion: modificacion,
-      logs: [...(paq.logs || []), log],
-    });
+    };
+
+    // Recalcular verificación si existe y cambió el precio fino
+    if (oldPrecio !== newPrecio && paq.verificacionIA && paq.verificacionIA.totalFactura != null) {
+      const cliente = clientes.find(c => c.id === paq.clienteId);
+      const paqActualizado = { ...paq, precioFino };
+      const nuevoTotalPaquete = calcularTotalFraPaquete(paqActualizado, cliente);
+
+      if (nuevoTotalPaquete != null) {
+        const diferenciaAnterior = paq.verificacionIA.diferencia;
+        const nuevaDiferencia = paq.verificacionIA.totalFactura - nuevoTotalPaquete;
+
+        updateData.verificacionIA = {
+          ...paq.verificacionIA,
+          totalPaquete: nuevoTotalPaquete,
+          diferencia: nuevaDiferencia,
+          validado: false,
+        };
+
+        const logRecalculo = {
+          id: Date.now() + 1,
+          fecha: modificacion.fecha,
+          usuario: usuarioActivo,
+          accion: 'recalcular_verificacion',
+          detalles: { diferenciaAntes: diferenciaAnterior, diferenciaDespues: nuevaDiferencia },
+        };
+        logs.push(logRecalculo);
+      }
+    }
+
+    updateData.logs = logs;
+    await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
   };
 
   const updatePaqueteFactura = async (paqueteId, factura, usuarioActivo) => {
@@ -767,19 +933,39 @@ export function useFirestore(activeSection = 'expediciones') {
     if (usuarios.find(u => u.id === id)) {
       throw new Error('Ya existe un usuario con ese nombre');
     }
-    await setDoc(doc(db, 'usuarios', id), { nombre });
-    return id;
+    // Generar código único
+    let codigo = generarCodigoUsuario();
+    // Asegurar que no exista ya
+    while (usuarios.find(u => u.codigo === codigo)) {
+      codigo = generarCodigoUsuario();
+    }
+    await setDoc(doc(db, 'usuarios', id), { nombre, codigo });
+    return { id, codigo };
   };
 
   const eliminarUsuario = async (id) => {
     if (usuarios.length <= 1) {
       throw new Error('Debe haber al menos un usuario');
     }
+    // No permitir eliminar a alex
+    if (id === 'alex') {
+      throw new Error('No se puede eliminar al usuario admin');
+    }
     await deleteDoc(doc(db, 'usuarios', id));
   };
 
   const guardarEdicionUsuario = async (id, nombre) => {
     await updateDoc(doc(db, 'usuarios', id), { nombre });
+  };
+
+  // Regenerar código de usuario (solo alex puede hacerlo)
+  const regenerarCodigoUsuario = async (id) => {
+    let codigo = generarCodigoUsuario();
+    while (usuarios.find(u => u.codigo === codigo)) {
+      codigo = generarCodigoUsuario();
+    }
+    await updateDoc(doc(db, 'usuarios', id), { codigo });
+    return codigo;
   };
 
   // Estados
@@ -909,6 +1095,7 @@ export function useFirestore(activeSection = 'expediciones') {
     agregarUsuario,
     eliminarUsuario,
     guardarEdicionUsuario,
+    regenerarCodigoUsuario,
     agregarEstado,
     eliminarEstado,
     guardarEdicionEstado,

@@ -62,7 +62,7 @@ export default function MadorTracker() {
     marcarTodosComoEstado: fmarcarTodos, addComentarioToPaquete: faddComentario,
     deleteComentarioFromPaquete: fdeleteComentario,
     agregarUsuario: fagregarUsuario, eliminarUsuario: feliminarUsuario,
-    guardarEdicionUsuario: fguardarEdicionUsuario,
+    guardarEdicionUsuario: fguardarEdicionUsuario, regenerarCodigoUsuario: fregenerarCodigoUsuario,
     agregarEstado: fagregarEstado, eliminarEstado: feliminarEstado,
     guardarEdicionEstado: fguardarEdicionEstado,
     updateExpedicionResultados: fupdateResultados,
@@ -81,23 +81,50 @@ export default function MadorTracker() {
   const [statsExpHasta, setStatsExpHasta] = useState(null);
   const [statsClienteId, setStatsClienteId] = useState(null);
 
-  // Usuario activo from URL param (required)
-  const [usuarioActivo, setUsuarioActivo] = useState(() => {
+  // Código de URL (sin nombre de parámetro, ej: ?a7x9k2mf)
+  const [codigoUrl, setCodigoUrl] = useState(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('user') || null;
+      const searchParams = window.location.search;
+      // El código es el primer parámetro sin valor (ej: ?a7x9k2mf)
+      if (searchParams.startsWith('?') && searchParams.length > 1) {
+        const firstParam = searchParams.slice(1).split('&')[0];
+        // Si no tiene '=' es solo el código
+        if (!firstParam.includes('=')) {
+          return firstParam;
+        }
+      }
     }
     return null;
   });
 
-  // Sync URL when user changes
-  useEffect(() => {
-    if (usuarioActivo) {
+  // Usuario activo derivado del código
+  const usuarioActivo = useMemo(() => {
+    if (!codigoUrl || !usuarios.length) return null;
+    const usuario = usuarios.find(u => u.codigo === codigoUrl);
+    return usuario?.id || null;
+  }, [codigoUrl, usuarios]);
+
+  // Si no hay código válido y hay usuarios cargados, mostrar error
+  const codigoInvalido = useMemo(() => {
+    if (loading) return false;
+    if (!codigoUrl) return true;
+    if (!usuarios.length) return false;
+    return !usuarios.find(u => u.codigo === codigoUrl);
+  }, [codigoUrl, usuarios, loading]);
+
+  // Sync URL when changing user (solo para alex que puede cambiar)
+  const cambiarUsuario = (nuevoUsuarioId) => {
+    const usuario = usuarios.find(u => u.id === nuevoUsuarioId);
+    if (usuario?.codigo) {
+      setCodigoUrl(usuario.codigo);
       const url = new URL(window.location);
-      url.searchParams.set('user', usuarioActivo);
+      url.search = `?${usuario.codigo}`;
       window.history.replaceState({}, '', url);
     }
-  }, [usuarioActivo]);
+  };
+
+  // Es alex (puede editar usuarios)
+  const esAlex = usuarioActivo === 'alex';
 
   // Auto-assign "en_jofisa" status when expedition export date has passed
   useEffect(() => {
@@ -1817,12 +1844,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     };
 
     const eliminarUsuario = async (id) => {
-      if (usuarioActivo === id) {
-        const otroUsuario = usuarios.find(u => u.id !== id);
-        if (otroUsuario) setUsuarioActivo(otroUsuario.id);
-      }
       try {
         await feliminarUsuario(id);
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+
+    const regenerarCodigo = async (id) => {
+      try {
+        const nuevoCodigo = await fregenerarCodigoUsuario(id);
+        alert(`Nuevo código generado: ${nuevoCodigo}`);
       } catch (e) {
         alert(e.message);
       }
@@ -1862,26 +1894,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     
     return (
       <div className="space-y-6">
-        {/* Sección Usuarios */}
+        {/* Sección Usuarios - solo visible para alex */}
+        {esAlex && (
         <div>
-          <h2 className="text-xl font-bold text-amber-800 mb-4">👥 Usuarios</h2>
-          
-          {/* Usuario activo */}
-          <Card className="mb-3">
-            <div className="flex items-center justify-between">
-              <span className="text-stone-600 text-sm">Usuario activo:</span>
-              <select
-                value={usuarioActivo}
-                onChange={(e) => setUsuarioActivo(e.target.value)}
-                className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-1 text-stone-800 font-medium focus:outline-none focus:border-amber-500"
-              >
-                {usuarios.map(u => (
-                  <option key={u.id} value={u.id}>{u.nombre}</option>
-                ))}
-              </select>
-            </div>
-          </Card>
-          
+          <h2 className="text-xl font-bold text-amber-800 mb-4">👥 Editar Usuarios</h2>
+
+          <p className="text-stone-500 text-sm mb-4">
+            Cada usuario tiene un código único de acceso. Comparte la URL con el código para dar acceso.
+          </p>
+
           <div className="space-y-2">
             {usuarios.map(u => (
               <Card key={u.id} className={u.id === usuarioActivo ? 'ring-2 ring-amber-400' : ''}>
@@ -1896,16 +1917,35 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       autoFocus
                     />
                   ) : (
-                    <span className="flex-1 text-stone-800 font-medium">{u.nombre}</span>
+                    <div className="flex-1">
+                      <span className="text-stone-800 font-medium">{u.nombre}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="text-xs bg-stone-100 px-2 py-0.5 rounded text-stone-600 font-mono">?{u.codigo}</code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?${u.codigo}`);
+                            alert('URL copiada al portapapeles');
+                          }}
+                          className="text-xs text-amber-600 hover:text-amber-800"
+                        >copiar URL</button>
+                      </div>
+                    </div>
                   )}
-                  {u.id === usuarioActivo && <span className="text-amber-500 text-xs">✓ Activo</span>}
+                  {u.id === usuarioActivo && <span className="text-amber-500 text-xs">✓ Tú</span>}
                   <div className="flex gap-1">
                     {editandoUsuarioId === u.id ? (
                       <button onClick={() => guardarEdicionUsuario(u.id)} className="text-green-600 px-2">✓</button>
                     ) : (
                       <>
+                        <button
+                          onClick={() => regenerarCodigo(u.id)}
+                          className="text-blue-600 hover:text-blue-800 px-1 text-sm"
+                          title="Regenerar código"
+                        >🔄</button>
                         <button onClick={() => { setEditandoUsuarioId(u.id); setNombreUsuarioEditado(u.nombre); }} className="text-amber-600 hover:text-amber-800 px-1 text-sm">✏️</button>
-                        <button onClick={() => eliminarUsuario(u.id)} className="text-red-400 hover:text-red-600 px-1 text-sm">🗑️</button>
+                        {u.id !== 'alex' && (
+                          <button onClick={() => eliminarUsuario(u.id)} className="text-red-400 hover:text-red-600 px-1 text-sm">🗑️</button>
+                        )}
                       </>
                     )}
                   </div>
@@ -1913,7 +1953,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               </Card>
             ))}
           </div>
-          
+
           <div className="flex gap-2 mt-3">
             <input
               type="text"
@@ -1923,13 +1963,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               onKeyDown={(e) => e.key === 'Enter' && nuevoNombreUsuario.trim() && agregarUsuario()}
               className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
             />
-            <Button 
+            <Button
               onClick={agregarUsuario}
               disabled={!nuevoNombreUsuario.trim()}
               disabledReason="Escribe un nombre"
             >+ Añadir</Button>
           </div>
         </div>
+        )}
         
         {/* Separador */}
         <hr className="border-amber-200" />
@@ -3245,29 +3286,19 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     );
   }
 
-  // Gate: require valid ?user= param
-  if (!usuarioActivo || !usuarios.find(u => u.id === usuarioActivo)) {
+  // Gate: require valid code in URL
+  if (codigoInvalido) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4">
         <div className="bg-white border border-amber-300 rounded-2xl p-8 shadow-xl max-w-sm w-full text-center">
-          <div className="text-4xl mb-4">✋</div>
+          <div className="text-4xl mb-4">🔐</div>
           <h1 className="text-xl font-bold text-amber-800 mb-2">Ma d'Or Tracker</h1>
-          {!usuarioActivo ? (
-            <p className="text-stone-600 mb-6">Selecciona tu usuario para acceder:</p>
+          {!codigoUrl ? (
+            <p className="text-stone-600 mb-4">Necesitas un código de acceso para entrar.</p>
           ) : (
-            <p className="text-red-600 mb-6">Usuario no reconocido.</p>
+            <p className="text-red-600 mb-4">Código de acceso inválido.</p>
           )}
-          <div className="space-y-2">
-            {usuarios.map(u => (
-              <button
-                key={u.id}
-                onClick={() => setUsuarioActivo(u.id)}
-                className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium py-3 px-4 rounded-xl border border-amber-300 transition-colors"
-              >
-                {u.nombre}
-              </button>
-            ))}
-          </div>
+          <p className="text-stone-500 text-sm">Contacta con el administrador para obtener tu código de acceso.</p>
         </div>
       </div>
     );
