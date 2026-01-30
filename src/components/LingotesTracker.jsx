@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { LOGO_MADOR_BASE64 } from '../assets/logo';
 
 const formatNum = (num, decimals = 2) => {
@@ -2594,8 +2595,130 @@ export default function LingotesTracker({
       return { byYear, sortedYears, clientesConDatos, totalesPorAnyo };
     }, [entregas, clientes]);
 
+    // Stats por mes para gráfico stacked
+    const statsPorMes = useMemo(() => {
+      const byMonth = {}; // { 'YYYY-MM': { clienteId: gramos } }
+
+      // Procesar entregas - usar fechaCierre de cada lingote cerrado
+      entregas.forEach(entrega => {
+        (entrega.lingotes || []).forEach(l => {
+          // Solo contar cerrados (vendidos)
+          if (l.estado !== 'finalizado' && l.estado !== 'pendiente_pago') return;
+
+          // Usar fechaCierre si existe, sino fechaEntrega
+          const fecha = l.fechaCierre || entrega.fechaEntrega;
+          if (!fecha) return;
+
+          const month = fecha.substring(0, 7); // 'YYYY-MM'
+          if (month.length !== 7) return;
+
+          if (!byMonth[month]) byMonth[month] = {};
+
+          const clienteId = entrega.clienteId;
+          if (!byMonth[month][clienteId]) byMonth[month][clienteId] = 0;
+
+          const pesoNeto = (l.peso || 0) - (l.pesoDevuelto || 0);
+          byMonth[month][clienteId] += pesoNeto;
+        });
+      });
+
+      // También incluir FUTURA cerrados
+      (futuraLingotes || []).forEach(f => {
+        if (!f.precio || !f.fechaCierre) return;
+        const month = f.fechaCierre.substring(0, 7);
+        if (month.length !== 7) return;
+
+        if (!byMonth[month]) byMonth[month] = {};
+        if (!byMonth[month][f.clienteId]) byMonth[month][f.clienteId] = 0;
+        byMonth[month][f.clienteId] += f.peso || 0;
+      });
+
+      // Ordenar meses y convertir a formato para recharts
+      const sortedMonths = Object.keys(byMonth).sort();
+
+      // Obtener lista de clientes que tienen datos
+      const clientesConVentas = clientes.filter(c =>
+        sortedMonths.some(m => byMonth[m]?.[c.id] > 0)
+      );
+
+      // Crear datos para el gráfico
+      const chartData = sortedMonths.map(month => {
+        const [year, mes] = month.split('-');
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const label = `${monthNames[parseInt(mes) - 1]} ${year.slice(2)}`;
+
+        const entry = { month, label };
+        let total = 0;
+        clientesConVentas.forEach(c => {
+          entry[c.id] = byMonth[month]?.[c.id] || 0;
+          total += entry[c.id];
+        });
+        entry.total = total;
+        return entry;
+      });
+
+      return { chartData, clientesConVentas };
+    }, [entregas, futuraLingotes, clientes]);
+
+    // Ancho del gráfico basado en número de meses (mínimo 60px por barra)
+    const chartWidth = Math.max(statsPorMes.chartData.length * 60, 400);
+
     return (
       <div className="space-y-4">
+        {/* Gráfico Mensual Stacked */}
+        {statsPorMes.chartData.length > 0 && (
+          <Card>
+            <h2 className="text-lg font-bold text-stone-800 mb-4">📈 Volumen Vendido por Mes</h2>
+            <div className="overflow-x-auto pb-2">
+              <div style={{ width: chartWidth, minWidth: '100%', height: 280 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={statsPorMes.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 10, fill: '#78716c' }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={50}
+                      interval={0}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: '#78716c' }}
+                      tickFormatter={(v) => `${v}g`}
+                      width={50}
+                    />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        const cliente = clientes.find(c => c.id === name);
+                        return [`${formatNum(value, 0)}g`, cliente?.nombre || name];
+                      }}
+                      labelFormatter={(label) => `Mes: ${label}`}
+                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    />
+                    <Legend
+                      formatter={(value) => {
+                        const cliente = clientes.find(c => c.id === value);
+                        return cliente?.nombre || value;
+                      }}
+                      wrapperStyle={{ fontSize: 10, paddingTop: 10 }}
+                    />
+                    {statsPorMes.clientesConVentas.map((cliente) => (
+                      <Bar
+                        key={cliente.id}
+                        dataKey={cliente.id}
+                        stackId="ventas"
+                        fill={cliente.color || '#8884d8'}
+                        name={cliente.id}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <p className="text-[10px] text-stone-400 mt-1">Gramos vendidos (cerrados) por mes, agrupados por cliente</p>
+          </Card>
+        )}
+
         {/* Stats por Año */}
         <Card>
           <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Entregas por Año</h2>
