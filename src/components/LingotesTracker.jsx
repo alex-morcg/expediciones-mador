@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const formatNum = (num, decimals = 2) => {
   if (num === null || num === undefined || isNaN(num)) return '-';
@@ -907,7 +907,7 @@ export default function LingotesTracker({
       const totalCerrado = resumenData.reduce((sum, r) => sum + r[2], 0);
       const totalPendiente = resumenData.reduce((sum, r) => sum + r[3], 0);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Entregas vivas', 'Peso Entregado', 'Peso Cerrado', 'Pendiente']],
         body: [...resumenData, ['TOTAL', totalEntregado, totalCerrado, totalPendiente]],
@@ -919,7 +919,7 @@ export default function LingotesTracker({
         tableWidth: 110,
       });
 
-      yPos = doc.lastAutoTable.finalY + 15;
+      yPos = (doc).lastAutoTable.finalY + 15;
 
       // Detalle de lingotes EN CURSO
       const lingotesEnCursoData = [];
@@ -956,7 +956,7 @@ export default function LingotesTracker({
       });
 
       if (lingotesEnCursoData.length > 0) {
-        doc.autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['ENTREGA', 'peso', 'precio', 'importe', 'Nº fra', 'fecha cierre', 'Pagado', 'DEVOLUCIÓN']],
           body: lingotesEnCursoData,
@@ -974,7 +974,7 @@ export default function LingotesTracker({
             7: { halign: 'center', cellWidth: 25 },
           },
         });
-        yPos = doc.lastAutoTable.finalY + 15;
+        yPos = (doc).lastAutoTable.finalY + 15;
       }
 
       // Texto legal
