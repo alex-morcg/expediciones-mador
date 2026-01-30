@@ -3328,6 +3328,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         futuraLingotes={lingotesFutura}
         facturas={lingotesFacturas}
         config={lingotesConfig}
+        currentUser={usuarioActual?.nombre || 'Usuario'}
         onBack={() => setShowLingotes(false)}
         onSaveExportacion={saveLingoteExportacion}
         onDeleteExportacion={deleteLingoteExportacion}

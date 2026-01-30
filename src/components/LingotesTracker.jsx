@@ -71,6 +71,7 @@ export default function LingotesTracker({
   futuraLingotes,
   facturas,
   config,
+  currentUser = 'Usuario',
   onBack,
   onSaveExportacion,
   onDeleteExportacion,
@@ -183,12 +184,6 @@ export default function LingotesTracker({
   const stockRealLingotes = useMemo(() => {
     return stockGlobal.reduce((sum, s) => sum + s.cantidad, 0);
   }, [stockGlobal]);
-
-  // Obtener usuario de la URL
-  const currentUser = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('user') || 'Usuario';
-  }, []);
 
   // Helper para crear logs
   const createLog = (tipo, descripcion) => ({
@@ -611,6 +606,7 @@ export default function LingotesTracker({
     const stockColor = getStockColor(stockRealTotal);
     const [showComposicion, setShowComposicion] = useState(false);
 
+    // Renderizar ClienteDetalle si hay cliente seleccionado
     if (selectedCliente) {
       return <ClienteDetalle />;
     }
