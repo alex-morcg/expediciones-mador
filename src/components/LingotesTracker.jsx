@@ -976,6 +976,14 @@ export default function LingotesTracker({
       doc.text("firmat client:", 14, yPos);
       yPos += 5;
       doc.rect(14, yPos, 60, 25);
+      yPos += 30;
+
+      // Timestamp de generación
+      const now = new Date();
+      const timestamp = `arxiu generat a ${now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })} a les ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text(timestamp, 14, yPos);
 
       // Generar blob y compartir
       const pdfBlob = doc.output('blob');
