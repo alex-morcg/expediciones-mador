@@ -864,32 +864,38 @@ export default function LingotesTracker({
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
             {/* Cuadrados grandes: stats de entregas EN CURSO */}
             {(() => {
-              const fechasEnCurso = entregasEnCursoList.map(e => formatEntregaShort(e.fechaEntrega)).join(' · ');
+              const nombresEnCurso = entregasEnCursoList.map(e => {
+                const exp = getExportacion(e.exportacionId);
+                return `${exp?.nombre || ''} ${formatEntregaShort(e.fechaEntrega)}`.trim();
+              }).join(' · ');
               return (
-                <>
-                  {/* Fechas de entregas en curso */}
-                  {fechasEnCurso && (
-                    <div className="text-xs text-white/60 mt-2 mb-1">{fechasEnCurso}</div>
-                  )}
-                  <div className="grid grid-cols-4 gap-3 mt-2">
-                    <div className="bg-white/20 rounded-xl p-2">
-                      <div className="text-lg font-bold">📦 {formatNum(enCursoEntregado, 0)}</div>
-                      <div className="text-xs text-white/70">Entregado</div>
-                    </div>
-                    <div className="bg-white/20 rounded-xl p-2">
-                      <div className="text-lg font-bold">✅ {formatNum(enCursoCerrado, 0)}</div>
-                      <div className="text-xs text-white/70">Cerrado</div>
-                    </div>
-                    <div className="bg-white/20 rounded-xl p-2">
-                      <div className="text-lg font-bold">↩️ {formatNum(enCursoDevuelto, 0)}</div>
-                      <div className="text-xs text-white/70">Devuelto</div>
-                    </div>
-                    <div className="bg-white/20 rounded-xl p-2">
-                      <div className="text-lg font-bold">⏳ {formatNum(enCursoPendiente, 0)}</div>
-                      <div className="text-xs text-white/70">Pendiente</div>
-                    </div>
+                <div className="grid grid-cols-5 gap-2 mt-4">
+                  {/* Primera columna: nombres de entregas en curso */}
+                  <div className="flex items-center justify-center">
+                    <span
+                      className="px-1.5 py-0.5 rounded font-bold text-xs"
+                      style={{ backgroundColor: entregasEnCursoList[0] ? getEntregaColor(entregasEnCursoList[0].fechaEntrega) + '40' : 'transparent' }}
+                    >
+                      {nombresEnCurso || '-'}
+                    </span>
                   </div>
-                </>
+                  <div className="bg-white/20 rounded-xl p-2">
+                    <div className="text-lg font-bold">📦 {formatNum(enCursoEntregado, 0)}</div>
+                    <div className="text-xs text-white/70">Entregado</div>
+                  </div>
+                  <div className="bg-white/20 rounded-xl p-2">
+                    <div className="text-lg font-bold">✅ {formatNum(enCursoCerrado, 0)}</div>
+                    <div className="text-xs text-white/70">Cerrado</div>
+                  </div>
+                  <div className="bg-white/20 rounded-xl p-2">
+                    <div className="text-lg font-bold">↩️ {formatNum(enCursoDevuelto, 0)}</div>
+                    <div className="text-xs text-white/70">Devuelto</div>
+                  </div>
+                  <div className="bg-white/20 rounded-xl p-2">
+                    <div className="text-lg font-bold">⏳ {formatNum(enCursoPendiente, 0)}</div>
+                    <div className="text-xs text-white/70">Pendiente</div>
+                  </div>
+                </div>
               );
             })()}
 
