@@ -744,41 +744,36 @@ export default function LingotesTracker({
           <FilterBtn id="todas" label="Todas" count={allEntregasCliente.length} />
         </div>
 
-        {/* FUTURA orphan lingotes */}
-        {clienteFutura.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+        {/* FUTURA pendientes de asignar - solo si hay stock (ya llegó exportación) */}
+        {clienteFutura.length > 0 && stockRealTotal > 0 && (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-red-800">FUTURA</h3>
-              <div className="text-sm text-red-600 font-semibold">
-                {clienteFutura.length} lingotes &bull; -{formatNum(futuraWeight, 0)}g
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📦</span>
+                <h3 className="font-bold text-amber-800">FUTURA pendientes de asignar</h3>
+              </div>
+              <div className="text-sm text-amber-600 font-semibold">
+                {clienteFutura.length} lingotes &bull; {formatNum(futuraWeight, 0)}g
               </div>
             </div>
-            <div className="space-y-1">
+            <p className="text-xs text-amber-700 mb-3">Hay stock disponible. Asigna estos lingotes a una entrega.</p>
+            <div className="space-y-1 mb-3">
               {clienteFutura.map((f) => (
                 <div key={f.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-white/60">
-                  <span className="font-mono text-red-700">{f.peso}g</span>
+                  <span className="font-mono text-amber-700">{f.peso}g</span>
                   <div className="flex items-center gap-2">
                     {f.precio ? (
-                      <span className="text-xs text-stone-500">{formatNum(f.precio)} €/g &bull; {f.nFactura || '-'}</span>
+                      <span className="text-xs text-emerald-600 font-semibold">✓ cerrado {formatNum(f.precio)} €/g</span>
                     ) : (
-                      <>
-                        <span className="text-xs text-red-400">sin precio</span>
-                        <Button size="sm" variant="success" onClick={() => { setSelectedFuturaId(f.id); setShowCierreModal(true); }}>
-                          Cerrar
-                        </Button>
-                      </>
+                      <span className="text-xs text-amber-600">sin cerrar</span>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-            {allEntregasCliente.length > 0 && (
-              <div className="mt-3">
-                <Button size="sm" onClick={() => setShowAssignFuturaModal(true)}>
-                  Asignar a entrega
-                </Button>
-              </div>
-            )}
+            <Button className="w-full" onClick={() => setShowAssignFuturaModal(true)}>
+              Asignar a nueva entrega
+            </Button>
           </div>
         )}
 
@@ -1157,19 +1152,67 @@ export default function LingotesTracker({
           );
         })()}
 
-        <div className="flex gap-2">
-          <Button className="flex-1" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
+        {/* Módulo FUTURA Exportación - solo si stock = 0 */}
+        {stockRealTotal === 0 && filteredPendiente === 0 && (
+          <div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="font-bold text-red-800 text-lg">FUTURA Exportación</h3>
+            </div>
+            <p className="text-sm text-red-700 mb-4">
+              No hay stock disponible. Puedes registrar ventas que se asignarán cuando llegue la próxima exportación.
+            </p>
+
+            {/* Lingotes FUTURA existentes */}
+            {clienteFutura.length > 0 && (
+              <div className="bg-white/60 rounded-xl p-3 mb-4">
+                <div className="text-sm font-semibold text-red-800 mb-2">
+                  Lingotes pendientes de exportación: {clienteFutura.length} ({formatNum(futuraWeight, 0)}g)
+                </div>
+                <div className="space-y-1">
+                  {clienteFutura.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-white/80">
+                      <span className="font-mono text-red-700">{f.peso}g</span>
+                      <div className="flex items-center gap-2">
+                        {f.precio ? (
+                          <span className="text-xs text-emerald-600 font-semibold">✓ {formatNum(f.precio)} €/g</span>
+                        ) : (
+                          <>
+                            <span className="text-xs text-amber-600">sin cerrar</span>
+                            <Button size="sm" variant="success" onClick={() => { setSelectedFuturaId(f.id); setShowCierreModal(true); }}>
+                              Cerrar
+                            </Button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => onDeleteFutura(f.id)}
+                          className="text-red-400 hover:text-red-600 text-xs px-1"
+                        >✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botón añadir FUTURA */}
+            <Button
+              variant="danger"
+              className="w-full"
+              size="lg"
+              onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}
+            >
+              + Añadir venta FUTURA
+            </Button>
+          </div>
+        )}
+
+        {/* Botón Nueva Entrega - solo si hay stock */}
+        {(stockRealTotal > 0 || filteredPendiente > 0) && (
+          <Button className="w-full" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
             + Nueva Entrega
           </Button>
-          <Button
-            variant="danger"
-            size="lg"
-            onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}
-            title="Venta sin stock físico"
-          >
-            FUTURA
-          </Button>
-        </div>
+        )}
 
         {/* Historial de actividad */}
         {(() => {
