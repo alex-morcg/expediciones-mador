@@ -2540,8 +2540,192 @@ export default function LingotesTracker({
     const totalMargenCierre = statsClientes.reduce((sum, c) => sum + c.margenCierre, 0);
     const totalPctCierre = totalMargen > 0 ? (totalMargenCierre / totalMargen) * 100 : 0;
 
+    // Stats por año - agrupar entregas por año de entrega y cliente
+    const statsPorAnyo = useMemo(() => {
+      const byYear = {}; // { year: { clienteId: { entregado, cerrado, devuelto, importe } } }
+      const years = new Set();
+
+      // Procesar entregas
+      entregas.forEach(entrega => {
+        const year = entrega.fechaEntrega ? entrega.fechaEntrega.substring(0, 4) : 'N/A';
+        if (year.length !== 4 || isNaN(parseInt(year))) return; // Ignorar años inválidos
+        years.add(year);
+
+        if (!byYear[year]) byYear[year] = {};
+
+        (entrega.lingotes || []).forEach(l => {
+          const clienteId = entrega.clienteId;
+          if (!byYear[year][clienteId]) {
+            byYear[year][clienteId] = { entregado: 0, cerrado: 0, devuelto: 0, importe: 0 };
+          }
+
+          const peso = l.peso || 0;
+          byYear[year][clienteId].entregado += peso;
+
+          if (l.estado === 'devuelto') {
+            byYear[year][clienteId].devuelto += peso;
+          } else if (l.estado === 'finalizado' || l.estado === 'pendiente_pago') {
+            byYear[year][clienteId].cerrado += peso;
+            byYear[year][clienteId].importe += l.importe || 0;
+          }
+        });
+      });
+
+      // Ordenar años
+      const sortedYears = [...years].sort();
+
+      // Crear estructura para la tabla
+      const clientesConDatos = clientes.filter(c => {
+        return sortedYears.some(year => byYear[year]?.[c.id]?.entregado > 0);
+      });
+
+      // Calcular totales por año
+      const totalesPorAnyo = {};
+      sortedYears.forEach(year => {
+        totalesPorAnyo[year] = { entregado: 0, cerrado: 0, devuelto: 0, importe: 0 };
+        Object.values(byYear[year] || {}).forEach(data => {
+          totalesPorAnyo[year].entregado += data.entregado;
+          totalesPorAnyo[year].cerrado += data.cerrado;
+          totalesPorAnyo[year].devuelto += data.devuelto;
+          totalesPorAnyo[year].importe += data.importe;
+        });
+      });
+
+      return { byYear, sortedYears, clientesConDatos, totalesPorAnyo };
+    }, [entregas, clientes]);
+
     return (
       <div className="space-y-4">
+        {/* Stats por Año */}
+        <Card>
+          <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Entregas por Año</h2>
+
+          {statsPorAnyo.sortedYears.length === 0 ? (
+            <p className="text-stone-400 text-center py-6">No hay datos todavía.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-stone-200">
+                    <th className="text-left py-2 px-1 font-semibold text-stone-600 sticky left-0 bg-white">Cliente</th>
+                    {statsPorAnyo.sortedYears.map(year => (
+                      <th key={year} className="text-center py-2 px-2 font-semibold text-stone-600 min-w-[80px]">{year}</th>
+                    ))}
+                    <th className="text-center py-2 px-2 font-semibold text-stone-800 bg-stone-50 min-w-[80px]">TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsPorAnyo.clientesConDatos.map(cliente => {
+                    let clienteTotal = { entregado: 0, cerrado: 0, devuelto: 0 };
+                    return (
+                      <tr key={cliente.id} className="border-b border-stone-100">
+                        <td className="py-2 px-1 sticky left-0 bg-white">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cliente.color }} />
+                            <span className="font-medium text-stone-800 truncate">{cliente.nombre}</span>
+                          </div>
+                        </td>
+                        {statsPorAnyo.sortedYears.map(year => {
+                          const data = statsPorAnyo.byYear[year]?.[cliente.id] || { entregado: 0, cerrado: 0, devuelto: 0 };
+                          clienteTotal.entregado += data.entregado;
+                          clienteTotal.cerrado += data.cerrado;
+                          clienteTotal.devuelto += data.devuelto;
+                          return (
+                            <td key={year} className="text-center py-2 px-1">
+                              {data.entregado > 0 ? (
+                                <div className="flex flex-col">
+                                  <span className="font-mono text-stone-700">{formatNum(data.entregado, 0)}</span>
+                                  <span className="text-[10px] text-stone-400">
+                                    {data.cerrado > 0 && <span className="text-emerald-600">V{formatNum(data.cerrado, 0)}</span>}
+                                    {data.devuelto > 0 && <span className="text-red-500 ml-1">D{formatNum(data.devuelto, 0)}</span>}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-stone-300">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="text-center py-2 px-1 bg-stone-50 font-semibold">
+                          <div className="flex flex-col">
+                            <span className="font-mono text-stone-800">{formatNum(clienteTotal.entregado, 0)}</span>
+                            <span className="text-[10px]">
+                              <span className="text-emerald-600">V{formatNum(clienteTotal.cerrado, 0)}</span>
+                              {clienteTotal.devuelto > 0 && <span className="text-red-500 ml-1">D{formatNum(clienteTotal.devuelto, 0)}</span>}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-amber-50 font-semibold border-t-2 border-amber-200">
+                    <td className="py-2 px-1 text-stone-800 sticky left-0 bg-amber-50">TOTAL</td>
+                    {statsPorAnyo.sortedYears.map(year => {
+                      const t = statsPorAnyo.totalesPorAnyo[year];
+                      return (
+                        <td key={year} className="text-center py-2 px-1">
+                          <div className="flex flex-col">
+                            <span className="font-mono text-stone-800">{formatNum(t.entregado, 0)}g</span>
+                            <span className="text-[10px]">
+                              <span className="text-emerald-600">V{formatNum(t.cerrado, 0)}</span>
+                              {t.devuelto > 0 && <span className="text-red-500 ml-1">D{formatNum(t.devuelto, 0)}</span>}
+                            </span>
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td className="text-center py-2 px-1 bg-amber-100">
+                      {(() => {
+                        const grandTotal = Object.values(statsPorAnyo.totalesPorAnyo).reduce(
+                          (acc, t) => ({ entregado: acc.entregado + t.entregado, cerrado: acc.cerrado + t.cerrado, devuelto: acc.devuelto + t.devuelto }),
+                          { entregado: 0, cerrado: 0, devuelto: 0 }
+                        );
+                        return (
+                          <div className="flex flex-col">
+                            <span className="font-mono text-stone-900">{formatNum(grandTotal.entregado, 0)}g</span>
+                            <span className="text-[10px]">
+                              <span className="text-emerald-700">V{formatNum(grandTotal.cerrado, 0)}</span>
+                              {grandTotal.devuelto > 0 && <span className="text-red-600 ml-1">D{formatNum(grandTotal.devuelto, 0)}</span>}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+              <p className="text-[10px] text-stone-400 mt-2">Valores en gramos. V=Vendido (cerrado), D=Devuelto</p>
+            </div>
+          )}
+        </Card>
+
+        {/* Importe por Año */}
+        {statsPorAnyo.sortedYears.length > 0 && (
+          <Card>
+            <h3 className="text-sm font-semibold text-stone-600 mb-3">💶 Importe por Año</h3>
+            <div className="flex flex-wrap gap-2">
+              {statsPorAnyo.sortedYears.map(year => {
+                const t = statsPorAnyo.totalesPorAnyo[year];
+                return (
+                  <div key={year} className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl px-3 py-2 text-center min-w-[70px]">
+                    <p className="text-xs text-emerald-700 font-medium">{year}</p>
+                    <p className="text-sm font-bold text-emerald-800">{formatEur(t.importe)}</p>
+                  </div>
+                );
+              })}
+              <div className="bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl px-3 py-2 text-center min-w-[80px]">
+                <p className="text-xs text-amber-700 font-medium">TOTAL</p>
+                <p className="text-sm font-bold text-amber-900">
+                  {formatEur(Object.values(statsPorAnyo.totalesPorAnyo).reduce((sum, t) => sum + t.importe, 0))}
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Márgenes por Cliente (existente) */}
         <Card>
           <h2 className="text-lg font-bold text-stone-800 mb-4">💰 Márgenes por Cliente</h2>
 
@@ -3277,6 +3461,7 @@ export default function LingotesTracker({
   };
 
   // Assign Futura Modal - select orphan FUTURA lingotes and assign to a real entrega
+  // Also allows adding extra lingotes from stock
   const AssignFuturaModal = () => {
     const clienteId = selectedCliente || editingEntregaClienteId;
     const cliente = getCliente(clienteId);
@@ -3285,6 +3470,8 @@ export default function LingotesTracker({
 
     const [selectedIds, setSelectedIds] = useState([]);
     const [selectedTarget, setSelectedTarget] = useState(targetEntregasList[0]?.id || '');
+    // State para lingotes adicionales del stock: { peso: cantidad }
+    const [extraLingotes, setExtraLingotes] = useState({});
 
     if (clienteFutura.length === 0) return null;
 
@@ -3296,10 +3483,100 @@ export default function LingotesTracker({
       setSelectedIds(clienteFutura.map(f => f.id));
     };
 
-    const handleAssign = async () => {
-      if (selectedIds.length === 0 || !selectedTarget) return;
-      await assignFuturaToEntrega(selectedIds, selectedTarget);
+    // Obtener stock disponible de la exportación de la entrega seleccionada
+    const selectedEntrega = entregas.find(e => e.id === selectedTarget);
+    const selectedExp = selectedEntrega ? exportaciones.find(ex => ex.id === selectedEntrega.exportacionId) : null;
+    const stockDisponible = selectedExp?.lingotes?.filter(l => l.cantidad > 0) || [];
+
+    const updateExtraCantidad = (peso, delta) => {
+      const stockItem = stockDisponible.find(s => s.peso === peso);
+      const maxCantidad = stockItem?.cantidad || 0;
+      setExtraLingotes(prev => {
+        const current = prev[peso] || 0;
+        const newVal = Math.max(0, Math.min(maxCantidad, current + delta));
+        if (newVal === 0) {
+          const { [peso]: _, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [peso]: newVal };
+      });
     };
+
+    const totalExtraLingotes = Object.entries(extraLingotes).reduce((sum, [peso, cant]) => sum + cant, 0);
+    const totalExtraPeso = Object.entries(extraLingotes).reduce((sum, [peso, cant]) => sum + (parseFloat(peso) * cant), 0);
+
+    const handleAssign = async () => {
+      if ((selectedIds.length === 0 && totalExtraLingotes === 0) || !selectedTarget) return;
+
+      const targetEntrega = entregas.find(e => e.id === selectedTarget);
+      if (!targetEntrega) return;
+
+      // 1. Build new lingotes from futura docs
+      const newLingotes = [];
+      for (const fId of selectedIds) {
+        const f = clienteFutura.find(fl => fl.id === fId);
+        if (!f) continue;
+        const hasPrecio = !!f.precio;
+        newLingotes.push({
+          peso: f.peso,
+          precio: f.precio || null,
+          importe: f.importe || 0,
+          nFactura: f.nFactura || null,
+          fechaCierre: f.fechaCierre || null,
+          pesoCerrado: hasPrecio ? f.peso : 0,
+          pesoDevuelto: 0,
+          estado: hasPrecio ? (f.pagado ? 'finalizado' : 'pendiente_pago') : 'en_curso',
+          pagado: f.pagado || false,
+          esDevolucion: false,
+          esFutura: true, // Marcar que viene de FUTURA
+        });
+      }
+
+      // 2. Add extra lingotes from stock
+      for (const [peso, cantidad] of Object.entries(extraLingotes)) {
+        for (let i = 0; i < cantidad; i++) {
+          newLingotes.push({
+            peso: parseFloat(peso),
+            precio: null,
+            importe: 0,
+            nFactura: null,
+            fechaCierre: null,
+            pesoCerrado: 0,
+            pesoDevuelto: 0,
+            estado: 'en_curso',
+            pagado: false,
+            esDevolucion: false,
+          });
+        }
+      }
+
+      // 3. Update entrega with new lingotes
+      await onUpdateEntrega(selectedTarget, {
+        lingotes: [...targetEntrega.lingotes, ...newLingotes],
+      });
+
+      // 4. Descontar stock de la exportación si hay extra lingotes
+      if (totalExtraLingotes > 0 && selectedExp) {
+        const updatedExpLingotes = selectedExp.lingotes.map(l => {
+          const usedCantidad = extraLingotes[l.peso] || 0;
+          return usedCantidad > 0 ? { ...l, cantidad: l.cantidad - usedCantidad } : l;
+        }).filter(l => l.cantidad > 0);
+
+        await onSaveExportacion({
+          ...selectedExp,
+          lingotes: updatedExpLingotes,
+        });
+      }
+
+      // 5. Delete futura docs
+      for (const fId of selectedIds) {
+        await onDeleteFutura(fId);
+      }
+
+      setShowAssignFuturaModal(false);
+    };
+
+    const totalFuturaSelected = clienteFutura.filter(f => selectedIds.includes(f.id)).reduce((s, f) => s + (f.peso || 0), 0);
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAssignFuturaModal(false)}>
@@ -3311,7 +3588,7 @@ export default function LingotesTracker({
             <>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-stone-700 mb-1">Asignar a entrega</label>
-                <select value={selectedTarget} onChange={e => setSelectedTarget(e.target.value)} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <select value={selectedTarget} onChange={e => { setSelectedTarget(e.target.value); setExtraLingotes({}); }} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
                   {targetEntregasList.map(e => {
                     const exp = getExportacion(e.exportacionId);
                     return <option key={e.id} value={e.id}>{e.fechaEntrega} {exp ? `(${exp.nombre})` : ''} - {numLingotes(e)} lingotes</option>;
@@ -3319,14 +3596,15 @@ export default function LingotesTracker({
                 </select>
               </div>
 
+              {/* Lingotes FUTURA */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-stone-700">Seleccionar lingotes</label>
+                  <label className="text-sm font-medium text-stone-700">Lingotes FUTURA</label>
                   <button onClick={selectAll} className="text-xs text-amber-600 font-semibold hover:text-amber-700">
                     Seleccionar todos
                   </button>
                 </div>
-                <div className="space-y-1 max-h-60 overflow-y-auto">
+                <div className="space-y-1 max-h-40 overflow-y-auto">
                   {clienteFutura.map((f) => {
                     const isSelected = selectedIds.includes(f.id);
                     return (
@@ -3347,19 +3625,66 @@ export default function LingotesTracker({
                 </div>
               </div>
 
-              {selectedIds.length > 0 && (
-                <div className="bg-amber-50 rounded-xl p-3 text-center mb-4">
-                  <span className="text-amber-600 text-sm">Asignar: </span>
-                  <span className="font-bold text-amber-800">
-                    {selectedIds.length} lingotes ({clienteFutura.filter(f => selectedIds.includes(f.id)).reduce((s, f) => s + (f.peso || 0), 0)}g)
-                  </span>
+              {/* Lingotes adicionales del stock */}
+              {stockDisponible.length > 0 && (
+                <div className="mb-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <label className="text-sm font-medium text-emerald-800 mb-2 block">+ Añadir del stock ({selectedExp?.nombre})</label>
+                  <div className="space-y-2">
+                    {stockDisponible.map(s => (
+                      <div key={s.peso} className="flex items-center justify-between">
+                        <span className="font-mono text-sm text-emerald-700">{s.peso}g</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-emerald-600">disp: {s.cantidad}</span>
+                          <div className="flex items-center bg-white rounded-lg border border-emerald-300">
+                            <button
+                              onClick={() => updateExtraCantidad(s.peso, -1)}
+                              className="w-8 h-8 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 rounded-l-lg"
+                              disabled={!extraLingotes[s.peso]}
+                            >
+                              −
+                            </button>
+                            <span className="w-8 text-center font-mono text-sm">{extraLingotes[s.peso] || 0}</span>
+                            <button
+                              onClick={() => updateExtraCantidad(s.peso, 1)}
+                              className="w-8 h-8 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 rounded-r-lg"
+                              disabled={(extraLingotes[s.peso] || 0) >= s.cantidad}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resumen */}
+              {(selectedIds.length > 0 || totalExtraLingotes > 0) && (
+                <div className="bg-amber-50 rounded-xl p-3 mb-4 space-y-1">
+                  {selectedIds.length > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-amber-600">FUTURA:</span>
+                      <span className="font-bold text-amber-800">{selectedIds.length} lingotes ({totalFuturaSelected}g)</span>
+                    </div>
+                  )}
+                  {totalExtraLingotes > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-emerald-600">Stock:</span>
+                      <span className="font-bold text-emerald-800">{totalExtraLingotes} lingotes ({totalExtraPeso}g)</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm pt-1 border-t border-amber-200">
+                    <span className="font-semibold text-stone-700">Total:</span>
+                    <span className="font-bold text-stone-800">{selectedIds.length + totalExtraLingotes} lingotes ({totalFuturaSelected + totalExtraPeso}g)</span>
+                  </div>
                 </div>
               )}
 
               <div className="flex gap-3">
                 <Button variant="secondary" className="flex-1" onClick={() => setShowAssignFuturaModal(false)}>Omitir</Button>
-                <Button className="flex-1" disabled={selectedIds.length === 0 || !selectedTarget} onClick={handleAssign}>
-                  Asignar{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                <Button className="flex-1" disabled={(selectedIds.length === 0 && totalExtraLingotes === 0) || !selectedTarget} onClick={handleAssign}>
+                  Asignar ({selectedIds.length + totalExtraLingotes})
                 </Button>
               </div>
             </>
