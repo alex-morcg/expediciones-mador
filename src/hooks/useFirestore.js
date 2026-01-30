@@ -548,6 +548,10 @@ export function useFirestore(activeSection = 'expediciones') {
     await updateDoc(doc(db, 'clientes', clienteId), { kilatajes });
   };
 
+  const updateClienteDatosFiscales = async (clienteId, datosFiscales) => {
+    await updateDoc(doc(db, 'clientes', clienteId), datosFiscales);
+  };
+
   // Expediciones
   const saveExpedicion = async (data, editingItem) => {
     const { esActual, id, ...expedicionData } = data;
@@ -1138,6 +1142,7 @@ export function useFirestore(activeSection = 'expediciones') {
     saveCliente,
     deleteCliente,
     updateClienteKilatajes,
+    updateClienteDatosFiscales,
     saveExpedicion,
     deleteExpedicion,
     savePaquete,

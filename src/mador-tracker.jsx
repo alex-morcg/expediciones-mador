@@ -54,7 +54,7 @@ export default function MadorTracker() {
   const {
     categorias, clientes, expediciones, paquetes, estadosPaquete, usuarios,
     expedicionActualId, loading, setExpedicionActualId,
-    saveCategoria: fsaveCategoria, deleteCategoria, saveCliente: fsaveCliente, deleteCliente, updateClienteKilatajes,
+    saveCategoria: fsaveCategoria, deleteCategoria, saveCliente: fsaveCliente, deleteCliente, updateClienteKilatajes, updateClienteDatosFiscales,
     saveExpedicion: fsaveExpedicion, deleteExpedicion, savePaquete: fsavePaquete, deletePaquete,
     addLineaToPaquete: faddLinea, removeLineaFromPaquete: fremoveLinea, updatePaqueteCierre: fupdateCierre,
     updatePaqueteFactura: fupdateFactura, updatePaqueteVerificacion: fupdateVerificacion,
@@ -1654,7 +1654,28 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
   const ClientesTab = () => {
     const [editingKilatajes, setEditingKilatajes] = useState(null);
     const [newKilataje, setNewKilataje] = useState({ nombre: '', ley: '' });
-    
+    const [editingDatosFiscales, setEditingDatosFiscales] = useState(null);
+    const [datosFiscalesForm, setDatosFiscalesForm] = useState({
+      razonSocial: '', direccion: '', codigoPostal: '', ciudad: '', pais: '', nrt: ''
+    });
+
+    const startEditDatosFiscales = (cliente) => {
+      setEditingDatosFiscales(cliente.id);
+      setDatosFiscalesForm({
+        razonSocial: cliente.razonSocial || '',
+        direccion: cliente.direccion || '',
+        codigoPostal: cliente.codigoPostal || '',
+        ciudad: cliente.ciudad || '',
+        pais: cliente.pais || '',
+        nrt: cliente.nrt || '',
+      });
+    };
+
+    const saveDatosFiscales = async (clienteId) => {
+      await updateClienteDatosFiscales(clienteId, datosFiscalesForm);
+      setEditingDatosFiscales(null);
+    };
+
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
@@ -1753,6 +1774,85 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       }
                     }}>+</Button>
                   </div>
+                )}
+              </div>
+
+              {/* Datos Fiscales */}
+              <div
+                className="rounded-lg p-3 mt-3"
+                style={{ backgroundColor: (cliente.color || '#f59e0b') + '10', border: `1px solid ${(cliente.color || '#f59e0b')}30` }}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium" style={{ color: cliente.color || '#f59e0b' }}>Datos Fiscales</span>
+                  <Button size="sm" variant="ghost" onClick={() => editingDatosFiscales === cliente.id ? setEditingDatosFiscales(null) : startEditDatosFiscales(cliente)}>
+                    {editingDatosFiscales === cliente.id ? 'Cerrar' : (cliente.nrt ? 'Editar' : 'Añadir')}
+                  </Button>
+                </div>
+
+                {editingDatosFiscales === cliente.id ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Razón Social"
+                      value={datosFiscalesForm.razonSocial}
+                      onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, razonSocial: e.target.value })}
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Dirección"
+                      value={datosFiscalesForm.direccion}
+                      onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, direccion: e.target.value })}
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="CP"
+                        value={datosFiscalesForm.codigoPostal}
+                        onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, codigoPostal: e.target.value })}
+                        className="w-24 bg-white rounded px-2 py-1 text-sm text-stone-800"
+                        style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Ciudad"
+                        value={datosFiscalesForm.ciudad}
+                        onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, ciudad: e.target.value })}
+                        className="flex-1 bg-white rounded px-2 py-1 text-sm text-stone-800"
+                        style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="País"
+                      value={datosFiscalesForm.pais}
+                      onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, pais: e.target.value })}
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="NRT / CIF"
+                      value={datosFiscalesForm.nrt}
+                      onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, nrt: e.target.value })}
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
+                    />
+                    <Button size="sm" className="w-full" onClick={() => saveDatosFiscales(cliente.id)}>Guardar</Button>
+                  </div>
+                ) : cliente.nrt ? (
+                  <div className="text-xs text-stone-600 space-y-0.5">
+                    {cliente.razonSocial && <div className="font-medium">{cliente.razonSocial}</div>}
+                    {cliente.direccion && <div>{cliente.direccion}</div>}
+                    {(cliente.codigoPostal || cliente.ciudad) && <div>{[cliente.codigoPostal, cliente.ciudad].filter(Boolean).join(' ')}</div>}
+                    {cliente.pais && <div>{cliente.pais}</div>}
+                    {cliente.nrt && <div className="font-mono mt-1">NRT: {cliente.nrt}</div>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-stone-400">Sin datos fiscales</p>
                 )}
               </div>
             </Card>
