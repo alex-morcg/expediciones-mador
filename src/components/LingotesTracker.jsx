@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const formatNum = (num, decimals = 2) => {
   if (num === null || num === undefined || isNaN(num)) return '-';
@@ -854,11 +856,179 @@ export default function LingotesTracker({
       </button>
     );
 
+    // Función para exportar PDF del cliente
+    const exportarClientePDF = async () => {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Header con logo (texto simulado) y datos empresa
+      doc.setFillColor(61, 55, 48);
+      doc.rect(14, 10, 60, 25, 'F');
+      doc.setTextColor(212, 175, 55);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text("MA D'OR", 20, 22);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text("MAYORISTAS DE JOYERIA", 20, 28);
+
+      // Datos del cliente
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      let yPos = 45;
+      if (cliente.razonSocial) { doc.text(cliente.razonSocial, 14, yPos); yPos += 5; }
+      else { doc.text(cliente.nombre, 14, yPos); yPos += 5; }
+      if (cliente.direccion) { doc.text(cliente.direccion, 14, yPos); yPos += 5; }
+      if (cliente.ciudad) { doc.text(`${cliente.codigoPostal || ''} ${cliente.ciudad}`.trim(), 14, yPos); yPos += 5; }
+      if (cliente.pais) { doc.text(cliente.pais, 14, yPos); yPos += 5; }
+      if (cliente.nrt) { doc.text(`NRT. ${cliente.nrt}`, 14, yPos); yPos += 5; }
+
+      // Resumen entregas en curso
+      yPos += 10;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Resumen entregas en curso', pageWidth / 2, yPos, { align: 'center' });
+      yPos += 5;
+
+      // Tabla resumen
+      const resumenData = entregasEnCursoList.map(e => {
+        const exp = getExportacion(e.exportacionId);
+        const nombre = `${exp?.nombre || ''} ${formatEntregaShort(e.fechaEntrega)}`.trim();
+        return [nombre, pesoEntrega(e), pesoCerrado(e), pesoEntrega(e) - pesoCerrado(e) - pesoDevuelto(e)];
+      });
+      // Añadir FUTURA pendientes si hay
+      const futuraPendientes = clienteFutura.filter(f => !f.precio);
+      if (futuraPendientes.length > 0) {
+        const futuraPeso = futuraPendientes.reduce((sum, f) => sum + (f.peso || 0), 0);
+        resumenData.push(['FUTURA', futuraPeso, 0, futuraPeso]);
+      }
+      // Total
+      const totalEntregado = resumenData.reduce((sum, r) => sum + r[1], 0);
+      const totalCerrado = resumenData.reduce((sum, r) => sum + r[2], 0);
+      const totalPendiente = resumenData.reduce((sum, r) => sum + r[3], 0);
+
+      doc.autoTable({
+        startY: yPos,
+        head: [['Entregas vivas', 'Peso Entregado', 'Peso Cerrado', 'Pendiente']],
+        body: [...resumenData, ['TOTAL', totalEntregado, totalCerrado, totalPendiente]],
+        theme: 'grid',
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 0: { cellWidth: 40 }, 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' } },
+        margin: { left: 80 },
+        tableWidth: 110,
+      });
+
+      yPos = doc.lastAutoTable.finalY + 15;
+
+      // Detalle de lingotes EN CURSO
+      const lingotesEnCursoData = [];
+      entregasEnCursoList.forEach(entrega => {
+        const exp = getExportacion(entrega.exportacionId);
+        const nombreEntrega = formatEntregaShort(entrega.fechaEntrega);
+        (entrega.lingotes || []).forEach(l => {
+          if (l.estado === 'en_curso') {
+            lingotesEnCursoData.push([
+              nombreEntrega,
+              l.peso || 0,
+              l.precio ? formatNum(l.precio) : '',
+              l.importe ? formatNum(l.importe, 0) : '',
+              l.nFactura || '',
+              l.fechaCierre || '',
+              l.pagado ? '✓' : '',
+              l.pesoDevuelto || '',
+            ]);
+          }
+        });
+      });
+      // Añadir FUTURA pendientes
+      futuraPendientes.forEach(f => {
+        lingotesEnCursoData.push([
+          'FUTURA',
+          f.peso || 0,
+          f.precio ? formatNum(f.precio) : '',
+          f.importe ? formatNum(f.importe, 0) : '',
+          f.nFactura || '',
+          f.fechaCierre || '',
+          f.pagado ? '✓' : '',
+          '',
+        ]);
+      });
+
+      if (lingotesEnCursoData.length > 0) {
+        doc.autoTable({
+          startY: yPos,
+          head: [['ENTREGA', 'peso', 'precio', 'importe', 'Nº fra', 'fecha cierre', 'Pagado', 'DEVOLUCIÓN']],
+          body: lingotesEnCursoData,
+          theme: 'grid',
+          headStyles: { fillColor: [34, 139, 34], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+          bodyStyles: { fontSize: 7 },
+          columnStyles: {
+            0: { cellWidth: 22 },
+            1: { halign: 'center', cellWidth: 18 },
+            2: { halign: 'center', cellWidth: 22 },
+            3: { halign: 'center', cellWidth: 22 },
+            4: { cellWidth: 25 },
+            5: { cellWidth: 25 },
+            6: { halign: 'center', cellWidth: 18 },
+            7: { halign: 'center', cellWidth: 25 },
+          },
+        });
+        yPos = doc.lastAutoTable.finalY + 15;
+      }
+
+      // Texto legal
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.text("El client respon de la custòdia, assegurança i de qualsevol pèrdua, robatori, dany o", 14, yPos);
+      yPos += 4;
+      doc.text("eventualitat dels lingots.", 14, yPos);
+      yPos += 15;
+
+      // Firma
+      doc.setFont('helvetica', 'normal');
+      doc.text("firmat client:", 14, yPos);
+      yPos += 5;
+      doc.rect(14, yPos, 60, 25);
+
+      // Generar blob y compartir
+      const pdfBlob = doc.output('blob');
+      const fileName = `Lingotes_${cliente.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: `Lingotes ${cliente.nombre}` });
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            // Fallback: descargar
+            const url = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        }
+      } else {
+        // Fallback: descargar directamente
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    };
+
     return (
       <div className="space-y-5">
         <div className="rounded-2xl p-5 text-white shadow-lg relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${cliente.color}, ${cliente.color}dd)` }}>
           <button onClick={() => setSelectedCliente(null)} className="absolute top-3 left-3 text-white/80 hover:text-white text-sm flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
             ← Volver
+          </button>
+          <button onClick={exportarClientePDF} className="absolute top-3 right-3 text-white/80 hover:text-white text-sm flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
+            📄 Export
           </button>
           <div className="text-center pt-6">
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
