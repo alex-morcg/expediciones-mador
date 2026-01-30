@@ -2722,8 +2722,16 @@ export default function LingotesTracker({
       return { chartData, clientesConVentas };
     }, [entregas, futuraLingotes, clientes]);
 
-    // Ancho del gráfico basado en número de meses (mínimo 60px por barra)
-    const chartWidth = Math.max(statsPorMes.chartData.length * 60, 400);
+    // Ancho del gráfico basado en número de meses (20px por barra para que sean más estrechas)
+    const chartWidth = Math.max(statsPorMes.chartData.length * 20, 400);
+
+    // Ref para scroll automático a la derecha
+    const chartScrollRef = React.useRef(null);
+    React.useEffect(() => {
+      if (chartScrollRef.current) {
+        chartScrollRef.current.scrollLeft = chartScrollRef.current.scrollWidth;
+      }
+    }, [statsPorMes.chartData]);
 
     return (
       <div className="space-y-4">
@@ -2731,14 +2739,14 @@ export default function LingotesTracker({
         {statsPorMes.chartData.length > 0 && (
           <Card>
             <h2 className="text-lg font-bold text-stone-800 mb-4">📈 Volumen Vendido por Mes</h2>
-            <div className="overflow-x-auto pb-2">
+            <div ref={chartScrollRef} className="overflow-x-auto pb-2">
               <div style={{ width: chartWidth, minWidth: '100%', height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statsPorMes.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                  <BarChart data={statsPorMes.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
                     <XAxis
                       dataKey="label"
-                      tick={{ fontSize: 10, fill: '#78716c' }}
+                      tick={{ fontSize: 9, fill: '#78716c' }}
                       angle={-45}
                       textAnchor="end"
                       height={50}
@@ -2747,7 +2755,8 @@ export default function LingotesTracker({
                     <YAxis
                       tick={{ fontSize: 10, fill: '#78716c' }}
                       tickFormatter={(v) => `${v}g`}
-                      width={50}
+                      width={45}
+                      label={{ value: 'gramos', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#a8a29e' }}
                     />
                     <Tooltip
                       formatter={(value, name) => {
