@@ -1157,9 +1157,19 @@ export default function LingotesTracker({
           );
         })()}
 
-        <Button className="w-full" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
-          + Nueva Entrega
-        </Button>
+        <div className="flex gap-2">
+          <Button className="flex-1" size="lg" onClick={() => { setEditingEntregaClienteId(cliente.id); setShowEntregaModal(true); }}>
+            + Nueva Entrega
+          </Button>
+          <Button
+            variant="danger"
+            size="lg"
+            onClick={() => { setEditingEntregaClienteId(cliente.id); setShowFuturaModal(true); }}
+            title="Venta sin stock físico"
+          >
+            FUTURA
+          </Button>
+        </div>
 
         {/* Historial de actividad */}
         {(() => {
