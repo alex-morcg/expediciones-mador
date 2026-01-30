@@ -468,7 +468,7 @@ export default function LingotesTracker({
     setSelectedLingoteIdx(null);
   };
 
-  // Devolver lingotes: marcarlos como devueltos (no vuelven al stock)
+  // Devolver lingotes: marcarlos como devueltos y volver al stock de la exportación
   const devolverLingotes = async (entregaId, lingoteIndices) => {
     const entrega = entregas.find(e => e.id === entregaId);
     if (!entrega) return;
@@ -489,9 +489,22 @@ export default function LingotesTracker({
     const logs = [...(entrega.logs || []), log];
 
     await onUpdateEntrega(entregaId, { lingotes, logs });
+
+    // Devolver lingotes al stock de la exportación de origen
+    const exportacion = exportaciones.find(e => e.id === entrega.exportacionId);
+    if (exportacion) {
+      const newLingotes = [...(exportacion.lingotes || [])];
+      const existingIdx = newLingotes.findIndex(l => l.peso === peso);
+      if (existingIdx !== -1) {
+        newLingotes[existingIdx] = { ...newLingotes[existingIdx], cantidad: newLingotes[existingIdx].cantidad + lingoteIndices.length };
+      } else {
+        newLingotes.push({ peso, cantidad: lingoteIndices.length });
+      }
+      await onSaveExportacion({ ...exportacion, lingotes: newLingotes }, exportacion.id);
+    }
   };
 
-  // Cancelar devolución: volver a poner lingotes en estado 'en_curso'
+  // Cancelar devolución: volver a poner lingotes en estado 'en_curso' y quitar del stock
   const cancelarDevolucion = async (entregaId, lingoteIdx) => {
     const entrega = entregas.find(e => e.id === entregaId);
     if (!entrega) return;
@@ -509,6 +522,19 @@ export default function LingotesTracker({
     const logs = [...(entrega.logs || []), log];
 
     await onUpdateEntrega(entregaId, { lingotes, logs });
+
+    // Quitar del stock de la exportación (el lingote vuelve a estar en el cliente)
+    const exportacion = exportaciones.find(e => e.id === entrega.exportacionId);
+    if (exportacion) {
+      const newLingotes = [...(exportacion.lingotes || [])];
+      const existingIdx = newLingotes.findIndex(l => l.peso === peso);
+      if (existingIdx !== -1 && newLingotes[existingIdx].cantidad > 0) {
+        newLingotes[existingIdx] = { ...newLingotes[existingIdx], cantidad: newLingotes[existingIdx].cantidad - 1 };
+        // Eliminar si cantidad = 0
+        const filtered = newLingotes.filter(l => l.cantidad > 0);
+        await onSaveExportacion({ ...exportacion, lingotes: filtered }, exportacion.id);
+      }
+    }
   };
 
   const marcarPagado = async (entregaId, lingoteIdx) => {
