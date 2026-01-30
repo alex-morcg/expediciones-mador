@@ -57,11 +57,16 @@ const compararPesosConIA = (lineasPaquete, pesosIA) => {
     const bruto = Math.abs(linea.bruto); // Ignorar signo para comparar
     const ley = linea.ley;
 
-    // Buscar coincidencia exacta o aproximada (tolerancia 0.5g en bruto, 5 en ley)
+    // Buscar coincidencia - solo por bruto si la IA no tiene ley
     const idx = pesosIARestantes.findIndex(p => {
-      const brutoIA = Math.abs(p.bruto);
+      const brutoIA = Math.abs(p.bruto || 0);
       const leyIA = p.ley;
-      return Math.abs(brutoIA - bruto) < 0.5 && Math.abs(leyIA - ley) < 5;
+      // Si la IA tiene ley, comparar ambos; si no, solo bruto
+      if (leyIA != null) {
+        return Math.abs(brutoIA - bruto) < 0.5 && Math.abs(leyIA - ley) < 5;
+      } else {
+        return Math.abs(brutoIA - bruto) < 0.5;
+      }
     });
 
     if (idx >= 0) {
@@ -75,7 +80,8 @@ const compararPesosConIA = (lineasPaquete, pesosIA) => {
 
   // Los pesos IA restantes son los que están en factura pero no en paquete
   for (const p of pesosIARestantes) {
-    discrepancias.push(`Línea ${p.bruto}g en factura vs 0.00g en datos`);
+    const brutoIA = p.bruto || 0;
+    discrepancias.push(`Línea ${brutoIA}g en factura no está en paquete`);
   }
 
   const pesosCuadran = discrepancias.length === 0;
