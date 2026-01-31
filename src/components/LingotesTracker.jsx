@@ -3105,6 +3105,145 @@ export default function LingotesTracker({
           </div>
         </Card>
 
+        {/* Importar datos NJ - TEMPORAL */}
+        <Card>
+          <h3 className="font-bold text-blue-700 mb-4">📥 Importar Datos NJ (Temporal)</h3>
+          <p className="text-sm text-stone-600 mb-4">
+            Importar 37 lingotes en 3 entregas + 13 FUTURA para Nova Joia desde el CSV.
+          </p>
+          <Button
+            variant="primary"
+            onClick={async () => {
+              if (!confirm('¿Importar datos de NJ? Se crearán 3 entregas y 13 FUTURA.')) return;
+
+              const NJ_CLIENT_ID = 'i4s6s7L68w9ErFKxQ3qQ';
+              const calcMargen = (precio, pJofisa, peso) => Math.round((precio - pJofisa) * peso * 100) / 100;
+
+              // Datos de entregas
+              const entregasData = {
+                '2025-11-05': [
+                  { peso: 50, precio: 124.29, importe: 6214.5, nFactura: '2025-167.pdf', fechaCierre: '2025-10-20', pJofisa: 117.5 },
+                  { peso: 50, precio: 124.29, importe: 6214.5, nFactura: '2025-168.pdf', fechaCierre: '2025-10-20', pJofisa: 117.5 },
+                  { peso: 50, precio: 125.16, importe: 6258, nFactura: '2025-170.pdf', fechaCierre: '2025-10-20', pJofisa: 118.32 },
+                  { peso: 50, precio: 127.13, importe: 6356.5, nFactura: '2025-171.pdf', fechaCierre: '2025-10-20', pJofisa: 120.18 },
+                  { peso: 50, precio: 121.3, importe: 6065, nFactura: '2025-172.pdf', fechaCierre: '2025-10-21', pJofisa: 114.68 },
+                  { peso: 50, precio: 121.3, importe: 6065, nFactura: '2025-173.pdf', fechaCierre: '2025-10-21', pJofisa: 114.68 },
+                  { peso: 50, precio: 118.31, importe: 5915.5, nFactura: '2025-174.pdf', fechaCierre: '2025-10-22', pJofisa: 111.86 },
+                  { peso: 50, precio: 118.31, importe: 5915.5, nFactura: '2025-175.pdf', fechaCierre: '2025-10-22', pJofisa: 111.86 },
+                  { peso: 50, precio: 121.07, importe: 6053.5, nFactura: '2025-176.pdf', fechaCierre: '2025-10-23', pJofisa: 114.46 },
+                  { peso: 50, precio: 121.07, importe: 6053.5, nFactura: '2025-177.pdf', fechaCierre: '2025-10-23', pJofisa: 114.46 },
+                  { peso: 50, precio: 121.22, importe: 6061, nFactura: '2025-178.pdf', fechaCierre: '2025-10-24', pJofisa: 114.6 },
+                  { peso: 50, precio: 121.22, importe: 6061, nFactura: '2025-179.pdf', fechaCierre: '2025-10-24', pJofisa: 114.6 },
+                  { peso: 50, precio: 121.22, importe: 6061, nFactura: '2025-180.pdf', fechaCierre: '2025-10-24', pJofisa: 114.6 },
+                  { peso: 50, precio: 121.22, importe: 6061, nFactura: '2025-181.pdf', fechaCierre: '2025-10-24', pJofisa: 114.6 },
+                  { peso: 50, precio: 121.22, importe: 6061, nFactura: '2025-182.pdf', fechaCierre: '2025-10-24', pJofisa: 114.6 },
+                  { peso: 50, precio: 114.69, importe: 5734.5, nFactura: '2025-185.pdf', fechaCierre: '2025-10-28', pJofisa: 108.44 },
+                  { peso: 50, precio: 114.69, importe: 5734.5, nFactura: '2025-186.pdf', fechaCierre: '2025-10-28', pJofisa: 108.44 },
+                  { peso: 50, precio: 114.69, importe: 5734.5, nFactura: '2025-184.pdf', fechaCierre: '2025-10-28', pJofisa: 108.44 },
+                  { peso: 50, precio: 118.28, importe: 5914, nFactura: '2025-192.pdf', fechaCierre: '2025-04-11', pJofisa: 111.83 },
+                  { peso: 50, precio: 118.28, importe: 5914, nFactura: '2025-193.pdf', fechaCierre: '2025-04-11', pJofisa: 111.83 },
+                  { peso: 50, precio: 121.25, importe: 6062.5, nFactura: '2025-198.pdf', fechaCierre: '2025-10-11', pJofisa: 114.63 },
+                  { peso: 50, precio: 121.25, importe: 6062.5, nFactura: '2025-199.pdf', fechaCierre: '2025-10-11', pJofisa: 114.63 },
+                  { peso: 50, precio: 119.86, importe: 5993, nFactura: '2025-206.pdf', fechaCierre: '2025-11-17', pJofisa: 113.32 },
+                  { peso: 50, precio: 120.35, importe: 6017.5, nFactura: '2025-210.pdf', fechaCierre: '2025-11-20', pJofisa: 113.78 },
+                  { peso: 50, precio: 122.27, importe: 6113.5, nFactura: '2025-211.pdf', fechaCierre: '2025-11-27', pJofisa: 115.59 },
+                  { peso: 50, precio: 128.11, importe: 6405.5, nFactura: '2025-226.pdf', fechaCierre: '2025-12-22', pJofisa: 121.1 },
+                ],
+                '2025-11-11': [
+                  { peso: 50, precio: 128.11, importe: 6405.5, nFactura: '2025-227.pdf', fechaCierre: '2025-12-22', pJofisa: 121.1 },
+                  { peso: 50, precio: 129.39, importe: 6469.5, nFactura: '2025-230.pdf', fechaCierre: '2025-12-29', pJofisa: 122.31 },
+                  { peso: 50, precio: 129.39, importe: 6469.5, nFactura: '2025-231.pdf', fechaCierre: '2025-12-29', pJofisa: 122.31 },
+                  { peso: 50, precio: 126.83, importe: 6341.5, nFactura: '2025-232.pdf', fechaCierre: '2025-12-30', pJofisa: 119.9 },
+                  { peso: 50, precio: 126.83, importe: 6341.5, nFactura: '2025-233.pdf', fechaCierre: '2025-12-30', pJofisa: 119.9 },
+                  { peso: 50, precio: 126.83, importe: 6341.5, nFactura: '2025-234.pdf', fechaCierre: '2025-12-30', pJofisa: 119.9 },
+                ],
+                '2025-12-23': [
+                  { peso: 50, precio: 129.46, importe: 6473, nFactura: '2026-1.pdf', fechaCierre: '2026-01-07', pJofisa: 122.38 },
+                  { peso: 50, precio: 129.46, importe: 6473, nFactura: '2026-2.pdf', fechaCierre: '2026-01-07', pJofisa: 122.38 },
+                  { peso: 50, precio: 129.46, importe: 6473, nFactura: '2026-3.pdf', fechaCierre: '2026-01-07', pJofisa: 122.38 },
+                  { peso: 50, precio: 134.02, importe: 6701, nFactura: '2026-9.pdf', fechaCierre: '2026-01-12', pJofisa: 126.68 },
+                  { peso: 50, precio: 134.02, importe: 6701, nFactura: '2026-10.pdf', fechaCierre: '2026-01-12', pJofisa: 126.68 },
+                ],
+              };
+
+              // Datos FUTURA
+              const futuraDataList = [
+                { peso: 50, precio: 136.63, importe: 6831.5, nFactura: '2026-15.pdf', fechaCierre: '2026-01-19', pJofisa: 129.14, pagado: true },
+                { peso: 50, precio: 136.63, importe: 6831.5, nFactura: '2026-16.pdf', fechaCierre: '2026-01-19', pJofisa: 129.14, pagado: true },
+                { peso: 50, precio: 136.63, importe: 6831.5, nFactura: '2026-17.pdf', fechaCierre: '2026-01-19', pJofisa: 129.14, pagado: true },
+                { peso: 50, precio: 136.63, importe: 6831.5, nFactura: '2026-18.pdf', fechaCierre: '2026-01-19', pJofisa: 129.14, pagado: true },
+                { peso: 50, precio: 152.51, importe: 7625.5, nFactura: '2026-24.pdf', fechaCierre: '2026-01-29', pJofisa: 144.12, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+                { peso: 50, precio: 145.38, importe: 7269, nFactura: null, fechaCierre: '2026-01-30', pJofisa: 136.68, pagado: false },
+              ];
+
+              try {
+                // Crear entregas
+                for (const [fechaEntrega, lingotesEntrega] of Object.entries(entregasData)) {
+                  // Verificar si ya existe
+                  const existe = entregas.find(e => e.clienteId === NJ_CLIENT_ID && e.fechaEntrega === fechaEntrega);
+                  if (existe) {
+                    console.log(`Entrega ${fechaEntrega} ya existe, saltando...`);
+                    continue;
+                  }
+
+                  const lingotes = lingotesEntrega.map(l => ({
+                    peso: l.peso,
+                    estado: 'finalizado',
+                    precio: l.precio,
+                    importe: l.importe,
+                    precioJofisa: l.pJofisa,
+                    margenCierre: calcMargen(l.precio, l.pJofisa, l.peso),
+                    fechaCierre: l.fechaCierre,
+                    nFactura: l.nFactura,
+                    pagado: true,
+                    pesoDevuelto: 0,
+                  }));
+
+                  await onSaveEntrega({
+                    clienteId: NJ_CLIENT_ID,
+                    fechaEntrega: fechaEntrega,
+                    exportacionNombre: '11-5',
+                    lingotes: lingotes,
+                    logs: [{ fecha: new Date().toISOString(), usuario: 'import', accion: 'Importación CSV' }],
+                  });
+                  console.log(`✅ Creada entrega ${fechaEntrega} con ${lingotes.length} lingotes`);
+                }
+
+                // Crear FUTURA
+                for (const f of futuraDataList) {
+                  await onSaveFutura({
+                    clienteId: NJ_CLIENT_ID,
+                    peso: f.peso,
+                    precio: f.precio,
+                    importe: f.importe,
+                    precioJofisa: f.pJofisa,
+                    margenCierre: calcMargen(f.precio, f.pJofisa, f.peso),
+                    fechaCierre: f.fechaCierre,
+                    nFactura: f.nFactura,
+                    pagado: f.pagado,
+                    fechaCreacion: new Date().toISOString(),
+                  });
+                  console.log(`✅ Creado FUTURA ${f.peso}g @ ${f.precio}€/g`);
+                }
+
+                alert('✅ Importación completada! 3 entregas + 13 FUTURA');
+              } catch (err) {
+                console.error('Error:', err);
+                alert('Error: ' + err.message);
+              }
+            }}
+          >
+            📥 Importar datos NJ
+          </Button>
+        </Card>
+
         {/* Reset data */}
         <Card>
           <h3 className="font-bold text-red-700 mb-4">⚠️ Zona Peligrosa</h3>
