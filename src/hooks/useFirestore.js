@@ -1031,6 +1031,11 @@ export function useFirestore(activeSection = 'expediciones') {
     return codigo;
   };
 
+  // Actualizar permisos de usuario
+  const actualizarPermisosUsuario = async (id, permisos) => {
+    await updateDoc(doc(db, 'usuarios', id), { permisos });
+  };
+
   // Estados
   const agregarEstado = async (data) => {
     const id = data.nombre.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
@@ -1161,6 +1166,7 @@ export function useFirestore(activeSection = 'expediciones') {
     eliminarUsuario,
     guardarEdicionUsuario,
     regenerarCodigoUsuario,
+    actualizarPermisosUsuario,
     agregarEstado,
     eliminarEstado,
     guardarEdicionEstado,

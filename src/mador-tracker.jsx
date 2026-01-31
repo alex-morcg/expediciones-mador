@@ -39,8 +39,14 @@ const tiempoRelativo = (fecha) => {
 };
 
 const COLORES_USUARIO = [
-  '#f59e0b', '#eab308', '#3b82f6', '#10b981', '#8b5cf6', 
+  '#f59e0b', '#eab308', '#3b82f6', '#10b981', '#8b5cf6',
   '#ef4444', '#ec4899', '#06b6d4', '#84cc16'
+];
+
+// Definición de permisos disponibles
+const PERMISOS_DISPONIBLES = [
+  { id: 'ver_estadisticas', nombre: 'Ver Estadísticas', icon: '📊', descripcion: 'Acceso a la pestaña de estadísticas' },
+  // Añadir más permisos aquí en el futuro
 ];
 
 
@@ -64,6 +70,7 @@ export default function MadorTracker() {
     deleteComentarioFromPaquete: fdeleteComentario,
     agregarUsuario: fagregarUsuario, eliminarUsuario: feliminarUsuario,
     guardarEdicionUsuario: fguardarEdicionUsuario, regenerarCodigoUsuario: fregenerarCodigoUsuario,
+    actualizarPermisosUsuario: factualizarPermisosUsuario,
     agregarEstado: fagregarEstado, eliminarEstado: feliminarEstado,
     guardarEdicionEstado: fguardarEdicionEstado,
     updateExpedicionResultados: fupdateResultados,
@@ -148,7 +155,14 @@ export default function MadorTracker() {
 
   const getUsuario = (id) => usuarios.find(u => u.id === id);
   const usuarioActual = getUsuario(usuarioActivo);
-  
+
+  // Helper para verificar permisos - alex tiene todos los permisos
+  const tienePermiso = (permisoId) => {
+    if (esAlex) return true;
+    const permisos = usuarioActual?.permisos || [];
+    return permisos.includes(permisoId);
+  };
+
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -2236,6 +2250,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   ) : (
                     <div className="flex-1">
                       <span className="text-stone-800 font-medium">{u.nombre}</span>
+                      {u.id === 'alex' && <span className="text-amber-500 text-xs ml-2">(admin)</span>}
                       <div className="flex items-center gap-2 mt-1">
                         <code className="text-xs bg-stone-100 px-2 py-0.5 rounded text-stone-600 font-mono">?{u.codigo}</code>
                         <button
@@ -2267,6 +2282,43 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     )}
                   </div>
                 </div>
+                {/* Permisos del usuario (no mostrar para alex que tiene todos) */}
+                {u.id !== 'alex' && (
+                  <div className="mt-3 pt-3 border-t border-amber-100">
+                    <span className="text-xs text-stone-500 font-medium">Permisos:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {PERMISOS_DISPONIBLES.map(permiso => {
+                        const tieneEstePermiso = (u.permisos || []).includes(permiso.id);
+                        return (
+                          <label
+                            key={permiso.id}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors ${
+                              tieneEstePermiso
+                                ? 'bg-green-100 text-green-700 border border-green-300'
+                                : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'
+                            }`}
+                            title={permiso.descripcion}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={tieneEstePermiso}
+                              onChange={(e) => {
+                                const nuevosPermisos = e.target.checked
+                                  ? [...(u.permisos || []), permiso.id]
+                                  : (u.permisos || []).filter(p => p !== permiso.id);
+                                factualizarPermisosUsuario(u.id, nuevosPermisos);
+                              }}
+                              className="sr-only"
+                            />
+                            <span>{permiso.icon}</span>
+                            <span>{permiso.nombre}</span>
+                            {tieneEstePermiso && <span className="text-green-600">✓</span>}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </Card>
             ))}
           </div>
@@ -3708,7 +3760,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           <TabButton id="expediciones" label="Expediciones" icon="📦" badge={totalPendientes} />
           <TabButton id="clientes" label="Clientes" icon="👥" />
           <TabButton id="parametros" label="Parámetros" icon="⚙️" />
-          <TabButton id="estadisticas" label="Stats" icon="📊" />
+          {tienePermiso('ver_estadisticas') && <TabButton id="estadisticas" label="Stats" icon="📊" />}
         </nav>
         
         {/* Subnavegación contextual */}
@@ -3770,7 +3822,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         {activeTab === 'expediciones' && <ExpedicionesTab />}
         {activeTab === 'clientes' && <ClientesTab />}
         {activeTab === 'parametros' && <ParametrosTab />}
-        {activeTab === 'estadisticas' && <EstadisticasTab />}
+        {activeTab === 'estadisticas' && tienePermiso('ver_estadisticas') && <EstadisticasTab />}
       </main>
       
       {/* Modals */}
