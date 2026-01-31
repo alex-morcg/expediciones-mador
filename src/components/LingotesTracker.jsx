@@ -707,9 +707,9 @@ export default function LingotesTracker({
             onClick={() => stockGlobal.length > 0 && setShowComposicion(!showComposicion)}
           >
             <div className="text-center">
-              <p className={`text-xs ${stockColor.text} mb-1`}>📦 Stock Ma d'Or</p>
+              <div className="text-2xl mb-1">📦</div>
               <div className={`text-4xl font-black ${stockColor.accent}`}>{formatNum(stockRealTotal, 0)}</div>
-              <div className={`text-xs ${stockColor.text}`}>gramos</div>
+              <p className={`text-xs ${stockColor.text} mt-1`}>Stock Ma d'Or</p>
               {stockGlobal.length > 0 && (
                 <div className={`text-xs ${stockColor.text} mt-2`}>
                   {showComposicion ? '▲ ocultar' : '▼ ver desglose'}
@@ -721,9 +721,9 @@ export default function LingotesTracker({
           {/* En Clientes */}
           <div className="bg-gradient-to-br from-stone-700 via-stone-600 to-stone-700 rounded-2xl p-4 text-white shadow-lg">
             <div className="text-center">
-              <p className="text-xs text-stone-400 mb-1">👥 En Clientes</p>
+              <div className="text-2xl mb-1">👥</div>
               <div className="text-4xl font-black text-amber-400">{formatNum(stockTotal.stockClientes, 0)}</div>
-              <div className="text-xs text-stone-400">gramos</div>
+              <p className="text-xs text-stone-400 mt-1">En Clientes</p>
             </div>
           </div>
         </div>
@@ -763,8 +763,9 @@ export default function LingotesTracker({
         {stockTotal.totalFutura > 0 && (
           <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-700 rounded-2xl p-4 text-white shadow-lg">
             <div className="text-center">
-              <p className="text-xs text-red-200 mb-1">⚠️ FUTURA (vendido sin stock)</p>
+              <div className="text-2xl mb-1">⚠️</div>
               <div className="text-3xl font-black text-white">-{formatNum(stockTotal.totalFutura, 0)}g</div>
+              <p className="text-xs text-red-200 mt-1">FUTURA (vendido sin stock)</p>
             </div>
           </div>
         )}
