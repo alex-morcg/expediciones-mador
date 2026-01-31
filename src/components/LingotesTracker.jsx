@@ -4978,7 +4978,7 @@ export default function LingotesTracker({
         <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
           <div className="flex items-center justify-between max-w-2xl mx-auto">
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
-              <img src="/icono-lingotes.jpg" alt="Lingotes" className="w-8 h-8 rounded" />
+              <span className="text-2xl">🥇</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
               <span className="text-xs text-stone-400 ml-1">v2.7</span>
             </div>

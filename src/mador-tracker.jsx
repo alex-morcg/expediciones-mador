@@ -3663,7 +3663,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <img src="/icono-expediciones.png" alt="Ma d'Or" className="w-16 h-16 mx-auto mb-4" />
+          <div className="text-4xl mb-4">✋</div>
           <p className="text-amber-800 font-medium">Cargando Ma d'Or...</p>
         </div>
       </div>
@@ -3737,7 +3737,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
           <div className="flex items-center justify-between max-w-2xl mx-auto">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowLingotes(true)}>
-              <img src="/icono-expediciones.png" alt="Ma d'Or" className="w-8 h-8" />
+              <span className="text-2xl">✋</span>
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
               <span className="text-xs text-white/50 font-mono">v1.0</span>
             </div>
