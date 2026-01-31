@@ -558,7 +558,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
     const [cierreData, setCierreData] = useState({ precioFino: '', cierreJofisa: '' });
     const [verificandoFactura, setVerificandoFactura] = useState(false);
     const [showLogsModal, setShowLogsModal] = useState(false);
-    const [showFacturaViewer, setShowFacturaViewer] = useState(false);
+    const [viewingPdf, setViewingPdf] = useState(null); // { data, nombre, tipo }
     const [newComentario, setNewComentario] = useState('');
     
     // Función para verificar factura con IA
@@ -991,23 +991,8 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     <p className="text-stone-800 font-medium truncate">{paq.factura.nombre}</p>
                     <p className="text-stone-500 text-xs">{paq.factura.tipo?.startsWith('image/') ? 'Imagen' : 'PDF'}</p>
                   </div>
-                  <Button size="sm" onClick={() => setShowFacturaViewer(true)}>Ver</Button>
+                  <Button size="sm" onClick={() => setViewingPdf({ data: paq.factura.data, nombre: paq.factura.nombre, tipo: paq.factura.tipo })}>Ver</Button>
                 </div>
-                {showFacturaViewer && (
-                  <div className="fixed inset-0 bg-black/90 z-50 flex flex-col" onClick={() => setShowFacturaViewer(false)}>
-                    <div className="flex justify-between items-center p-3 bg-black/50">
-                      <span className="text-white text-sm truncate">{paq.factura.nombre}</span>
-                      <button onClick={() => setShowFacturaViewer(false)} className="text-white text-2xl font-bold px-3 hover:text-red-400">✕</button>
-                    </div>
-                    <div className="flex-1 overflow-auto p-2" onClick={e => e.stopPropagation()}>
-                      {paq.factura.tipo?.startsWith('image/') ? (
-                        <img src={paq.factura.data} alt="Factura" className="w-full h-auto" />
-                      ) : (
-                        <iframe src={paq.factura.data} className="w-full h-full min-h-[80vh]" style={{ border: 'none' }} />
-                      )}
-                    </div>
-                  </div>
-                )}
                 
                 {/* Resultado de verificación guardado */}
                 {paq.verificacionIA && paq.verificacionIA.archivoNombre === paq.factura.nombre && (
@@ -1229,6 +1214,23 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           </div>
           
           {/* Modal de Logs */}
+          {/* Modal visor PDF */}
+          {viewingPdf && (
+            <div className="fixed inset-0 bg-black/90 z-50 flex flex-col" onClick={() => setViewingPdf(null)}>
+              <div className="flex justify-between items-center p-3 bg-black/50">
+                <span className="text-white text-sm truncate">{viewingPdf.nombre}</span>
+                <button onClick={() => setViewingPdf(null)} className="text-white text-2xl font-bold px-3 hover:text-red-400">✕</button>
+              </div>
+              <div className="flex-1 overflow-auto p-2" onClick={e => e.stopPropagation()}>
+                {viewingPdf.tipo?.startsWith('image/') ? (
+                  <img src={viewingPdf.data} alt={viewingPdf.nombre} className="w-full h-auto" />
+                ) : (
+                  <iframe src={viewingPdf.data} className="w-full h-full min-h-[80vh]" style={{ border: 'none' }} />
+                )}
+              </div>
+            </div>
+          )}
+
           {showLogsModal && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowLogsModal(false)}>
               <div className="bg-white border border-amber-300 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
