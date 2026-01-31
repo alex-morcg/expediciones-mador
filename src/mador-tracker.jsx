@@ -302,6 +302,18 @@ export default function MadorTracker() {
       return;
     }
 
+    // Usar fecha de exportación o pedir al usuario
+    let fechaExport = expedicion.fechaExportacion;
+    if (!fechaExport) {
+      const inputFecha = prompt('Fecha de exportación (DD/MM/YYYY):', new Date().toLocaleDateString('es-ES'));
+      if (!inputFecha) return; // Cancelado
+      fechaExport = inputFecha;
+    } else {
+      // Convertir de YYYY-MM-DD a DD/MM/YYYY
+      const [y, m, d] = fechaExport.split('-');
+      fechaExport = `${d}/${m}/${y}`;
+    }
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -313,20 +325,11 @@ export default function MadorTracker() {
     // Fecha
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date().toLocaleDateString('es-ES'), pageWidth / 2, 28, { align: 'center' });
+    doc.text(fechaExport, pageWidth / 2, 28, { align: 'center' });
 
     // Lista de paquetes
     let yPos = 45;
     doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Paquete', 20, yPos);
-    doc.text('Peso Bruto', pageWidth - 20, yPos, { align: 'right' });
-
-    yPos += 3;
-    doc.setLineWidth(0.5);
-    doc.line(20, yPos, pageWidth - 20, yPos);
-    yPos += 8;
-
     doc.setFont('helvetica', 'normal');
     let totalBruto = 0;
 
@@ -334,8 +337,8 @@ export default function MadorTracker() {
       const totales = calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(expedicionId));
       totalBruto += totales.brutoTotal;
 
-      doc.text(paq.nombre, 20, yPos);
-      doc.text(`${formatNum(totales.brutoTotal, 2)} g`, pageWidth - 20, yPos, { align: 'right' });
+      // Nombre y peso en la misma línea, juntos
+      doc.text(`${paq.nombre}  —  ${formatNum(totales.brutoTotal, 2)} g`, 20, yPos);
       yPos += 7;
 
       // Nueva página si es necesario
@@ -353,8 +356,7 @@ export default function MadorTracker() {
 
     // Total
     doc.setFont('helvetica', 'bold');
-    doc.text('TOTAL', 20, yPos);
-    doc.text(`${formatNum(totalBruto, 2)} g`, pageWidth - 20, yPos, { align: 'right' });
+    doc.text(`TOTAL  —  ${formatNum(totalBruto, 2)} g`, 20, yPos);
 
     // Guardar
     doc.save(`Expedicion_${expedicion.nombre}_paquetes.pdf`);
@@ -1257,7 +1259,16 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
       return (
         <div className="space-y-4">
           <Card>
-            <h3 className="text-amber-600 font-semibold mb-3">📊 Totales</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-amber-600 font-semibold">📊 Totales</h3>
+              <button
+                onClick={() => exportarExpedicionPDF(selectedExpedicion)}
+                className="text-xl hover:scale-110 transition-transform"
+                title="Exportar lista paquetes PDF"
+              >
+                🚚
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-stone-500">Bruto Total</span>
@@ -3600,13 +3611,6 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 <>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedExpedicion(null)}>← Volver</Button>
                   <h2 className="text-lg font-bold text-amber-800 flex-1">Expedición {expediciones.find(e => e.id === selectedExpedicion)?.nombre}</h2>
-                  <button
-                    onClick={() => exportarExpedicionPDF(selectedExpedicion)}
-                    className="text-xl hover:scale-110 transition-transform"
-                    title="Exportar lista paquetes PDF"
-                  >
-                    🚚
-                  </button>
                   <select
                     value={ordenVista}
                     onChange={(e) => setOrdenVista(e.target.value)}
