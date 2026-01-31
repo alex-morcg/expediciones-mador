@@ -1274,6 +1274,7 @@ export default function LingotesTracker({
                                 {maxCantidad > 1 && (
                                   <input
                                     type="number"
+                                    inputMode="numeric"
                                     min="1"
                                     max={maxCantidad}
                                     value={cantidad}
@@ -1436,6 +1437,7 @@ export default function LingotesTracker({
                                 {maxCantidad > 1 && (
                                   <input
                                     type="number"
+                                    inputMode="numeric"
                                     min="1"
                                     max={maxCantidad}
                                     value={cantidad}
@@ -1495,6 +1497,7 @@ export default function LingotesTracker({
                                 {maxCantidad > 1 && (
                                   <input
                                     type="number"
+                                    inputMode="numeric"
                                     min="1"
                                     max={maxCantidad}
                                     value={cantidad}
@@ -1592,6 +1595,7 @@ export default function LingotesTracker({
                       ))}
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         max={99}
                         value={futuraCierreCantidad[`new_${cliente.id}`] || 1}
@@ -2138,6 +2142,7 @@ export default function LingotesTracker({
                     <div key={idx} className="flex items-center gap-2 flex-wrap">
                       <input
                         type="number"
+                        inputMode="numeric"
                         value={l.cantidad}
                         onChange={(e) => updateLingoteTipo(idx, 'cantidad', parseInt(e.target.value) || 0)}
                         className="w-16 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -2164,6 +2169,7 @@ export default function LingotesTracker({
                         <div className="flex items-center gap-1 ml-1">
                           <input
                             type="number"
+                            inputMode="decimal"
                             value={l.peso !== 50 && l.peso !== 100 ? l.peso : ''}
                             onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
                             disabled={editingExpHasBeenUsed}
@@ -2206,6 +2212,7 @@ export default function LingotesTracker({
                 <label className="block text-sm font-medium text-stone-700 mb-1">Precio por gramo (€/g)</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   value={formData.precioGramo}
                   onChange={(e) => setFormData({ ...formData, precioGramo: e.target.value })}
@@ -2271,6 +2278,7 @@ export default function LingotesTracker({
                         <div key={idx} className="flex items-center gap-2 flex-wrap">
                           <input
                             type="number"
+                            inputMode="numeric"
                             value={l.cantidad}
                             onChange={(e) => updateLingoteTipo(idx, 'cantidad', parseInt(e.target.value) || 0)}
                             className="w-16 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -2297,6 +2305,7 @@ export default function LingotesTracker({
                             <div className="flex items-center gap-1 ml-1">
                               <input
                                 type="number"
+                                inputMode="decimal"
                                 value={l.peso !== 50 && l.peso !== 100 ? l.peso : ''}
                                 onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
                                 disabled={editingExpHasBeenUsed}
@@ -2339,6 +2348,7 @@ export default function LingotesTracker({
                     <label className="block text-sm font-medium text-stone-700 mb-1">Precio por gramo (€/g)</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       value={formData.precioGramo}
                       onChange={(e) => setFormData({ ...formData, precioGramo: e.target.value })}
@@ -3864,6 +3874,7 @@ export default function LingotesTracker({
                           </button>
                           <input
                             type="number"
+                            inputMode="numeric"
                             value={item.cantidad}
                             onChange={(e) => updateItemCantidad(item.peso, parseInt(e.target.value) || 0)}
                             className={`flex-1 border rounded-xl px-3 py-2 text-center font-bold text-lg focus:outline-none focus:ring-2 ${
@@ -4091,6 +4102,7 @@ export default function LingotesTracker({
               <div className="flex gap-2">
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   value={formData.euroOnza}
                   onChange={(e) => {
@@ -4127,7 +4139,7 @@ export default function LingotesTracker({
             )}
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
-              <input type="number" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} onClick={e => e.stopPropagation()} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Se rellena con OK" />
+              <input type="number" inputMode="decimal" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} onClick={e => e.stopPropagation()} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Se rellena con OK" />
               {base > 0 && baseClienteNum > 0 && Math.abs(baseClienteNum - base) > 0.001 && (() => {
                 const diff = baseClienteNum - base;
                 const diffTotal = diff * pesoTotalNeto;
@@ -4148,7 +4160,7 @@ export default function LingotesTracker({
             </div>
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
-              <input type="number" step="0.01" value={formData.precioJofisa} onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Base cliente + 0,25" />
+              <input type="number" inputMode="decimal" step="0.01" value={formData.precioJofisa} onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Base cliente + 0,25" />
             </div>
             {precioJofisaNum > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
@@ -4164,7 +4176,7 @@ export default function LingotesTracker({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1">Margen %</label>
-                <input type="number" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <input type="number" inputMode="decimal" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1">Precio Cliente</label>
@@ -4966,7 +4978,7 @@ export default function LingotesTracker({
         <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
           <div className="flex items-center justify-between max-w-2xl mx-auto">
             <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
-              <span className="text-2xl">🥇</span>
+              <img src="/icono-lingotes.jpg" alt="Lingotes" className="w-8 h-8 rounded" />
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
               <span className="text-xs text-stone-400 ml-1">v2.7</span>
             </div>

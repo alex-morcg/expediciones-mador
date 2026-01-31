@@ -535,10 +535,12 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
     );
   };
 
-  const Input = ({ label, ...props }) => (
+  const Input = ({ label, type, ...props }) => (
     <div className="mb-3">
       {label && <label className="block text-amber-800 text-sm mb-1 font-medium">{label}</label>}
-      <input 
+      <input
+        type={type}
+        inputMode={type === 'number' ? 'decimal' : undefined}
         {...props}
         className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-colors"
       />
@@ -749,6 +751,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               <div className="flex gap-2 flex-1">
                 <input
                   type="number"
+                  inputMode="decimal"
                   placeholder="Bruto (g)"
                   value={newLinea.bruto}
                   onChange={(e) => setNewLinea({ ...newLinea, bruto: e.target.value })}
@@ -757,6 +760,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 />
                 <input
                   type="number"
+                  inputMode="decimal"
                   placeholder="Ley"
                   value={newLinea.ley}
                   onChange={(e) => setNewLinea({ ...newLinea, ley: e.target.value })}
@@ -816,6 +820,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       <label className="block text-xs mb-1" style={{ color: clienteColor }}>Precio fino €/g</label>
                       <input
                         type="number"
+                        inputMode="decimal"
                         placeholder="€/g"
                         value={cierreData.precioFino || paq.precioFino || ''}
                         onChange={(e) => setCierreData({ ...cierreData, precioFino: e.target.value })}
@@ -828,6 +833,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       <div className="flex gap-1">
                         <input
                           type="number"
+                          inputMode="decimal"
                           placeholder="€/g"
                           value={cierreData.cierreJofisa || paq.cierreJofisa || ''}
                           onChange={(e) => setCierreData({ ...cierreData, cierreJofisa: e.target.value })}
@@ -1169,7 +1175,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       <div className="mt-3 pt-2 border-t border-green-200">
                         <p className="text-green-700 text-sm font-medium">✅ Verificado y validado</p>
                         <p className="text-green-600 text-xs">
-                          {new Date(paq.verificacionIA.fechaValidacion).toLocaleDateString('es-ES')}
+                          {getUsuario(paq.verificacionIA.validadoPor)?.nombre || paq.verificacionIA.validadoPor} • {new Date(paq.verificacionIA.fechaValidacion).toLocaleDateString('es-ES')}
                         </p>
                       </div>
                     ) : (
@@ -1992,6 +1998,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     />
                     <input
                       type="number"
+                      inputMode="decimal"
                       placeholder="Ley"
                       value={newKilataje.ley}
                       onChange={(e) => setNewKilataje({ ...newKilataje, ley: e.target.value })}
@@ -3134,8 +3141,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 </div>
                 <div className="w-20">
                   <label className="block text-amber-800 text-sm mb-1 font-medium">Nº</label>
-                  <input 
+                  <input
                     type="number"
+                    inputMode="numeric"
                     value={formData.numero || ''}
                     onChange={(e) => setFormData({ ...formData, numero: parseInt(e.target.value) || '' })}
                     className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
@@ -3206,12 +3214,14 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 <div className="flex gap-2">
                   <input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Bruto (g)"
                     id="modal-bruto"
                     className="flex-1 min-w-0 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
                   />
                   <input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Ley"
                     id="modal-ley"
                     className="flex-1 min-w-0 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
@@ -3281,6 +3291,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     <label className="block text-amber-800 text-xs mb-1">Base €/g</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       value={formData.precioFino ?? ''}
                       onChange={(e) => setFormData({ ...formData, precioFino: e.target.value === '' ? null : parseFloat(e.target.value) })}
@@ -3292,6 +3303,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     <div className="flex gap-1">
                       <input
                         type="number"
+                        inputMode="decimal"
                         step="0.01"
                         value={formData.cierreJofisa ?? ''}
                         onChange={(e) => setFormData({ ...formData, cierreJofisa: e.target.value === '' ? '' : parseFloat(e.target.value) })}
@@ -3575,6 +3587,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     <span className="text-sm font-medium w-24 truncate" style={{ color }}>{cliente?.nombre}</span>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       placeholder="0.00"
                       value={finoSobra}
@@ -3596,6 +3609,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               <span className="text-sm text-stone-500">Precio €/g:</span>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 placeholder="0.00"
                 value={precioFinoSobra}
@@ -3623,6 +3637,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     <span className="text-sm font-medium w-24 truncate" style={{ color }}>{cliente?.nombre}</span>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       placeholder="0.00"
                       value={gramosDevueltos}
@@ -3648,7 +3663,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4">✋</div>
+          <img src="/icono-expediciones.png" alt="Ma d'Or" className="w-16 h-16 mx-auto mb-4" />
           <p className="text-amber-800 font-medium">Cargando Ma d'Or...</p>
         </div>
       </div>
@@ -3722,7 +3737,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
           <div className="flex items-center justify-between max-w-2xl mx-auto">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowLingotes(true)}>
-              <span className="text-2xl">✋</span>
+              <img src="/icono-expediciones.png" alt="Ma d'Or" className="w-8 h-8" />
               <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
               <span className="text-xs text-white/50 font-mono">v1.0</span>
             </div>
