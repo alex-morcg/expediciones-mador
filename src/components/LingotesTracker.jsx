@@ -3319,6 +3319,9 @@ export default function LingotesTracker({
                 ],
               };
 
+              // Acumulador para descontar del stock
+              const stockADescontar = {}; // { peso: cantidad }
+
               // Función para crear entregas
               const crearEntregas = async (clienteId, clienteNombre, entregasData) => {
                 for (const [fechaEntrega, lingotesEntrega] of Object.entries(entregasData)) {
@@ -3341,10 +3344,16 @@ export default function LingotesTracker({
                     pesoDevuelto: 0,
                   }));
 
+                  // Acumular para descontar del stock
+                  for (const l of lingotesEntrega) {
+                    stockADescontar[l.peso] = (stockADescontar[l.peso] || 0) + 1;
+                  }
+
                   await onSaveEntrega({
                     clienteId: clienteId,
                     fechaEntrega: fechaEntrega,
                     exportacionNombre: selectedExp.nombre,
+                    exportacionId: selectedExp.id,
                     lingotes: lingotes,
                     logs: [{ fecha: new Date().toISOString(), usuario: 'import', accion: `Importación CSV - ${clienteNombre}` }],
                   });
@@ -3389,7 +3398,23 @@ export default function LingotesTracker({
                 // Gemma
                 await crearEntregas(clienteIds.Gemma, 'Gemma', gemmaEntregas);
 
-                alert('✅ Importación completada!\n\nNJ: 3 entregas + 13 FUTURA\nMilla: 2 entregas\nOrcash: 1 entrega\nGaudia: 3 entregas + 30 FUTURA\nGemma: 1 entrega');
+                // Descontar del stock de la exportación
+                const newLingotes = [...(selectedExp.lingotes || [])];
+                for (const [pesoStr, cantidad] of Object.entries(stockADescontar)) {
+                  const peso = parseInt(pesoStr);
+                  const idx = newLingotes.findIndex(l => l.peso === peso);
+                  if (idx !== -1) {
+                    newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad - cantidad };
+                  }
+                }
+                // Filtrar los que quedan con cantidad > 0
+                const filteredLingotes = newLingotes.filter(l => l.cantidad > 0);
+                await onSaveExportacion({ ...selectedExp, lingotes: filteredLingotes }, selectedExp.id);
+
+                const totalDescontado = Object.entries(stockADescontar).reduce((sum, [peso, cant]) => sum + (parseInt(peso) * cant), 0);
+                console.log(`✅ Descontados ${totalDescontado}g del stock de ${selectedExp.nombre}`);
+
+                alert(`✅ Importación completada!\n\nNJ: 3 entregas + 13 FUTURA\nMilla: 2 entregas\nOrcash: 1 entrega\nGaudia: 3 entregas + 30 FUTURA\nGemma: 1 entrega\n\n📦 Descontados ${totalDescontado}g de ${selectedExp.nombre}`);
               } catch (err) {
                 console.error('Error:', err);
                 alert('Error: ' + err.message);
