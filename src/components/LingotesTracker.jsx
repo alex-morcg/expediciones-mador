@@ -618,9 +618,36 @@ export default function LingotesTracker({
   };
 
   const deleteEntrega = async (entregaId) => {
-    if (confirm('Eliminar esta entrega?')) {
+    if (confirm('Eliminar esta entrega? Los lingotes volverán al stock de la exportación.')) {
       const entrega = entregas.find(e => e.id === entregaId);
-      const cliente = entrega ? clientes.find(c => c.id === entrega.clienteId) : null;
+      if (!entrega) return;
+
+      // Devolver lingotes al stock de la exportación
+      const exportacion = exportaciones.find(e => e.id === entrega.exportacionId);
+      if (exportacion) {
+        // Contar lingotes por peso de la entrega (solo los que no están cerrados/finalizados)
+        const lingotesPorPeso = {};
+        (entrega.lingotes || []).forEach(l => {
+          // Solo devolver lingotes en_curso o devueltos (no los cerrados/finalizados que ya se vendieron)
+          if (l.estado === 'en_curso' || l.estado === 'devuelto') {
+            lingotesPorPeso[l.peso] = (lingotesPorPeso[l.peso] || 0) + 1;
+          }
+        });
+
+        // Añadir de vuelta a la exportación
+        const newLingotes = [...(exportacion.lingotes || [])];
+        Object.entries(lingotesPorPeso).forEach(([peso, cantidad]) => {
+          const pesoNum = Number(peso);
+          const idx = newLingotes.findIndex(l => l.peso === pesoNum);
+          if (idx !== -1) {
+            newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad + cantidad };
+          } else {
+            newLingotes.push({ peso: pesoNum, cantidad });
+          }
+        });
+
+        await onSaveExportacion({ ...exportacion, lingotes: newLingotes }, exportacion.id);
+      }
 
       await onDeleteEntrega(entregaId);
     }
