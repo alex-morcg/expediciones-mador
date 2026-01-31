@@ -2693,27 +2693,28 @@ export default function LingotesTracker({
         'Suissa': 'qZ29q4Iu7Qs94q1mqxBR',
       };
 
-      // Datos históricos: peso e importe por cliente/año (2024-2025)
+      // Datos históricos: peso y margen (mgn) por cliente/año (2024-2025)
+      // €/gramo = margen total / peso total
       const historicDataAnual = {
         '2024': {
-          [clienteIds.Gemma]: { peso: 350, importe: 24150 },
-          [clienteIds.Milla]: { peso: 550, importe: 37950 },
-          [clienteIds.NJ]: { peso: 2550, importe: 175950 },
-          [clienteIds.Orcash]: { peso: 1200, importe: 82800 },
-          [clienteIds.Gaudia]: { peso: 150, importe: 10350 },
-          [clienteIds.Suissa]: { peso: 200, importe: 13800 },
+          [clienteIds.Gemma]: { peso: 350, mgn: 1470 },
+          [clienteIds.Milla]: { peso: 550, mgn: 2136 },
+          [clienteIds.NJ]: { peso: 2550, mgn: 10165 },
+          [clienteIds.Orcash]: { peso: 1200, mgn: 4853 },
+          [clienteIds.Gaudia]: { peso: 150, mgn: 645 },
+          [clienteIds.Suissa]: { peso: 200, mgn: 898 },
         },
         '2025': {
-          [clienteIds.Gemma]: { peso: 450, importe: 38700 },
-          [clienteIds.Milla]: { peso: 605, importe: 52030 },
-          [clienteIds.NJ]: { peso: 5900, importe: 507400 },
-          [clienteIds.Orcash]: { peso: 859, importe: 73874 },
-          [clienteIds.Gaudia]: { peso: 3500, importe: 301000 },
-          [clienteIds.Suissa]: { peso: 0, importe: 0 },
+          [clienteIds.Gemma]: { peso: 450, mgn: 2547 },
+          [clienteIds.Milla]: { peso: 605, mgn: 3416 },
+          [clienteIds.NJ]: { peso: 5900, mgn: 34033 },
+          [clienteIds.Orcash]: { peso: 859, mgn: 5499 },
+          [clienteIds.Gaudia]: { peso: 3500, mgn: 21379 },
+          [clienteIds.Suissa]: { peso: 0, mgn: 0 },
         },
       };
 
-      const byYear = {}; // { year: { clienteId: { peso, importe } } }
+      const byYear = {}; // { year: { clienteId: { peso, mgn } } }
       const years = new Set(['2024', '2025']);
 
       // Inicializar con datos históricos
@@ -2735,12 +2736,12 @@ export default function LingotesTracker({
 
           const clienteId = entrega.clienteId;
           if (!byYear[year][clienteId]) {
-            byYear[year][clienteId] = { peso: 0, importe: 0 };
+            byYear[year][clienteId] = { peso: 0, mgn: 0 };
           }
 
           const peso = (l.peso || 0) - (l.pesoDevuelto || 0);
           byYear[year][clienteId].peso += peso;
-          byYear[year][clienteId].importe += l.importe || 0;
+          byYear[year][clienteId].mgn += l.margenCierre || 0;
         });
       });
 
@@ -2755,11 +2756,11 @@ export default function LingotesTracker({
 
         const clienteId = f.clienteId;
         if (!byYear[year][clienteId]) {
-          byYear[year][clienteId] = { peso: 0, importe: 0 };
+          byYear[year][clienteId] = { peso: 0, mgn: 0 };
         }
 
         byYear[year][clienteId].peso += f.peso || 0;
-        byYear[year][clienteId].importe += (f.peso || 0) * (f.precio || 0);
+        byYear[year][clienteId].mgn += f.margenCierre || 0;
       });
 
       // Ordenar años (solo 2024+)
@@ -2774,20 +2775,20 @@ export default function LingotesTracker({
       const chartData = sortedYears.map(year => {
         const entry = { year };
         let totalPeso = 0;
-        let totalImporte = 0;
+        let totalMgn = 0;
 
         clientesConDatos.forEach(c => {
-          const data = byYear[year]?.[c.id] || { peso: 0, importe: 0 };
+          const data = byYear[year]?.[c.id] || { peso: 0, mgn: 0 };
           const shortName = c.nombre.substring(0, 6);
           entry[shortName] = data.peso;
-          entry[`${shortName}_importe`] = data.importe;
+          entry[`${shortName}_mgn`] = data.mgn;
           totalPeso += data.peso;
-          totalImporte += data.importe;
+          totalMgn += data.mgn;
         });
 
         entry.totalPeso = totalPeso;
-        entry.totalImporte = totalImporte;
-        entry.euroGramo = totalPeso > 0 ? totalImporte / totalPeso : 0;
+        entry.totalMgn = totalMgn;
+        entry.euroGramo = totalPeso > 0 ? totalMgn / totalPeso : 0;
 
         return entry;
       });
@@ -3087,8 +3088,8 @@ export default function LingotesTracker({
                               <span className="font-mono font-bold text-stone-800">{formatNum(data.totalPeso, 0)}g</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-stone-600">Importe:</span>
-                              <span className="font-mono font-semibold text-emerald-700">{formatNum(data.totalImporte, 0)}€</span>
+                              <span className="text-stone-600">Margen:</span>
+                              <span className="font-mono font-semibold text-emerald-700">{formatNum(data.totalMgn, 0)}€</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-cyan-700 font-medium">€/gramo:</span>
