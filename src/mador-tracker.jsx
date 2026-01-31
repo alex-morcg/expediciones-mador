@@ -1042,65 +1042,112 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           </span>
                         </div>
                       )}
-                      {paq.verificacionIA.observaciones && (
-                        <div className="bg-white/60 rounded p-2 mt-1">
-                          <span className="text-stone-500 text-xs block mb-1">Obs:</span>
-                          {(() => {
-                            // Parsear las discrepancias del texto
-                            const obs = paq.verificacionIA.observaciones;
-                            const regex = /Línea\s+([\d.,]+)g\s+ley\s+([\d.,]+)\s+en factura\s+vs\s+([\d.,]+)g\s+ley\s+([\d.,]+)\s+en datos/gi;
-                            const matches = [...obs.matchAll(regex)];
+                      {/* Tabla comparativa: siempre mostrar si hay pesos extraídos */}
+                      {(() => {
+                        const obs = paq.verificacionIA.observaciones || '';
+                        const regex = /Línea\s+([\d.,]+)g\s+ley\s+([\d.,]+)\s+en factura\s+vs\s+([\d.,]+)g\s+ley\s+([\d.,]+)\s+en datos/gi;
+                        const matches = [...obs.matchAll(regex)];
+                        const pesosFra = paq.verificacionIA.pesos || [];
+                        const pesosData = paq.lineas || [];
 
-                            if (matches.length > 0) {
-                              return (
-                                <table className="w-full text-[10px] border-collapse">
-                                  <thead>
-                                    <tr className="text-stone-400">
-                                      <th className="text-left py-0.5">Factura</th>
-                                      <th className="text-left py-0.5">Ley Fra</th>
-                                      <th className="text-left py-0.5">Datos</th>
-                                      <th className="text-left py-0.5">Ley Dat</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {matches.map((m, i) => {
-                                      const pesoFra = m[1];
-                                      const leyFra = m[2];
-                                      const pesoDat = m[3];
-                                      const leyDat = m[4];
-                                      const pesosDiff = pesoFra !== pesoDat;
-                                      const leyesDiff = leyFra !== leyDat;
-                                      return (
-                                        <tr key={i} className="border-t border-stone-200">
-                                          <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoFra}g</td>
-                                          <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyFra}</td>
-                                          <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoDat}g</td>
-                                          <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyDat}</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              );
-                            }
-                            // Fallback: mostrar texto original si no parsea
-                            return <span className="text-stone-700 text-xs">{obs}</span>;
-                          })()}
-                        </div>
-                      )}
-                      {paq.verificacionIA.pesos && paq.verificacionIA.pesos.length > 0 && (
-                        <details className="mt-1">
-                          <summary className="text-stone-400 text-xs cursor-pointer hover:text-stone-600">Ver pesos extraídos</summary>
-                          <div className="mt-1 space-y-0.5">
-                            {paq.verificacionIA.pesos.map((p, i) => (
-                              <div key={i} className="flex justify-between text-xs text-stone-500">
-                                <span>{p.bruto}g</span>
-                                {p.ley && <span>ley {p.ley}</span>}
+                        // Caso 1: Hay discrepancias detectadas en observaciones
+                        if (matches.length > 0) {
+                          return (
+                            <div className="bg-white/60 rounded p-2 mt-1">
+                              <span className="text-stone-500 text-xs block mb-1">Comparación líneas:</span>
+                              <table className="w-full text-[10px] border-collapse">
+                                <thead>
+                                  <tr className="text-stone-400">
+                                    <th className="text-left py-0.5">Factura</th>
+                                    <th className="text-left py-0.5">Ley Fra</th>
+                                    <th className="text-left py-0.5">Datos</th>
+                                    <th className="text-left py-0.5">Ley Dat</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {matches.map((m, i) => {
+                                    const pesoFra = m[1];
+                                    const leyFra = m[2];
+                                    const pesoDat = m[3];
+                                    const leyDat = m[4];
+                                    const pesosDiff = pesoFra !== pesoDat;
+                                    const leyesDiff = leyFra !== leyDat;
+                                    return (
+                                      <tr key={i} className="border-t border-stone-200">
+                                        <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoFra}g</td>
+                                        <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyFra}</td>
+                                        <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoDat}g</td>
+                                        <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyDat}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        }
+
+                        // Caso 2: Pesos cuadran y hay datos para comparar
+                        if (paq.verificacionIA.pesosCuadran && pesosFra.length > 0 && pesosData.length > 0) {
+                          return (
+                            <div className="bg-white/60 rounded p-2 mt-1">
+                              <span className="text-stone-500 text-xs block mb-1">Comparación líneas:</span>
+                              <table className="w-full text-[10px] border-collapse">
+                                <thead>
+                                  <tr className="text-stone-400">
+                                    <th className="text-left py-0.5">Factura</th>
+                                    <th className="text-left py-0.5">Ley Fra</th>
+                                    <th className="text-left py-0.5">Datos</th>
+                                    <th className="text-left py-0.5">Ley Dat</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {pesosFra.map((pFra, i) => {
+                                    const pDat = pesosData[i] || {};
+                                    return (
+                                      <tr key={i} className="border-t border-stone-200">
+                                        <td className="py-0.5 font-mono text-green-600">{pFra.bruto}g</td>
+                                        <td className="py-0.5 font-mono text-green-600">{pFra.ley || '-'}</td>
+                                        <td className="py-0.5 font-mono text-green-600">{pDat.bruto || '-'}g</td>
+                                        <td className="py-0.5 font-mono text-green-600">{pDat.ley || '-'}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        }
+
+                        // Caso 3: Solo hay observaciones texto sin formato de discrepancia
+                        if (obs && obs.trim()) {
+                          return (
+                            <div className="bg-white/60 rounded p-2 mt-1">
+                              <span className="text-stone-500 text-xs block mb-1">Obs:</span>
+                              <span className="text-stone-700 text-xs">{obs}</span>
+                            </div>
+                          );
+                        }
+
+                        // Caso 4: Solo hay pesos extraídos sin datos de comparación
+                        if (pesosFra.length > 0) {
+                          return (
+                            <details className="mt-1">
+                              <summary className="text-stone-400 text-xs cursor-pointer hover:text-stone-600">Ver pesos extraídos</summary>
+                              <div className="mt-1 space-y-0.5">
+                                {pesosFra.map((p, i) => (
+                                  <div key={i} className="flex justify-between text-xs text-stone-500">
+                                    <span>{p.bruto}g</span>
+                                    {p.ley && <span>ley {p.ley}</span>}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        </details>
-                      )}
+                            </details>
+                          );
+                        }
+
+                        return null;
+                      })()}
                     </div>
                     
                     {/* Validación manual */}
