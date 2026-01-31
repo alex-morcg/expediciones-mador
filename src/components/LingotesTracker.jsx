@@ -1033,8 +1033,28 @@ export default function LingotesTracker({
       }
     };
 
+    // Swipe back gesture
+    const swipeStartX = React.useRef(null);
+    const handleTouchStart = (e) => {
+      // Solo detectar swipe desde el borde izquierdo (primeros 30px)
+      if (e.touches[0].clientX < 30) {
+        swipeStartX.current = e.touches[0].clientX;
+      }
+    };
+    const handleTouchEnd = (e) => {
+      if (swipeStartX.current !== null) {
+        const swipeEndX = e.changedTouches[0].clientX;
+        const swipeDistance = swipeEndX - swipeStartX.current;
+        // Si desliza más de 80px hacia la derecha, volver atrás
+        if (swipeDistance > 80) {
+          setSelectedCliente(null);
+        }
+        swipeStartX.current = null;
+      }
+    };
+
     return (
-      <div className="space-y-5">
+      <div className="space-y-5" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <div className="rounded-2xl p-5 text-white shadow-lg relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${cliente.color}, ${cliente.color}dd)` }}>
           <button onClick={() => setSelectedCliente(null)} className="absolute top-3 left-3 text-white/80 hover:text-white text-sm flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
             ← Volver
@@ -1071,20 +1091,24 @@ export default function LingotesTracker({
                       {todosNombres || '-'}
                     </span>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2">
-                    <div className="text-lg font-bold">📦 {formatNum(totalEntregado, 0)}</div>
+                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                    <div className="text-lg">📦</div>
+                    <div className="text-lg font-bold">{formatNum(totalEntregado, 0)}</div>
                     <div className="text-xs text-white/70">Entregado</div>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2">
-                    <div className="text-lg font-bold">✅ {formatNum(enCursoCerrado, 0)}</div>
+                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                    <div className="text-lg">✅</div>
+                    <div className="text-lg font-bold">{formatNum(enCursoCerrado, 0)}</div>
                     <div className="text-xs text-white/70">Cerrado</div>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2">
-                    <div className="text-lg font-bold">↩️ {formatNum(enCursoDevuelto, 0)}</div>
+                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                    <div className="text-lg">↩️</div>
+                    <div className="text-lg font-bold">{formatNum(enCursoDevuelto, 0)}</div>
                     <div className="text-xs text-white/70">Devuelto</div>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2">
-                    <div className="text-lg font-bold">⏳ {formatNum(totalPendiente, 0)}</div>
+                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                    <div className="text-lg">⏳</div>
+                    <div className="text-lg font-bold">{formatNum(totalPendiente, 0)}</div>
                     <div className="text-xs text-white/70">Pendiente</div>
                   </div>
                 </div>
@@ -1637,7 +1661,7 @@ export default function LingotesTracker({
                         <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">€/g</th>
                         <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Importe</th>
                         <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-10">Pag</th>
-                        <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-10">Fra</th>
+                        <th className="text-left py-1.5 px-1 text-stone-500 font-medium text-xs">Fra</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1657,7 +1681,7 @@ export default function LingotesTracker({
                               {l.pagado && '✓'}
                             </button>
                           </td>
-                          <td className="py-1.5 px-1 text-center">
+                          <td className="py-1.5 px-1 text-left">
                             {l.nFactura ? (
                               <button
                                 onClick={(e) => {
@@ -1665,10 +1689,16 @@ export default function LingotesTracker({
                                   const factura = (facturas || []).find(f => f.id === l.nFactura);
                                   if (factura) setViewingFactura(factura);
                                 }}
-                                className="text-blue-500 hover:text-blue-700 text-sm"
+                                className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1"
                                 title="Ver factura"
                               >
-                                📄
+                                <span>📄</span>
+                                <span className="font-mono truncate max-w-[80px]">
+                                  {(() => {
+                                    const factura = (facturas || []).find(f => f.id === l.nFactura);
+                                    return factura?.nombre?.replace(/\.pdf$/i, '') || '';
+                                  })()}
+                                </span>
                               </button>
                             ) : (
                               <button
@@ -2782,6 +2812,17 @@ export default function LingotesTracker({
     // Ancho del gráfico basado en número de meses (20px por barra para que sean más estrechas)
     const chartWidth = Math.max(statsPorMes.chartData.length * 20, 400);
 
+    // Estado para hover en el gráfico
+    const [hoveredBarTotal, setHoveredBarTotal] = React.useState(null);
+
+    // Calcular el máximo para el eje Y (redondeado a múltiplo de 500)
+    const maxTotal = Math.max(...statsPorMes.chartData.map(d => d.total || 0), 500);
+    const yAxisMax = Math.ceil(maxTotal / 500) * 500;
+    const yAxisTicks = [];
+    for (let i = 0; i <= yAxisMax; i += 500) {
+      yAxisTicks.push(i);
+    }
+
     // Ref para scroll automático a la derecha
     const chartScrollRef = React.useRef(null);
     React.useEffect(() => {
@@ -2799,7 +2840,18 @@ export default function LingotesTracker({
             <div ref={chartScrollRef} className="overflow-x-auto pb-2">
               <div style={{ width: chartWidth, minWidth: '100%', height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statsPorMes.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }} barCategoryGap="30%">
+                  <BarChart
+                    data={statsPorMes.chartData}
+                    margin={{ top: 10, right: 45, left: 0, bottom: 20 }}
+                    barCategoryGap="30%"
+                    onMouseMove={(state) => {
+                      if (state?.activePayload?.length > 0) {
+                        const total = state.activePayload[0]?.payload?.total || 0;
+                        setHoveredBarTotal(total);
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredBarTotal(null)}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
                     <XAxis
                       dataKey="label"
@@ -2810,10 +2862,21 @@ export default function LingotesTracker({
                       interval={0}
                     />
                     <YAxis
+                      yAxisId="left"
                       tick={{ fontSize: 10, fill: '#78716c' }}
                       tickFormatter={(v) => `${v}g`}
                       width={45}
-                      label={{ value: 'gramos', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#a8a29e' }}
+                      domain={[0, yAxisMax]}
+                      ticks={yAxisTicks}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 10, fill: '#78716c' }}
+                      tickFormatter={(v) => `${v}g`}
+                      width={45}
+                      domain={[0, yAxisMax]}
+                      ticks={yAxisTicks}
                     />
                     <Tooltip
                       formatter={(value, name) => {
@@ -2837,13 +2900,19 @@ export default function LingotesTracker({
                         stackId="ventas"
                         fill={cliente.color || '#8884d8'}
                         name={cliente.shortName}
+                        yAxisId="left"
                       />
                     ))}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
-            <p className="text-[10px] text-stone-400 mt-1">Gramos vendidos (cerrados) por mes, agrupados por cliente</p>
+            <div className="flex justify-between items-center mt-1">
+              <p className="text-[10px] text-stone-400">Gramos vendidos (cerrados) por mes, agrupados por cliente</p>
+              {hoveredBarTotal !== null && (
+                <p className="text-sm font-semibold text-amber-600">Total: {formatNum(hoveredBarTotal, 0)}g</p>
+              )}
+            </div>
           </Card>
         )}
 
@@ -2887,10 +2956,12 @@ export default function LingotesTracker({
                       clienteTotal.mgn += data.mgn || 0;
                     });
                     const grandTotalMgn = Object.values(statsPorAnyo.totalesPorAnyo).reduce((sum, t) => sum + (t.mgn || 0), 0);
+                    // Color suave del cliente (15% opacidad)
+                    const rowBgColor = cliente.color ? `${cliente.color}15` : 'transparent';
 
                     return (
-                      <tr key={cliente.id} className="border-b border-stone-100 hover:bg-stone-50">
-                        <td className="py-2 px-2 sticky left-0 bg-white border-r border-stone-200">
+                      <tr key={cliente.id} className="border-b border-stone-100" style={{ backgroundColor: rowBgColor }}>
+                        <td className="py-2 px-2 sticky left-0 border-r border-stone-200" style={{ backgroundColor: rowBgColor }}>
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cliente.color }} />
                             <span className="font-medium text-stone-800 truncate">{cliente.nombre}</span>
@@ -2961,78 +3032,6 @@ export default function LingotesTracker({
           )}
         </Card>
 
-        {/* Márgenes por Cliente (existente) */}
-        <Card>
-          <h2 className="text-lg font-bold text-stone-800 mb-4">💰 Márgenes por Cliente</h2>
-
-          {statsClientes.length === 0 ? (
-            <p className="text-stone-400 text-center py-6">No hay lingotes cerrados todavía.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-stone-200">
-                    <th className="text-left py-2 px-1 font-semibold text-stone-600">Cliente</th>
-                    <th className="text-right py-2 px-1 font-semibold text-stone-600">Vendido</th>
-                    <th className="text-right py-2 px-1 font-semibold text-stone-600">Margen</th>
-                    <th className="text-right py-2 px-1 font-semibold text-stone-600">% Cierre</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statsClientes.map(c => (
-                    <tr key={c.id} className="border-b border-stone-100">
-                      <td className="py-3 px-1">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }} />
-                          <span className="font-medium text-stone-800">{c.nombre}</span>
-                        </div>
-                      </td>
-                      <td className="text-right py-3 px-1 font-mono text-stone-700">{formatNum(c.gramosVendidos, 0)}g</td>
-                      <td className="text-right py-3 px-1 font-mono font-semibold text-emerald-600">{formatEur(c.margenTotal)}</td>
-                      <td className="text-right py-3 px-1">
-                        <span className="font-mono text-stone-600">{formatNum(c.pctMargenCierre, 1)}%</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-stone-50 font-semibold">
-                    <td className="py-3 px-1 text-stone-800">TOTAL</td>
-                    <td className="text-right py-3 px-1 font-mono text-stone-800">{formatNum(totalGramos, 0)}g</td>
-                    <td className="text-right py-3 px-1 font-mono text-emerald-700">{formatEur(totalMargen)}</td>
-                    <td className="text-right py-3 px-1 font-mono text-stone-700">{formatNum(totalPctCierre, 1)}%</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        {totalMargen > 0 && (
-          <Card>
-            <h3 className="text-sm font-semibold text-stone-600 mb-3">Desglose del Margen Total</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-stone-600">Margen Cierre (diff. base)</span>
-                <span className="font-mono font-semibold text-amber-600">{formatEur(totalMargenCierre)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-stone-600">Margen Operativo</span>
-                <span className="font-mono font-semibold text-emerald-600">{formatEur(totalMargen - totalMargenCierre)}</span>
-              </div>
-              <div className="h-3 bg-stone-200 rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500"
-                  style={{ width: `${totalPctCierre}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-stone-500">
-                <span>Cierre: {formatNum(totalPctCierre, 1)}%</span>
-                <span>Operativo: {formatNum(100 - totalPctCierre, 1)}%</span>
-              </div>
-            </div>
-          </Card>
-        )}
       </div>
     );
   };
