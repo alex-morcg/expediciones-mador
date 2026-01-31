@@ -1478,10 +1478,35 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           
           <div className="space-y-2">
             {(() => {
+              // Función para determinar tipo de pendiente
+              const getTipoPendiente = (p) => {
+                if (!p.precioFino) return 'sin_cerrar';
+                if (!p.factura) return 'sin_factura';
+                if (!(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)) return 'sin_verificar';
+                return null;
+              };
+
+              // Definición de tipos de pendiente con colores
+              const tiposPendiente = {
+                'sin_cerrar': { nombre: 'Pendiente de cerrar', color: '#dc2626', icon: '🔓' },
+                'sin_factura': { nombre: 'Pendiente de factura', color: '#f59e0b', icon: '📄' },
+                'sin_verificar': { nombre: 'Pendiente de verificar', color: '#3b82f6', icon: '🤖' },
+              };
+
               const basePaquetes = ordenVista === 'pendientes'
-                ? expedicionPaquetes.filter(p => !p.precioFino || !p.factura || !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre))
+                ? expedicionPaquetes.filter(p => getTipoPendiente(p) !== null)
                 : expedicionPaquetes;
               const sortedPaquetes = [...basePaquetes].sort((a, b) => {
+                if (ordenVista === 'pendientes') {
+                  // Ordenar por tipo de pendiente: sin_cerrar > sin_factura > sin_verificar
+                  const ordenPendiente = ['sin_cerrar', 'sin_factura', 'sin_verificar'];
+                  const tipoA = getTipoPendiente(a);
+                  const tipoB = getTipoPendiente(b);
+                  const idxA = ordenPendiente.indexOf(tipoA);
+                  const idxB = ordenPendiente.indexOf(tipoB);
+                  if (idxA !== idxB) return idxA - idxB;
+                  return b.numero - a.numero;
+                }
                 if (ordenVista === 'cliente') {
                   const clienteA = getCliente(a.clienteId)?.nombre || '';
                   const clienteB = getCliente(b.clienteId)?.nombre || '';
@@ -1538,6 +1563,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               let lastClienteId = null;
               let lastEstadoId = null;
               let lastCategoriaId = null;
+              let lastTipoPendiente = null;
               
               return sortedPaquetes.map(paq => {
                 const paqTotales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
@@ -1562,9 +1588,30 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 const showCategoriaHeader = ordenVista === 'categoria' && paq.categoriaId !== lastCategoriaId;
                 const categoriaBrutoTotal = brutoPorCategoria[paq.categoriaId] || 0;
                 lastCategoriaId = paq.categoriaId;
-                
+
+                // Header de tipo pendiente cuando cambia
+                const tipoPendienteActual = getTipoPendiente(paq);
+                const showPendienteHeader = ordenVista === 'pendientes' && tipoPendienteActual !== lastTipoPendiente;
+                const tipoPendienteInfo = tiposPendiente[tipoPendienteActual];
+                lastTipoPendiente = tipoPendienteActual;
+
                 return (
                   <React.Fragment key={paq.id}>
+                    {showPendienteHeader && tipoPendienteInfo && (
+                      <div
+                        className="flex items-center gap-2 pt-3 pb-1 mt-2 border-t-2"
+                        style={{ borderColor: tipoPendienteInfo.color }}
+                      >
+                        <span className="text-lg">{tipoPendienteInfo.icon}</span>
+                        <span className="font-bold flex-1" style={{ color: tipoPendienteInfo.color }}>{tipoPendienteInfo.nombre}</span>
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-bold"
+                          style={{ backgroundColor: tipoPendienteInfo.color + '20', color: tipoPendienteInfo.color }}
+                        >
+                          {sortedPaquetes.filter(p => getTipoPendiente(p) === tipoPendienteActual).length}
+                        </span>
+                      </div>
+                    )}
                     {showClienteHeader && (
                       <div 
                         className="flex items-center gap-2 pt-3 pb-1 mt-2 border-t-2"

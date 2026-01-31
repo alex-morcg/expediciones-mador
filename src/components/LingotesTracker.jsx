@@ -1981,7 +1981,14 @@ export default function LingotesTracker({
     };
 
     const exportacionesStats = useMemo(() => {
-      return exportaciones.map(exp => {
+      // Ordenar descendente por fecha o nombre
+      const sorted = [...exportaciones].sort((a, b) => {
+        // Primero por fecha si existe
+        if (a.fecha && b.fecha) return b.fecha.localeCompare(a.fecha);
+        // Si no hay fecha, por nombre descendente
+        return (b.nombre || '').localeCompare(a.nombre || '');
+      });
+      return sorted.map(exp => {
         const entregasExp = entregas.filter(e => e.exportacionId === exp.id);
         const totalEntregado = entregasExp.reduce((sum, e) => sum + pesoEntrega(e), 0);
         const totalCerrado = entregasExp.reduce((sum, e) => sum + pesoCerrado(e), 0);
@@ -2099,13 +2106,13 @@ export default function LingotesTracker({
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-stone-800">Exportaciones</h2>
+          <h2 className="text-xl font-bold text-stone-800">Importaciones</h2>
           <Button size="sm" onClick={openNew}>+ Nueva</Button>
         </div>
 
         {showNew && !editingExp && (
           <Card className="border-amber-400 bg-amber-50">
-            <h3 className="font-bold text-stone-800 mb-4">Nueva Exportación</h3>
+            <h3 className="font-bold text-stone-800 mb-4">Nueva Importación</h3>
             <div className="space-y-4">
               <div className="flex gap-3">
                 <div className="flex-1">
@@ -2445,7 +2452,7 @@ export default function LingotesTracker({
               <div className="bg-amber-50 rounded-xl p-3 mb-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <p className="text-xs text-amber-600 font-medium">📦 Exportación</p>
+                    <p className="text-xs text-amber-600 font-medium">📦 Importación</p>
                     <p className="text-amber-800 font-bold">{formatNum(exp.grExport || 0, 0)}g</p>
                   </div>
                   <div className="text-right">
@@ -3372,7 +3379,7 @@ export default function LingotesTracker({
 
           {/* Selector de exportación */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-stone-700 mb-1">Asignar a Exportación:</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Asignar a Importación:</label>
             <select
               value={importExportacionId}
               onChange={(e) => setImportExportacionId(e.target.value)}
@@ -3801,7 +3808,7 @@ export default function LingotesTracker({
               {/* Exportación, Cliente y Fecha */}
               <div className="space-y-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">📦 Exportación</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">📦 Importación</label>
                   <select
                     value={formData.exportacionId}
                     onChange={(e) => handleExportacionChange(e.target.value)}
@@ -4973,7 +4980,7 @@ export default function LingotesTracker({
         {/* Navigation */}
         <nav className="bg-white border-b border-amber-200 flex shadow-sm">
           <TabBtn id="stock" label="Stock" icon="📊" />
-          <TabBtn id="exportaciones" label="Exportaciones" icon="📦" />
+          <TabBtn id="exportaciones" label="Importaciones" icon="📦" />
           <TabBtn id="estadisticas" label="Stats" icon="💰" />
           <TabBtn id="parametros" label="Ajustes" icon="⚙️" />
         </nav>
