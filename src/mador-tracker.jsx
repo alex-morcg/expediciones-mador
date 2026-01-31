@@ -841,15 +841,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       )}
                     </div>
                   </div>
-                  <Button 
-                    className="self-start sm:self-end" 
+                  <Button
+                    className="self-start sm:self-end"
                     disabled={!!noPuedeGuardar}
                     disabledReason={noPuedeGuardar}
                     onClick={() => {
-                      const precioFinal = cierreData.precioFino ? parseFloat(cierreData.precioFino) : paq.precioFino;
-                      const cierreJofisaFinal = cierreData.cierreJofisa ? parseFloat(cierreData.cierreJofisa) : paq.cierreJofisa;
-                      if (precioFinal) {
-                        updatePaqueteCierre(paq.id, precioFinal, cierreJofisaFinal);
+                      const precioFinal = cierreData.precioFino !== '' ? parseFloat(cierreData.precioFino) : paq.precioFino;
+                      const cierreJofisaFinal = cierreData.cierreJofisa !== '' ? parseFloat(cierreData.cierreJofisa) : paq.cierreJofisa;
+                      if (precioFinal && !isNaN(precioFinal)) {
+                        updatePaqueteCierre(paq.id, precioFinal, cierreJofisaFinal || (precioFinal - 0.25));
                         setCierreData({ precioFino: '', cierreJofisa: '' });
                       }
                     }}
@@ -1059,8 +1059,48 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       )}
                       {paq.verificacionIA.observaciones && (
                         <div className="bg-white/60 rounded p-2 mt-1">
-                          <span className="text-stone-500 text-xs">Obs: </span>
-                          <span className="text-stone-700 text-xs">{paq.verificacionIA.observaciones}</span>
+                          <span className="text-stone-500 text-xs block mb-1">Obs:</span>
+                          {(() => {
+                            // Parsear las discrepancias del texto
+                            const obs = paq.verificacionIA.observaciones;
+                            const regex = /Línea\s+([\d.,]+)g\s+ley\s+([\d.,]+)\s+en factura\s+vs\s+([\d.,]+)g\s+ley\s+([\d.,]+)\s+en datos/gi;
+                            const matches = [...obs.matchAll(regex)];
+
+                            if (matches.length > 0) {
+                              return (
+                                <table className="w-full text-[10px] border-collapse">
+                                  <thead>
+                                    <tr className="text-stone-400">
+                                      <th className="text-left py-0.5">Factura</th>
+                                      <th className="text-left py-0.5">Ley Fra</th>
+                                      <th className="text-left py-0.5">Datos</th>
+                                      <th className="text-left py-0.5">Ley Dat</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {matches.map((m, i) => {
+                                      const pesoFra = m[1];
+                                      const leyFra = m[2];
+                                      const pesoDat = m[3];
+                                      const leyDat = m[4];
+                                      const pesosDiff = pesoFra !== pesoDat;
+                                      const leyesDiff = leyFra !== leyDat;
+                                      return (
+                                        <tr key={i} className="border-t border-stone-200">
+                                          <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoFra}g</td>
+                                          <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyFra}</td>
+                                          <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoDat}g</td>
+                                          <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyDat}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              );
+                            }
+                            // Fallback: mostrar texto original si no parsea
+                            return <span className="text-stone-700 text-xs">{obs}</span>;
+                          })()}
                         </div>
                       )}
                       {paq.verificacionIA.pesos && paq.verificacionIA.pesos.length > 0 && (

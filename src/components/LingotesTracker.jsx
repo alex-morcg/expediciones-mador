@@ -19,6 +19,14 @@ const formatEntregaShort = (fecha) => {
   return `${parseInt(m[3])}-${parseInt(m[2])}`;
 };
 
+// Fecha cierre compacta: "2026-01-28" → "26-01-28"
+const formatFechaCierre = (fecha) => {
+  if (!fecha || fecha === '-') return '-';
+  const m = fecha.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return fecha;
+  return `${m[1].slice(2)}-${m[2]}-${m[3]}`;
+};
+
 // 20-color palette for entrega badges
 const ENTREGA_COLORS = [
   '#e11d48', '#db2777', '#c026d3', '#9333ea', '#7c3aed',
@@ -1147,7 +1155,7 @@ export default function LingotesTracker({
             {entregasFinalizadasList.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/20">
                 {/* Header de 5 columnas: Entrega + 4 stats */}
-                <div className="grid grid-cols-5 gap-2 px-2 py-1 text-xs text-white/50 mb-1">
+                <div className="grid grid-cols-5 gap-2 px-2 py-1 text-[10px] text-white/50 mb-1">
                   <span className="text-left">Entrega</span>
                   <span className="text-center">📦</span>
                   <span className="text-center">✅</span>
@@ -1165,9 +1173,9 @@ export default function LingotesTracker({
                       return (
                         <div key={entrega.id} className="grid grid-cols-5 gap-2 bg-white/10 rounded-lg px-2 py-2 items-center">
                           <div className="flex items-center gap-1">
-                            <span className="text-green-300 text-xs">✓</span>
+                            <span className="text-green-300 text-[10px]">✓</span>
                             <span
-                              className="px-1.5 py-0.5 rounded font-bold text-xs truncate"
+                              className="px-1 py-0.5 rounded font-bold text-[10px] truncate"
                               style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '40', color: 'white' }}
                             >
                               {nombreEntrega}
@@ -1695,7 +1703,7 @@ export default function LingotesTracker({
                     <tbody>
                       {lingotes.map((l, i) => (
                         <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-amber-50/50' : 'hover:bg-stone-50'}`}>
-                          <td className="py-1.5 px-1 text-xs">{l.fechaCierre || '-'}</td>
+                          <td className="py-1.5 px-1 text-[10px] text-stone-500">{formatFechaCierre(l.fechaCierre)}</td>
                           <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
                           <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
                           <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
@@ -3208,13 +3216,11 @@ export default function LingotesTracker({
                     const grandTotalMgn = Object.values(statsPorAnyo.totalesPorAnyo).reduce((sum, t) => sum + (t.mgn || 0), 0);
                     // Color suave del cliente (20% opacidad)
                     const rowBgColor = cliente.color ? `${cliente.color}20` : 'transparent';
-                    // Color sólido para sticky (mezcla con blanco)
-                    const stickyBgColor = cliente.color ? `${cliente.color}30` : '#ffffff';
 
                     return (
                       <tr key={cliente.id} className="border-b border-stone-100" style={{ backgroundColor: rowBgColor }}>
-                        <td className="py-2 px-2 sticky left-0 border-r border-stone-200 min-w-[90px] z-10" style={{ backgroundColor: stickyBgColor }}>
-                          <div className="flex items-center gap-1.5">
+                        <td className="py-2 px-2 sticky left-0 border-r border-stone-200 min-w-[90px] z-10 bg-white">
+                          <div className="flex items-center gap-1.5 -mx-2 -my-2 px-2 py-2" style={{ backgroundColor: cliente.color ? `${cliente.color}30` : 'transparent' }}>
                             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cliente.color }} />
                             <span className="font-medium text-stone-800 whitespace-nowrap text-xs">{cliente.nombre}</span>
                           </div>
