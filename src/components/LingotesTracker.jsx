@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ComposedChart, Line } from 'recharts';
 import { LOGO_MADOR_BASE64 } from '../assets/logo';
 
 const formatNum = (num, decimals = 2) => {
@@ -2682,6 +2682,119 @@ export default function LingotesTracker({
       return { byYear, sortedYears, clientesConDatos, totalesPorAnyo };
     }, [entregas, futuraLingotes, clientes]);
 
+    // Stats volumen anual para gráfico de barras + línea €/g (desde 2024)
+    const statsVolumenAnual = useMemo(() => {
+      const clienteIds = {
+        'Gemma': 'LYn5VsQMazDk4qjT6r6M',
+        'Milla': 'N6nDJCoBzFxhshm5dB6A',
+        'NJ': 'i4s6s7L68w9ErFKxQ3qQ',
+        'Orcash': 'yZTyXNSpM0jJvJRYj0Y7',
+        'Gaudia': 'Uu5XbiExWFB0d5AiugIi',
+        'Suissa': 'qZ29q4Iu7Qs94q1mqxBR',
+      };
+
+      // Datos históricos: peso e importe por cliente/año (2024-2025)
+      const historicDataAnual = {
+        '2024': {
+          [clienteIds.Gemma]: { peso: 350, importe: 24150 },
+          [clienteIds.Milla]: { peso: 550, importe: 37950 },
+          [clienteIds.NJ]: { peso: 2550, importe: 175950 },
+          [clienteIds.Orcash]: { peso: 1200, importe: 82800 },
+          [clienteIds.Gaudia]: { peso: 150, importe: 10350 },
+          [clienteIds.Suissa]: { peso: 200, importe: 13800 },
+        },
+        '2025': {
+          [clienteIds.Gemma]: { peso: 450, importe: 38700 },
+          [clienteIds.Milla]: { peso: 605, importe: 52030 },
+          [clienteIds.NJ]: { peso: 5900, importe: 507400 },
+          [clienteIds.Orcash]: { peso: 859, importe: 73874 },
+          [clienteIds.Gaudia]: { peso: 3500, importe: 301000 },
+          [clienteIds.Suissa]: { peso: 0, importe: 0 },
+        },
+      };
+
+      const byYear = {}; // { year: { clienteId: { peso, importe } } }
+      const years = new Set(['2024', '2025']);
+
+      // Inicializar con datos históricos
+      Object.keys(historicDataAnual).forEach(year => {
+        byYear[year] = { ...historicDataAnual[year] };
+      });
+
+      // Procesar entregas de 2026 en adelante (dinámico)
+      entregas.forEach(entrega => {
+        (entrega.lingotes || []).forEach(l => {
+          if (l.estado !== 'finalizado' && l.estado !== 'pendiente_pago') return;
+          const fecha = l.fechaCierre || entrega.fechaEntrega;
+          if (!fecha) return;
+          const year = fecha.substring(0, 4);
+          if (year < '2026') return;
+
+          years.add(year);
+          if (!byYear[year]) byYear[year] = {};
+
+          const clienteId = entrega.clienteId;
+          if (!byYear[year][clienteId]) {
+            byYear[year][clienteId] = { peso: 0, importe: 0 };
+          }
+
+          const peso = (l.peso || 0) - (l.pesoDevuelto || 0);
+          byYear[year][clienteId].peso += peso;
+          byYear[year][clienteId].importe += l.importe || 0;
+        });
+      });
+
+      // FUTURA cerrados de 2026+
+      (futuraLingotes || []).forEach(f => {
+        if (!f.precio || !f.fechaCierre) return;
+        const year = f.fechaCierre.substring(0, 4);
+        if (year < '2026') return;
+
+        years.add(year);
+        if (!byYear[year]) byYear[year] = {};
+
+        const clienteId = f.clienteId;
+        if (!byYear[year][clienteId]) {
+          byYear[year][clienteId] = { peso: 0, importe: 0 };
+        }
+
+        byYear[year][clienteId].peso += f.peso || 0;
+        byYear[year][clienteId].importe += (f.peso || 0) * (f.precio || 0);
+      });
+
+      // Ordenar años (solo 2024+)
+      const sortedYears = [...years].filter(y => y >= '2024').sort();
+
+      // Clientes con datos en estos años
+      const clientesConDatos = clientes.filter(c => {
+        return sortedYears.some(year => byYear[year]?.[c.id]?.peso > 0);
+      });
+
+      // Crear chartData para el gráfico
+      const chartData = sortedYears.map(year => {
+        const entry = { year };
+        let totalPeso = 0;
+        let totalImporte = 0;
+
+        clientesConDatos.forEach(c => {
+          const data = byYear[year]?.[c.id] || { peso: 0, importe: 0 };
+          const shortName = c.nombre.substring(0, 6);
+          entry[shortName] = data.peso;
+          entry[`${shortName}_importe`] = data.importe;
+          totalPeso += data.peso;
+          totalImporte += data.importe;
+        });
+
+        entry.totalPeso = totalPeso;
+        entry.totalImporte = totalImporte;
+        entry.euroGramo = totalPeso > 0 ? totalImporte / totalPeso : 0;
+
+        return entry;
+      });
+
+      return { chartData, clientesConDatos, byYear };
+    }, [entregas, futuraLingotes, clientes]);
+
     // Stats por mes para gráfico stacked - DATOS HISTÓRICOS HARDCODEADOS
     const statsPorMes = useMemo(() => {
       // Mapeo de nombres a IDs de cliente
@@ -2916,6 +3029,113 @@ export default function LingotesTracker({
           </Card>
         )}
 
+        {/* Gráfico Volumen Anual + €/g */}
+        {statsVolumenAnual.chartData.length > 0 && (
+          <Card>
+            <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Volumen Anual y €/gramo</h2>
+            <div style={{ width: '100%', height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={statsVolumenAnual.chartData}
+                  margin={{ top: 20, right: 60, left: 10, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                  <XAxis
+                    dataKey="year"
+                    tick={{ fontSize: 12, fill: '#78716c', fontWeight: 600 }}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fontSize: 10, fill: '#78716c' }}
+                    tickFormatter={(v) => `${formatNum(v, 0)}g`}
+                    width={55}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 10, fill: '#0891b2' }}
+                    tickFormatter={(v) => `${formatNum(v, 2)}€`}
+                    width={50}
+                    domain={['auto', 'auto']}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || payload.length === 0) return null;
+                      const data = payload[0]?.payload;
+                      if (!data) return null;
+
+                      return (
+                        <div className="bg-white border border-stone-200 rounded-lg shadow-lg p-3 text-xs">
+                          <p className="font-bold text-stone-800 mb-2 text-sm">{label}</p>
+                          <div className="space-y-1">
+                            {statsVolumenAnual.clientesConDatos.map(c => {
+                              const shortName = c.nombre.substring(0, 6);
+                              const peso = data[shortName] || 0;
+                              if (peso === 0) return null;
+                              return (
+                                <div key={c.id} className="flex items-center gap-2">
+                                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                                  <span className="text-stone-600">{c.nombre}:</span>
+                                  <span className="font-mono font-semibold text-stone-800">{formatNum(peso, 0)}g</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="border-t border-stone-200 mt-2 pt-2 space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-stone-600">Total:</span>
+                              <span className="font-mono font-bold text-stone-800">{formatNum(data.totalPeso, 0)}g</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-stone-600">Importe:</span>
+                              <span className="font-mono font-semibold text-emerald-700">{formatNum(data.totalImporte, 0)}€</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-cyan-700 font-medium">€/gramo:</span>
+                              <span className="font-mono font-bold text-cyan-700">{formatNum(data.euroGramo, 2)}€</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Legend
+                    formatter={(value) => {
+                      if (value === 'euroGramo') return '€/gramo';
+                      const cliente = statsVolumenAnual.clientesConDatos.find(c => c.nombre.substring(0, 6) === value);
+                      return cliente?.nombre || value;
+                    }}
+                    wrapperStyle={{ fontSize: 10, paddingTop: 10 }}
+                  />
+                  {statsVolumenAnual.clientesConDatos.map((cliente) => {
+                    const shortName = cliente.nombre.substring(0, 6);
+                    return (
+                      <Bar
+                        key={shortName}
+                        dataKey={shortName}
+                        stackId="volumen"
+                        fill={cliente.color || '#8884d8'}
+                        name={shortName}
+                        yAxisId="left"
+                      />
+                    );
+                  })}
+                  <Line
+                    type="monotone"
+                    dataKey="euroGramo"
+                    stroke="#0891b2"
+                    strokeWidth={3}
+                    dot={{ fill: '#0891b2', strokeWidth: 2, r: 5 }}
+                    yAxisId="right"
+                    name="euroGramo"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-[10px] text-stone-400 mt-1">Volumen total vendido por año (barras) y precio medio €/gramo (línea)</p>
+          </Card>
+        )}
+
         {/* Stats por Año */}
         <Card>
           <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Entregas por Año</h2>
@@ -2927,13 +3147,14 @@ export default function LingotesTracker({
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="border-b-2 border-stone-300">
-                    <th rowSpan={2} className="text-left py-2 px-2 font-semibold text-stone-600 sticky left-0 bg-white border-r border-stone-200">Cliente</th>
+                    <th rowSpan={2} className="text-left py-2 px-2 font-semibold text-stone-600 sticky left-0 bg-white border-r border-stone-200 min-w-[90px] z-10">Cliente</th>
                     {statsPorAnyo.sortedYears.map(year => (
                       <th key={year} colSpan={3} className="text-center py-1 px-1 font-bold text-stone-700 border-r border-stone-200 bg-stone-50">{year}</th>
                     ))}
                     <th colSpan={3} className="text-center py-1 px-1 font-bold text-stone-800 bg-amber-50 border-l-2 border-amber-300">Suma total</th>
                   </tr>
                   <tr className="border-b border-stone-200 text-[10px]">
+                    <th className="sticky left-0 bg-white z-10"></th>
                     {statsPorAnyo.sortedYears.map(year => (
                       <React.Fragment key={year}>
                         <th className="py-1 px-1 text-stone-500 font-medium">Peso</th>
@@ -2956,15 +3177,17 @@ export default function LingotesTracker({
                       clienteTotal.mgn += data.mgn || 0;
                     });
                     const grandTotalMgn = Object.values(statsPorAnyo.totalesPorAnyo).reduce((sum, t) => sum + (t.mgn || 0), 0);
-                    // Color suave del cliente (15% opacidad)
-                    const rowBgColor = cliente.color ? `${cliente.color}15` : 'transparent';
+                    // Color suave del cliente (20% opacidad)
+                    const rowBgColor = cliente.color ? `${cliente.color}20` : 'transparent';
+                    // Color sólido para sticky (mezcla con blanco)
+                    const stickyBgColor = cliente.color ? `${cliente.color}30` : '#ffffff';
 
                     return (
                       <tr key={cliente.id} className="border-b border-stone-100" style={{ backgroundColor: rowBgColor }}>
-                        <td className="py-2 px-2 sticky left-0 border-r border-stone-200" style={{ backgroundColor: rowBgColor }}>
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cliente.color }} />
-                            <span className="font-medium text-stone-800 truncate">{cliente.nombre}</span>
+                        <td className="py-2 px-2 sticky left-0 border-r border-stone-200 min-w-[90px] z-10" style={{ backgroundColor: stickyBgColor }}>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cliente.color }} />
+                            <span className="font-medium text-stone-800 whitespace-nowrap text-xs">{cliente.nombre}</span>
                           </div>
                         </td>
                         {statsPorAnyo.sortedYears.map(year => {
