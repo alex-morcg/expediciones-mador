@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { jsPDF } from 'jspdf';
 import { useFirestore } from './hooks/useFirestore';
 import LingotesTracker from './components/LingotesTracker';
 
@@ -288,6 +289,75 @@ export default function MadorTracker() {
     });
     
     return { sumaBruto, sumaFino, totalFra, totalFraJofisa, totalMargen, totalFraEstimado, precioMedioBruto, porCategoria, porCliente, numPaquetes: expedicionPaquetes.length };
+  };
+
+  // Exportar PDF simple con lista de paquetes y peso bruto
+  const exportarExpedicionPDF = (expedicionId) => {
+    const expedicion = expediciones.find(e => e.id === expedicionId);
+    if (!expedicion) return;
+
+    const expedicionPaquetes = paquetes.filter(p => p.expedicionId === expedicionId);
+    if (expedicionPaquetes.length === 0) {
+      alert('No hay paquetes en esta expedición');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Título
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Expedición ${expedicion.nombre}`, pageWidth / 2, 20, { align: 'center' });
+
+    // Fecha
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date().toLocaleDateString('es-ES'), pageWidth / 2, 28, { align: 'center' });
+
+    // Lista de paquetes
+    let yPos = 45;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Paquete', 20, yPos);
+    doc.text('Peso Bruto', pageWidth - 20, yPos, { align: 'right' });
+
+    yPos += 3;
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos, pageWidth - 20, yPos);
+    yPos += 8;
+
+    doc.setFont('helvetica', 'normal');
+    let totalBruto = 0;
+
+    expedicionPaquetes.forEach(paq => {
+      const totales = calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(expedicionId));
+      totalBruto += totales.brutoTotal;
+
+      doc.text(paq.nombre, 20, yPos);
+      doc.text(`${formatNum(totales.brutoTotal, 2)} g`, pageWidth - 20, yPos, { align: 'right' });
+      yPos += 7;
+
+      // Nueva página si es necesario
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
+    });
+
+    // Línea separadora
+    yPos += 2;
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos, pageWidth - 20, yPos);
+    yPos += 8;
+
+    // Total
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL', 20, yPos);
+    doc.text(`${formatNum(totalBruto, 2)} g`, pageWidth - 20, yPos, { align: 'right' });
+
+    // Guardar
+    doc.save(`Expedicion_${expedicion.nombre}_paquetes.pdf`);
   };
 
   const getPrecioRefExpedicion = (expedicionId) => {
@@ -3530,6 +3600,13 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 <>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedExpedicion(null)}>← Volver</Button>
                   <h2 className="text-lg font-bold text-amber-800 flex-1">Expedición {expediciones.find(e => e.id === selectedExpedicion)?.nombre}</h2>
+                  <button
+                    onClick={() => exportarExpedicionPDF(selectedExpedicion)}
+                    className="text-xl hover:scale-110 transition-transform"
+                    title="Exportar lista paquetes PDF"
+                  >
+                    🚚
+                  </button>
                   <select
                     value={ordenVista}
                     onChange={(e) => setOrdenVista(e.target.value)}
