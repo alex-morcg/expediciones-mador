@@ -920,6 +920,26 @@ export function useFirestore(activeSection = 'expediciones') {
     });
   };
 
+  const updatePaqueteEstadoPago = async (paqueteId, estadoPago, usuarioActivo) => {
+    const paq = paquetes.find(p => p.id === paqueteId);
+    if (!paq) return;
+    const modificacion = { usuario: usuarioActivo, fecha: new Date().toISOString() };
+    const estadoAnterior = paq.estadoPago || 'por_pagar';
+    const log = {
+      id: Date.now(),
+      fecha: modificacion.fecha,
+      usuario: usuarioActivo,
+      accion: 'cambiar_estado_pago',
+      detalles: { antes: estadoAnterior, despues: estadoPago },
+    };
+    await updateDoc(doc(db, 'paquetes', paqueteId), {
+      estadoPago,
+      estadoPagoLog: { usuario: usuarioActivo, fecha: modificacion.fecha },
+      ultimaModificacion: modificacion,
+      logs: [...(paq.logs || []), log],
+    });
+  };
+
   const marcarTodosComoEstado = async (expedicionId, estadoId, usuarioActivo, estadosPaqueteList) => {
     const modificacion = { usuario: usuarioActivo, fecha: new Date().toISOString() };
     const estadoNuevo = estadosPaqueteList.find(e => e.id === estadoId);
@@ -1159,6 +1179,7 @@ export function useFirestore(activeSection = 'expediciones') {
     updatePaqueteVerificacion,
     validarVerificacion,
     updatePaqueteEstado,
+    updatePaqueteEstadoPago,
     marcarTodosComoEstado,
     addComentarioToPaquete,
     deleteComentarioFromPaquete,

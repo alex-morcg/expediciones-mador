@@ -65,7 +65,7 @@ export default function MadorTracker() {
     saveExpedicion: fsaveExpedicion, deleteExpedicion, savePaquete: fsavePaquete, deletePaquete,
     addLineaToPaquete: faddLinea, removeLineaFromPaquete: fremoveLinea, updatePaqueteCierre: fupdateCierre,
     updatePaqueteFactura: fupdateFactura, updatePaqueteVerificacion: fupdateVerificacion,
-    validarVerificacion: fvalidarVerificacion, updatePaqueteEstado: fupdateEstado,
+    validarVerificacion: fvalidarVerificacion, updatePaqueteEstado: fupdateEstado, updatePaqueteEstadoPago: fupdateEstadoPago,
     marcarTodosComoEstado: fmarcarTodos, addComentarioToPaquete: faddComentario,
     deleteComentarioFromPaquete: fdeleteComentario,
     agregarUsuario: fagregarUsuario, eliminarUsuario: feliminarUsuario,
@@ -152,6 +152,30 @@ export default function MadorTracker() {
       }
     });
   }, [expediciones, paquetes, estadosPaquete]);
+
+  // Migración única: marcar paquetes de E53 y anteriores como pagados
+  useEffect(() => {
+    if (!expediciones.length || !paquetes.length) return;
+
+    // Encontrar IDs de expediciones E53 y anteriores
+    const expE53yAnteriores = expediciones.filter(exp => {
+      const expNum = getExpNum(exp.nombre);
+      return expNum > 0 && expNum <= 53;
+    }).map(exp => exp.id);
+
+    // Buscar paquetes de esas expediciones que NO tienen estadoPago definido
+    const paquetesSinEstadoPago = paquetes.filter(paq =>
+      expE53yAnteriores.includes(paq.expedicionId) && !paq.estadoPago
+    );
+
+    // Si hay paquetes sin estado de pago, marcarlos como pagados
+    if (paquetesSinEstadoPago.length > 0) {
+      console.log(`[Migración] Marcando ${paquetesSinEstadoPago.length} paquetes de E53 y anteriores como pagados...`);
+      paquetesSinEstadoPago.forEach(paq => {
+        fupdateEstadoPago(paq.id, 'pagado', 'sistema');
+      });
+    }
+  }, [expediciones, paquetes]);
 
   const getUsuario = (id) => usuarios.find(u => u.id === id);
   const usuarioActual = getUsuario(usuarioActivo);
@@ -436,6 +460,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const updatePaqueteVerificacion = (paqueteId, verificacionIA) => fupdateVerificacion(paqueteId, verificacionIA, usuarioActivo);
   const validarVerificacion = (paqueteId) => fvalidarVerificacion(paqueteId, usuarioActivo);
   const updatePaqueteEstado = (paqueteId, estado) => fupdateEstado(paqueteId, estado, usuarioActivo, estadosPaquete);
+  const updatePaqueteEstadoPago = (paqueteId, estadoPago) => fupdateEstadoPago(paqueteId, estadoPago, usuarioActivo);
   const marcarTodosComoEstado = (expedicionId, estadoId) => { fmarcarTodos(expedicionId, estadoId, usuarioActivo, estadosPaquete); setMarcarTodosModal({ open: false, estadoId: null }); };
   const addComentarioToPaquete = (paqueteId, texto) => faddComentario(paqueteId, texto, usuarioActivo);
   const deleteComentarioFromPaquete = (paqueteId, comentarioId) => {
@@ -704,6 +729,26 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               <div><span className="text-stone-500">Categoría:</span> <span className="text-stone-800 font-medium">{categoria?.nombre}</span></div>
               <div><span className="text-stone-500">Descuento:</span> <span className="text-stone-800 font-medium">{paq.descuento}%</span></div>
               <div><span className="text-stone-500">IGI:</span> <span className="text-stone-800 font-medium">{paq.igi}%</span></div>
+              <div className="col-span-2 pt-2 border-t border-stone-200 mt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-stone-500">Estado pago:</span>
+                  <button
+                    onClick={() => updatePaqueteEstadoPago(paq.id, paq.estadoPago === 'pagado' ? 'por_pagar' : 'pagado')}
+                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                      paq.estadoPago === 'pagado'
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    }`}
+                  >
+                    {paq.estadoPago === 'pagado' ? '💰 Pagado' : '⏳ Por pagar'}
+                  </button>
+                </div>
+                {paq.estadoPagoLog && (
+                  <p className="text-xs text-stone-400 mt-1 text-right">
+                    {getUsuario(paq.estadoPagoLog.usuario)?.nombre || paq.estadoPagoLog.usuario} • {new Date(paq.estadoPagoLog.fecha).toLocaleDateString('es-ES')}
+                  </p>
+                )}
+              </div>
             </div>
           </Card>
           
@@ -1591,6 +1636,11 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   const catA = getCategoria(a.categoriaId)?.nombre || '';
                   const catB = getCategoria(b.categoriaId)?.nombre || '';
                   if (catA !== catB) return catA.localeCompare(catB);
+                } else if (ordenVista === 'estadoPago') {
+                  // Por pagar primero, luego pagado
+                  const estadoPagoA = a.estadoPago === 'pagado' ? 1 : 0;
+                  const estadoPagoB = b.estadoPago === 'pagado' ? 1 : 0;
+                  if (estadoPagoA !== estadoPagoB) return estadoPagoA - estadoPagoB;
                 }
                 return b.numero - a.numero;
               });
@@ -1626,11 +1676,20 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 }
                 brutoPorEstado[paq.estado] += totales.brutoTotal;
               });
-              
+
+              // Pre-calcular suma de bruto por estado de pago
+              const brutoPorEstadoPago = { pagado: 0, por_pagar: 0 };
+              expedicionPaquetes.forEach(paq => {
+                const totales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
+                const key = paq.estadoPago === 'pagado' ? 'pagado' : 'por_pagar';
+                brutoPorEstadoPago[key] += totales.brutoTotal;
+              });
+
               let lastClienteId = null;
               let lastEstadoId = null;
               let lastCategoriaId = null;
               let lastTipoPendiente = null;
+              let lastEstadoPago = null;
               
               return sortedPaquetes.map(paq => {
                 const paqTotales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
@@ -1661,6 +1720,11 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 const showPendienteHeader = ordenVista === 'pendientes' && tipoPendienteActual !== lastTipoPendiente;
                 const tipoPendienteInfo = tiposPendiente[tipoPendienteActual];
                 lastTipoPendiente = tipoPendienteActual;
+
+                // Header de estado de pago cuando cambia
+                const estadoPagoActual = paq.estadoPago === 'pagado' ? 'pagado' : 'por_pagar';
+                const showEstadoPagoHeader = ordenVista === 'estadoPago' && estadoPagoActual !== lastEstadoPago;
+                lastEstadoPago = estadoPagoActual;
 
                 return (
                   <React.Fragment key={paq.id}>
@@ -1712,7 +1776,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       </div>
                     )}
                     {showCategoriaHeader && (
-                      <div 
+                      <div
                         className="flex items-center gap-2 pt-3 pb-1 mt-2 border-t-2 border-amber-400"
                       >
                         <span className="text-lg">🏷️</span>
@@ -1721,6 +1785,28 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           <span className="bg-amber-200 text-amber-800 text-xs px-2 py-0.5 rounded font-medium">FINO</span>
                         )}
                         <span className="text-sm font-mono font-bold text-amber-600">{formatNum(categoriaBrutoTotal)}g</span>
+                      </div>
+                    )}
+                    {showEstadoPagoHeader && (
+                      <div
+                        className={`flex items-center gap-2 pt-3 pb-1 mt-2 border-t-2 ${
+                          estadoPagoActual === 'pagado' ? 'border-green-500' : 'border-red-500'
+                        }`}
+                      >
+                        <span className="text-lg">{estadoPagoActual === 'pagado' ? '💰' : '⏳'}</span>
+                        <span className={`font-bold flex-1 ${estadoPagoActual === 'pagado' ? 'text-green-700' : 'text-red-700'}`}>
+                          {estadoPagoActual === 'pagado' ? 'Pagado' : 'Por pagar'}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                            estadoPagoActual === 'pagado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {sortedPaquetes.filter(p => (p.estadoPago === 'pagado' ? 'pagado' : 'por_pagar') === estadoPagoActual).length}
+                        </span>
+                        <span className={`text-sm font-mono font-bold ${estadoPagoActual === 'pagado' ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatNum(brutoPorEstadoPago[estadoPagoActual] || 0)}g
+                        </span>
                       </div>
                     )}
                     <Card 
@@ -1772,6 +1858,9 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                             {paqTotales.esEstimado ? '~' : ''}{formatNum(paqTotales.totalFra)} €
                           </p>
                           <p className="text-stone-500 text-xs">{formatNum(paqTotales.brutoTotal)}g bruto</p>
+                          <p className={`text-xs mt-0.5 ${paq.estadoPago === 'pagado' ? 'text-green-600' : 'text-red-500'}`}>
+                            {paq.estadoPago === 'pagado' ? '💰 Pagado' : '⏳ Por pagar'}
+                          </p>
                         </div>
                       </div>
                     </Card>
@@ -3824,6 +3913,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     <option value="cliente">👥 Por cliente</option>
                     <option value="estado">📍 Por estado</option>
                     <option value="categoria">🏷️ Por categoría</option>
+                    <option value="estadoPago">💰 Por pago</option>
                   </select>
                 </>
               ) : null}
