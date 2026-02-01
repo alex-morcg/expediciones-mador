@@ -2441,6 +2441,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     const [editandoEstadoId, setEditandoEstadoId] = useState(null);
     const [estadoEditado, setEstadoEditado] = useState({ nombre: '', icon: '', color: '' });
     const [nuevoEstado, setNuevoEstado] = useState({ nombre: '', icon: '📌', color: '#6b7280' });
+
+    // Estado local para configuración general (evita guardar en cada tecla)
+    const [limiteExposicionLocal, setLimiteExposicionLocal] = useState(configGeneral.limiteExposicionCliente || 100000);
+    const limiteHaCambiado = limiteExposicionLocal !== (configGeneral.limiteExposicionCliente || 100000);
+
+    const guardarConfigGeneral = () => {
+      updateConfigGeneral({ limiteExposicionCliente: limiteExposicionLocal });
+    };
     
     const agregarUsuario = async () => {
       if (!nuevoNombreUsuario.trim()) return;
@@ -2748,12 +2756,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <input
                   type="number"
                   inputMode="numeric"
-                  value={configGeneral.limiteExposicionCliente || ''}
-                  onChange={(e) => updateConfigGeneral({ limiteExposicionCliente: e.target.value ? parseFloat(e.target.value) : 100000 })}
+                  value={limiteExposicionLocal}
+                  onChange={(e) => setLimiteExposicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
                   className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
                   placeholder="100000"
                 />
               </div>
+              {limiteHaCambiado && (
+                <Button onClick={guardarConfigGeneral}>💾 Guardar cambios</Button>
+              )}
             </div>
           </Card>
         </div>
