@@ -199,6 +199,8 @@ export default function MadorTracker() {
   const [textModalContent, setTextModalContent] = useState('');
   const [ordenVista, setOrdenVista] = useState('normal'); // 'normal', 'cliente', 'estado'
   const [marcarTodosModal, setMarcarTodosModal] = useState({ open: false, estadoId: null });
+  const [showAlertaExposicion, setShowAlertaExposicion] = useState(false);
+  const [alertaExposicionChecked, setAlertaExposicionChecked] = useState(false);
 
   // Helper functions
   const getNextPaqueteNumber = (expedicionId) => {
@@ -443,6 +445,102 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
     setModalOpen(false);
     setModalType(null);
     setEditingItem(null);
+  };
+
+  // Cálculo global de exposición para alertas
+  const ultimoPrecioGlobal = useMemo(() => {
+    const paqsConPrecio = paquetes.filter(p => p.precioFino);
+    if (paqsConPrecio.length === 0) return 130;
+    const sorted = [...paqsConPrecio].sort((a, b) => {
+      const expA = expediciones.find(e => e.id === a.expedicionId);
+      const expB = expediciones.find(e => e.id === b.expedicionId);
+      const numExpA = getExpNum(expA?.nombre);
+      const numExpB = getExpNum(expB?.nombre);
+      if (numExpA !== numExpB) return numExpB - numExpA;
+      return (b.numero || 0) - (a.numero || 0);
+    });
+    return sorted[0]?.precioFino || 130;
+  }, [paquetes, expediciones]);
+
+  const clientesEnAlerta = useMemo(() => {
+    const umbral = configGeneral.alertaExposicionUmbral || 80000;
+    const resultado = [];
+
+    clientes.forEach(cliente => {
+      // Paquetes "por_recoger"
+      const paquetesPorRecoger = paquetes.filter(p =>
+        p.clienteId === cliente.id && p.estado === 'por_recoger'
+      );
+
+      let finoPaquetes = 0;
+      paquetesPorRecoger.forEach(paq => {
+        const finoLineas = paq.lineas.reduce((sum, l) => {
+          const fino = calcularFinoLinea(l.bruto, l.ley);
+          if (cliente.lineasNegativasNoCuentanPeso && l.bruto < 0) return sum;
+          return sum + fino;
+        }, 0);
+        finoPaquetes += finoLineas;
+      });
+
+      // Lingotes en entrega sin vender
+      let pesoLingotes = 0;
+      const entregasCliente = lingotesEntregas.filter(e => e.clienteId === cliente.id);
+      entregasCliente.forEach(entrega => {
+        (entrega.lingotes || []).forEach(l => {
+          if (l.estado === 'en_curso') {
+            pesoLingotes += l.peso || 0;
+          }
+        });
+      });
+
+      const totalExposicion = (finoPaquetes + pesoLingotes) * ultimoPrecioGlobal;
+
+      if (totalExposicion > umbral) {
+        resultado.push({
+          cliente,
+          totalExposicion,
+          exceso: totalExposicion - umbral,
+        });
+      }
+    });
+
+    return resultado;
+  }, [clientes, paquetes, lingotesEntregas, ultimoPrecioGlobal, configGeneral.alertaExposicionUmbral, calcularFinoLinea]);
+
+  // Comprobar alerta de exposición al cargar
+  useEffect(() => {
+    if (loading || alertaExposicionChecked) return;
+    if (clientesEnAlerta.length === 0) {
+      setAlertaExposicionChecked(true);
+      return;
+    }
+
+    // Verificar si el usuario actual debe recibir alertas
+    const usuariosAlerta = configGeneral.alertaExposicionUsuarios || [];
+    if (!usuariosAlerta.includes(usuarioActivo)) {
+      setAlertaExposicionChecked(true);
+      return;
+    }
+
+    // Verificar si está pospuesto
+    const snoozeKey = `alerta_exposicion_snooze_${usuarioActivo}`;
+    const snoozeUntil = localStorage.getItem(snoozeKey);
+    if (snoozeUntil && new Date(snoozeUntil) > new Date()) {
+      setAlertaExposicionChecked(true);
+      return;
+    }
+
+    // Mostrar alerta
+    setShowAlertaExposicion(true);
+    setAlertaExposicionChecked(true);
+  }, [loading, clientesEnAlerta, configGeneral.alertaExposicionUsuarios, usuarioActivo, alertaExposicionChecked]);
+
+  const posponerAlerta = (dias) => {
+    const snoozeKey = `alerta_exposicion_snooze_${usuarioActivo}`;
+    const fechaSnooze = new Date();
+    fechaSnooze.setDate(fechaSnooze.getDate() + dias);
+    localStorage.setItem(snoozeKey, fechaSnooze.toISOString());
+    setShowAlertaExposicion(false);
   };
 
   // CRUD wrappers (delegate to Firestore hook)
@@ -2445,16 +2543,30 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     // Estado local para configuración general (evita guardar en cada tecla)
     const [limiteExposicionLocal, setLimiteExposicionLocal] = useState(configGeneral.limiteExposicionCliente || 100000);
     const [seguroExpedicionLocal, setSeguroExpedicionLocal] = useState(configGeneral.seguroExpedicionDefault || 600000);
+    const [alertaUmbralLocal, setAlertaUmbralLocal] = useState(configGeneral.alertaExposicionUmbral || 80000);
+    const [alertaUsuariosLocal, setAlertaUsuariosLocal] = useState(configGeneral.alertaExposicionUsuarios || []);
 
     const limiteHaCambiado = limiteExposicionLocal !== (configGeneral.limiteExposicionCliente || 100000);
     const seguroHaCambiado = seguroExpedicionLocal !== (configGeneral.seguroExpedicionDefault || 600000);
-    const hayConfigCambios = limiteHaCambiado || seguroHaCambiado;
+    const alertaUmbralCambiado = alertaUmbralLocal !== (configGeneral.alertaExposicionUmbral || 80000);
+    const alertaUsuariosCambiado = JSON.stringify(alertaUsuariosLocal) !== JSON.stringify(configGeneral.alertaExposicionUsuarios || []);
+    const hayConfigCambios = limiteHaCambiado || seguroHaCambiado || alertaUmbralCambiado || alertaUsuariosCambiado;
 
     const guardarConfigGeneral = () => {
       updateConfigGeneral({
         limiteExposicionCliente: limiteExposicionLocal,
         seguroExpedicionDefault: seguroExpedicionLocal,
+        alertaExposicionUmbral: alertaUmbralLocal,
+        alertaExposicionUsuarios: alertaUsuariosLocal,
       });
+    };
+
+    const toggleAlertaUsuario = (usuarioId) => {
+      if (alertaUsuariosLocal.includes(usuarioId)) {
+        setAlertaUsuariosLocal(alertaUsuariosLocal.filter(id => id !== usuarioId));
+      } else {
+        setAlertaUsuariosLocal([...alertaUsuariosLocal, usuarioId]);
+      }
     };
     
     const agregarUsuario = async () => {
@@ -2776,17 +2888,59 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           {/* Subsección Exposición */}
           <Card className="mb-4">
             <h3 className="font-semibold text-stone-700 mb-3">📊 Exposición</h3>
-            <div>
-              <label className="block text-sm text-stone-600 mb-1">Límite exposición por cliente (€)</label>
-              <p className="text-xs text-stone-400 mb-2">Valor máximo de oro pendiente (paquetes por recoger + lingotes en entrega) por cliente</p>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={limiteExposicionLocal}
-                onChange={(e) => setLimiteExposicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
-                className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
-                placeholder="100000"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-stone-600 mb-1">Límite exposición por cliente (€)</label>
+                <p className="text-xs text-stone-400 mb-2">Valor máximo de la barra de exposición por cliente</p>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={limiteExposicionLocal}
+                  onChange={(e) => setLimiteExposicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
+                  className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                  placeholder="100000"
+                />
+              </div>
+
+              <hr className="border-stone-200" />
+
+              <div>
+                <label className="block text-sm text-stone-600 mb-1">🔔 Umbral de alerta (€)</label>
+                <p className="text-xs text-stone-400 mb-2">Cuando un cliente supere este valor, se mostrará un aviso al entrar en la app</p>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={alertaUmbralLocal}
+                  onChange={(e) => setAlertaUmbralLocal(e.target.value ? parseFloat(e.target.value) : 0)}
+                  className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                  placeholder="80000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-stone-600 mb-2">Usuarios que reciben la alerta</label>
+                <div className="flex flex-wrap gap-2">
+                  {usuarios.map(u => {
+                    const seleccionado = alertaUsuariosLocal.includes(u.id);
+                    return (
+                      <button
+                        key={u.id}
+                        onClick={() => toggleAlertaUsuario(u.id)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          seleccionado
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                        }`}
+                      >
+                        {seleccionado && '✓ '}{u.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+                {alertaUsuariosLocal.length === 0 && (
+                  <p className="text-xs text-stone-400 mt-2">⚠️ Sin usuarios seleccionados, nadie recibirá alertas</p>
+                )}
+              </div>
             </div>
           </Card>
 
@@ -4179,6 +4333,58 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
       {showTextModal && <TextModal />}
       <CategoriasResumenModal />
       {ResultadosModal()}
+
+      {/* Modal Alerta de Exposición */}
+      {showAlertaExposicion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-red-500 px-6 py-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                ⚠️ Alerta de Exposición
+              </h2>
+            </div>
+            <div className="p-6">
+              <p className="text-stone-600 mb-4">
+                Los siguientes clientes superan el umbral de <strong>{formatNum(configGeneral.alertaExposicionUmbral || 80000)} €</strong>:
+              </p>
+              <div className="space-y-2 mb-6">
+                {clientesEnAlerta.map(({ cliente, totalExposicion, exceso }) => (
+                  <div
+                    key={cliente.id}
+                    className="flex justify-between items-center p-3 rounded-lg"
+                    style={{ backgroundColor: (cliente.color || '#f59e0b') + '15' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: cliente.color || '#f59e0b' }}
+                      />
+                      <span className="font-medium text-stone-800">
+                        {cliente.abreviacion || cliente.nombre}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-stone-800">{formatNum(totalExposicion)} €</span>
+                      <span className="text-red-500 text-sm ml-2">(+{formatNum(exceso)} €)</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-stone-500 mb-2">Posponer alerta:</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => posponerAlerta(1)}>1 día</Button>
+                  <Button variant="secondary" size="sm" onClick={() => posponerAlerta(3)}>3 días</Button>
+                  <Button variant="secondary" size="sm" onClick={() => posponerAlerta(7)}>1 semana</Button>
+                </div>
+                <Button className="w-full mt-3" onClick={() => setShowAlertaExposicion(false)}>
+                  Entendido
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

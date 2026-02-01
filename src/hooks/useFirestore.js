@@ -306,7 +306,7 @@ export function useFirestore(activeSection = 'expediciones') {
   const [estadosPaquete, setEstadosPaquete] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [expedicionActualId, setExpedicionActualIdState] = useState(null);
-  const [configGeneral, setConfigGeneral] = useState({ limiteExposicionCliente: 100000, seguroExpedicionDefault: 600000 });
+  const [configGeneral, setConfigGeneral] = useState({ limiteExposicionCliente: 100000, seguroExpedicionDefault: 600000, alertaExposicionUmbral: 80000, alertaExposicionUsuarios: [] });
   const [matriculas, setMatriculas] = useState([]);
 
   // Lingotes data - solo cuando activeSection === 'lingotes'
@@ -411,6 +411,8 @@ export function useFirestore(activeSection = 'expediciones') {
             setConfigGeneral({
               limiteExposicionCliente: data.limiteExposicionCliente ?? 100000,
               seguroExpedicionDefault: data.seguroExpedicionDefault ?? 600000,
+              alertaExposicionUmbral: data.alertaExposicionUmbral ?? 80000,
+              alertaExposicionUsuarios: data.alertaExposicionUsuarios ?? [],
             });
           }
         }
