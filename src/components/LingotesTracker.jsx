@@ -4996,7 +4996,7 @@ export default function LingotesTracker({
         <nav className="bg-white border-b border-amber-200 flex shadow-sm">
           <TabBtn id="stock" label="Stock" icon="📊" />
           <TabBtn id="exportaciones" label="Importaciones" icon="📦" />
-          <TabBtn id="estadisticas" label="Stats" icon="💰" />
+          {canViewStats && <TabBtn id="estadisticas" label="Stats" icon="💰" />}
           <TabBtn id="parametros" label="Ajustes" icon="⚙️" />
         </nav>
       </div>
@@ -5005,7 +5005,7 @@ export default function LingotesTracker({
       <main className="max-w-2xl mx-auto p-4 pb-24">
         {activeTab === 'stock' && <StockOverview />}
         {activeTab === 'exportaciones' && <ExportacionesView />}
-        {activeTab === 'estadisticas' && <EstadisticasView />}
+        {activeTab === 'estadisticas' && canViewStats && <EstadisticasView />}
         {activeTab === 'parametros' && <ParametrosView />}
       </main>
 
