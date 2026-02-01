@@ -60,7 +60,7 @@ export default function MadorTracker() {
   // Firestore data & CRUD - con lazy loading basado en sección activa
   const {
     categorias, clientes, expediciones, paquetes, estadosPaquete, usuarios,
-    expedicionActualId, loading, setExpedicionActualId,
+    expedicionActualId, configGeneral, loading, setExpedicionActualId, updateConfigGeneral,
     saveCategoria: fsaveCategoria, deleteCategoria, saveCliente: fsaveCliente, deleteCliente, updateClienteKilatajes, updateClienteDatosFiscales,
     saveExpedicion: fsaveExpedicion, deleteExpedicion, savePaquete: fsavePaquete, deletePaquete,
     addLineaToPaquete: faddLinea, removeLineaFromPaquete: fremoveLinea, updatePaqueteCierre: fupdateCierre,
@@ -1985,6 +1985,82 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
       razonSocial: '', direccion: '', codigoPostal: '', ciudad: '', pais: '', nrt: ''
     });
 
+    // Precio €/g editable para cálculo de exposición (por defecto: último precio de cierre)
+    const ultimoPrecioCierre = useMemo(() => {
+      const paqsConPrecio = paquetes.filter(p => p.precioFino);
+      if (paqsConPrecio.length === 0) return 130; // Default
+      // Ordenar por id descendente (más reciente primero)
+      const sorted = [...paqsConPrecio].sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+      return sorted[0]?.precioFino || 130;
+    }, [paquetes]);
+
+    const [precioExposicion, setPrecioExposicion] = useState(null);
+    const precioCalculoExposicion = precioExposicion ?? ultimoPrecioCierre;
+
+    // Calcular exposición por cliente
+    const exposicionPorCliente = useMemo(() => {
+      const resultado = {};
+      const limiteExposicion = configGeneral.limiteExposicionCliente || 100000;
+
+      clientes.forEach(cliente => {
+        // 1. Paquetes "por_recoger" - calcular fino y valor
+        const paquetesPorRecoger = paquetes.filter(p =>
+          p.clienteId === cliente.id && p.estado === 'por_recoger'
+        );
+
+        let finoPaquetes = 0;
+        const detallePaquetes = [];
+        paquetesPorRecoger.forEach(paq => {
+          const finoLineas = paq.lineas.reduce((sum, l) => {
+            const fino = calcularFinoLinea(l.bruto, l.ley);
+            // Si el cliente tiene lineasNegativasNoCuentanPeso, excluir negativas
+            if (cliente.lineasNegativasNoCuentanPeso && l.bruto < 0) return sum;
+            return sum + fino;
+          }, 0);
+          finoPaquetes += finoLineas;
+          detallePaquetes.push({ nombre: paq.nombre, fino: finoLineas });
+        });
+
+        const valorPaquetes = finoPaquetes * precioCalculoExposicion;
+
+        // 2. Lingotes en entrega sin vender (estado 'en_curso')
+        let pesoLingotes = 0;
+        const entregasCliente = lingotesEntregas.filter(e => e.clienteId === cliente.id);
+        entregasCliente.forEach(entrega => {
+          (entrega.lingotes || []).forEach(l => {
+            if (l.estado === 'en_curso') {
+              pesoLingotes += l.peso || 0;
+            }
+          });
+        });
+
+        const valorLingotes = pesoLingotes * precioCalculoExposicion;
+
+        // Solo incluir clientes con datos
+        const totalExposicion = valorPaquetes + valorLingotes;
+        if (totalExposicion > 0) {
+          resultado[cliente.id] = {
+            cliente,
+            finoPaquetes,
+            valorPaquetes,
+            detallePaquetes,
+            pesoLingotes,
+            valorLingotes,
+            totalExposicion,
+            limiteExposicion,
+            porcentaje: (totalExposicion / limiteExposicion) * 100,
+            excedido: totalExposicion > limiteExposicion,
+            exceso: totalExposicion > limiteExposicion ? totalExposicion - limiteExposicion : 0,
+          };
+        }
+      });
+
+      return resultado;
+    }, [clientes, paquetes, lingotesEntregas, precioCalculoExposicion, configGeneral.limiteExposicionCliente, calcularFinoLinea]);
+
+    const clientesConExposicion = Object.values(exposicionPorCliente);
+    const [hoveredExposicion, setHoveredExposicion] = useState(null);
+
     const startEditDatosFiscales = (cliente) => {
       setEditingDatosFiscales(cliente.id);
       setDatosFiscalesForm({
@@ -2008,6 +2084,103 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           <h2 className="text-xl font-bold text-amber-800">Clientes</h2>
           <Button onClick={() => openModal('cliente')}>+ Nuevo</Button>
         </div>
+
+        {/* Resumen de Exposición por Cliente */}
+        {clientesConExposicion.length > 0 && (
+          <Card className="bg-stone-50 border-stone-200">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-stone-700">📊 Exposición por Cliente</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-stone-500">€/g:</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={precioExposicion ?? ''}
+                  placeholder={ultimoPrecioCierre.toFixed(2)}
+                  onChange={(e) => setPrecioExposicion(e.target.value ? parseFloat(e.target.value) : null)}
+                  className="w-20 bg-white border border-stone-300 rounded px-2 py-1 text-sm text-stone-800 text-right"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {clientesConExposicion.map(exp => {
+                const { cliente, valorPaquetes, valorLingotes, totalExposicion, limiteExposicion, porcentaje, excedido, exceso, finoPaquetes, pesoLingotes, detallePaquetes } = exp;
+                const pctPaquetes = (valorPaquetes / limiteExposicion) * 100;
+                const pctLingotes = (valorLingotes / limiteExposicion) * 100;
+                const barWidth = excedido ? 100 : porcentaje;
+                const markPct = excedido ? (limiteExposicion / totalExposicion) * 100 : 100;
+
+                return (
+                  <div key={cliente.id} className="relative">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: cliente.color || '#f59e0b' }}
+                      />
+                      <span className="font-medium text-sm text-stone-700">{cliente.abreviacion || cliente.nombre}</span>
+                      <span className={`text-xs font-mono ml-auto ${excedido ? 'text-red-600 font-bold' : 'text-stone-600'}`}>
+                        {formatNum(totalExposicion)} € {excedido && <span className="text-red-500">(+{formatNum(exceso)} €)</span>}
+                      </span>
+                    </div>
+
+                    {/* Barra de progreso */}
+                    <div
+                      className="relative h-4 bg-stone-200 rounded-full overflow-hidden cursor-pointer"
+                      onMouseEnter={() => setHoveredExposicion(cliente.id)}
+                      onMouseLeave={() => setHoveredExposicion(null)}
+                    >
+                      {/* Segmento amarillo - Paquetes */}
+                      <div
+                        className="absolute top-0 left-0 h-full bg-amber-400 transition-all"
+                        style={{ width: `${Math.min(pctPaquetes, 100)}%` }}
+                        title={`Paquetes: ${formatNum(valorPaquetes)} € (${formatNum(finoPaquetes, 2)}g fino)`}
+                      />
+                      {/* Segmento naranja - Lingotes */}
+                      <div
+                        className="absolute top-0 h-full bg-orange-500 transition-all"
+                        style={{ left: `${Math.min(pctPaquetes, 100)}%`, width: `${Math.min(pctLingotes, 100 - Math.min(pctPaquetes, 100))}%` }}
+                        title={`Lingotes: ${formatNum(valorLingotes)} € (${formatNum(pesoLingotes, 2)}g)`}
+                      />
+                      {/* Marca roja del límite si se excede */}
+                      {excedido && (
+                        <div
+                          className="absolute top-0 w-1 h-full bg-red-600 z-10"
+                          style={{ left: `${markPct}%` }}
+                          title={`Límite: ${formatNum(limiteExposicion)} €`}
+                        />
+                      )}
+                    </div>
+
+                    {/* Leyenda debajo de la barra */}
+                    <div className="flex justify-between text-xs text-stone-500 mt-0.5">
+                      <span>
+                        <span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>
+                        {formatNum(finoPaquetes, 1)}g paq
+                        <span className="inline-block w-2 h-2 rounded-full bg-orange-500 ml-2 mr-1"></span>
+                        {formatNum(pesoLingotes, 1)}g ling
+                      </span>
+                      <span>{formatNum(limiteExposicion)} €</span>
+                    </div>
+
+                    {/* Tooltip con detalle de paquetes */}
+                    {hoveredExposicion === cliente.id && detallePaquetes.length > 0 && (
+                      <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-stone-300 rounded-lg shadow-lg p-2 text-xs max-w-xs">
+                        <p className="font-medium text-stone-700 mb-1">Paquetes por recoger:</p>
+                        {detallePaquetes.map((p, i) => (
+                          <div key={i} className="flex justify-between gap-4">
+                            <span className="text-stone-600">{p.nombre}</span>
+                            <span className="text-stone-800 font-mono">{formatNum(p.fino, 2)}g</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
         
         <div className="space-y-3">
           {clientes.map(cliente => (
@@ -2551,6 +2724,30 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
         {/* Sección Matrículas */}
         <MatriculasSection />
+
+        {/* Separador */}
+        <hr className="border-amber-200" />
+
+        {/* Sección Configuración General */}
+        <div>
+          <h2 className="text-xl font-bold text-amber-800 mb-4">⚙️ Configuración General</h2>
+          <Card>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-stone-600 mb-1">Límite exposición por cliente (€)</label>
+                <p className="text-xs text-stone-400 mb-2">Valor máximo de oro pendiente (paquetes por recoger + lingotes en entrega) por cliente</p>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={configGeneral.limiteExposicionCliente || ''}
+                  onChange={(e) => updateConfigGeneral({ limiteExposicionCliente: e.target.value ? parseFloat(e.target.value) : 100000 })}
+                  className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                  placeholder="100000"
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
 
         {/* Separador */}
         <hr className="border-amber-200" />

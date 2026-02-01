@@ -306,6 +306,7 @@ export function useFirestore(activeSection = 'expediciones') {
   const [estadosPaquete, setEstadosPaquete] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [expedicionActualId, setExpedicionActualIdState] = useState(null);
+  const [configGeneral, setConfigGeneral] = useState({ limiteExposicionCliente: 100000 });
   const [matriculas, setMatriculas] = useState([]);
 
   // Lingotes data - solo cuando activeSection === 'lingotes'
@@ -405,7 +406,11 @@ export function useFirestore(activeSection = 'expediciones') {
       onSnapshot(doc(db, 'config', 'settings'), (snap) => {
         if (!cancelled) {
           if (snap.exists()) {
-            setExpedicionActualIdState(snap.data().expedicionActualId || null);
+            const data = snap.data();
+            setExpedicionActualIdState(data.expedicionActualId || null);
+            setConfigGeneral({
+              limiteExposicionCliente: data.limiteExposicionCliente ?? 100000,
+            });
           }
         }
         checkLoaded();
@@ -514,6 +519,10 @@ export function useFirestore(activeSection = 'expediciones') {
 
   const setExpedicionActualId = async (id) => {
     await setDoc(doc(db, 'config', 'settings'), { expedicionActualId: id }, { merge: true });
+  };
+
+  const updateConfigGeneral = async (data) => {
+    await setDoc(doc(db, 'config', 'settings'), data, { merge: true });
   };
 
   // Categorias
@@ -1156,10 +1165,12 @@ export function useFirestore(activeSection = 'expediciones') {
     estadosPaquete,
     usuarios,
     expedicionActualId,
+    configGeneral,
     loading,
 
     // Config
     setExpedicionActualId,
+    updateConfigGeneral,
 
     // CRUD
     saveCategoria,
