@@ -4307,7 +4307,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         {/* Navigation */}
         <nav className="bg-white border-b border-amber-200 flex shadow-sm">
           <TabButton id="expediciones" label="Expediciones" icon="📦" badge={totalPendientes} />
-          <TabButton id="clientes" label="Clientes" icon="👥" />
+          <TabButton id="clientes" label="Clientes" icon="👥" badge={clientesEnAlerta.length} />
           <TabButton id="parametros" label="Parámetros" icon="⚙️" />
           {tienePermiso('ver_estadisticas') && <TabButton id="estadisticas" label="Stats" icon="📊" />}
         </nav>
