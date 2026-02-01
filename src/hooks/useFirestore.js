@@ -670,6 +670,7 @@ export function useFirestore(activeSection = 'expediciones') {
         lineas: data.lineas || [],
         logs: [log],
         comentarios: [],
+        estado: 'por_recoger',
         creadoPor: modificacion,
         ultimaModificacion: modificacion,
       });
