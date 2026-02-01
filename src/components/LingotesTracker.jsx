@@ -84,6 +84,7 @@ export default function LingotesTracker({
   facturas,
   config,
   currentUser = 'Usuario',
+  canViewStats = true,
   onBack,
   onSaveExportacion,
   onDeleteExportacion,
@@ -3001,7 +3002,7 @@ export default function LingotesTracker({
     return (
       <div className="space-y-4">
         {/* Gráfico Mensual Stacked */}
-        {statsPorMes.chartData.length > 0 && (
+        {canViewStats && statsPorMes.chartData.length > 0 && (
           <Card>
             <h2 className="text-lg font-bold text-stone-800 mb-4">📈 Volumen Vendido por Mes</h2>
             <div ref={chartScrollRef} className="overflow-x-auto pb-2">
@@ -3084,7 +3085,7 @@ export default function LingotesTracker({
         )}
 
         {/* Gráfico Volumen Anual + €/g */}
-        {statsVolumenAnual.chartData.length > 0 && (
+        {canViewStats && statsVolumenAnual.chartData.length > 0 && (
           <Card>
             <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Volumen Anual y €/gramo</h2>
             <div style={{ width: '100%', height: 320 }}>
@@ -3191,6 +3192,7 @@ export default function LingotesTracker({
         )}
 
         {/* Stats por Año */}
+        {canViewStats && (
         <Card>
           <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Entregas por Año</h2>
 
@@ -3306,6 +3308,7 @@ export default function LingotesTracker({
             </div>
           )}
         </Card>
+        )}
 
       </div>
     );

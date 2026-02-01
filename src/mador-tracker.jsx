@@ -4252,6 +4252,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         facturas={lingotesFacturas}
         config={lingotesConfig}
         currentUser={usuarioActual?.nombre || 'Usuario'}
+        canViewStats={tienePermiso('ver_estadisticas')}
         onBack={() => setShowLingotes(false)}
         onSaveExportacion={saveLingoteExportacion}
         onDeleteExportacion={deleteLingoteExportacion}
