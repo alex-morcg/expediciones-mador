@@ -56,8 +56,11 @@ const PERMISOS_DISPONIBLES = [
 export default function MadorTracker() {
   // Local UI state - definido primero para usar en useFirestore
   const [showLingotes, setShowLingotes] = useState(false);
+  const [activeTab, setActiveTab] = useState('expediciones');
 
   // Firestore data & CRUD - con lazy loading basado en sección activa
+  // Cargar lingotes cuando: showLingotes=true O activeTab='clientes' (para exposición)
+  const needsLingotes = showLingotes || activeTab === 'clientes';
   const {
     categorias, clientes, expediciones, paquetes, estadosPaquete, usuarios,
     expedicionActualId, configGeneral, loading, setExpedicionActualId, updateConfigGeneral,
@@ -81,10 +84,9 @@ export default function MadorTracker() {
     updateLingotesConfig,
     saveLingoteFutura, deleteLingoteFutura, updateLingoteFutura,
     lingotesFacturas, saveLingoteFactura, deleteLingoteFactura, updateLingoteFactura,
-  } = useFirestore(showLingotes ? 'lingotes' : 'expediciones');
+  } = useFirestore(needsLingotes ? 'lingotes' : 'expediciones');
 
   // Local UI state
-  const [activeTab, setActiveTab] = useState('expediciones');
   const [statsExpDesde, setStatsExpDesde] = useState(null);
   const [statsExpHasta, setStatsExpHasta] = useState(null);
   const [statsClienteId, setStatsClienteId] = useState(null);
@@ -1989,10 +1991,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     const ultimoPrecioCierre = useMemo(() => {
       const paqsConPrecio = paquetes.filter(p => p.precioFino);
       if (paqsConPrecio.length === 0) return 130; // Default
-      // Ordenar por id descendente (más reciente primero)
-      const sorted = [...paqsConPrecio].sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+      // Ordenar por expedición (más reciente primero) y luego por número de paquete
+      const sorted = [...paqsConPrecio].sort((a, b) => {
+        const expA = expediciones.find(e => e.id === a.expedicionId);
+        const expB = expediciones.find(e => e.id === b.expedicionId);
+        const numExpA = getExpNum(expA?.nombre);
+        const numExpB = getExpNum(expB?.nombre);
+        if (numExpA !== numExpB) return numExpB - numExpA; // Mayor exp primero
+        return (b.numero || 0) - (a.numero || 0); // Mayor número primero
+      });
       return sorted[0]?.precioFino || 130;
-    }, [paquetes]);
+    }, [paquetes, expediciones]);
 
     const [precioExposicion, setPrecioExposicion] = useState(null);
     const precioCalculoExposicion = precioExposicion ?? ultimoPrecioCierre;
