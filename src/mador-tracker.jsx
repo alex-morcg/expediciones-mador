@@ -3231,6 +3231,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     };
 
     const [showConfirmExit, setShowConfirmExit] = useState(false);
+    const [showLineaPendiente, setShowLineaPendiente] = useState(false);
     const [leyendoFactura, setLeyendoFactura] = useState(false);
 
     const leerFacturaConIA = async (file) => {
@@ -3827,8 +3828,38 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               </div>
             </div>
           )}
-          
-          {!showConfirmExit && (
+
+          {showLineaPendiente && (
+            <div className="p-4 bg-amber-50 border-t border-amber-300">
+              <p className="text-amber-800 text-sm mb-3">⚠️ Tienes una línea de oro sin añadir. ¿Qué quieres hacer?</p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" className="flex-1" onClick={() => setShowLineaPendiente(false)}>Volver</Button>
+                <Button size="sm" className="flex-1" onClick={() => {
+                  const brutoInput = document.getElementById('modal-bruto');
+                  const leyInput = document.getElementById('modal-ley');
+                  const bruto = parseFloat(brutoInput?.value);
+                  const ley = parseFloat(leyInput?.value);
+                  if (bruto && ley) {
+                    const newFormData = {
+                      ...formData,
+                      lineas: [...(formData.lineas || []), { id: Date.now(), bruto, ley }]
+                    };
+                    setShowLineaPendiente(false);
+                    savePaquete(newFormData);
+                  } else {
+                    setShowLineaPendiente(false);
+                    savePaquete(formData);
+                  }
+                }}>Añadir y guardar</Button>
+                <Button variant="danger" size="sm" className="flex-1" onClick={() => {
+                  setShowLineaPendiente(false);
+                  savePaquete(formData);
+                }}>Descartar</Button>
+              </div>
+            </div>
+          )}
+
+          {!showConfirmExit && !showLineaPendiente && (
             <div className="p-4 border-t border-amber-200 flex-shrink-0">
               <div className="flex gap-3">
                 <Button variant="secondary" className="flex-1" onClick={handleClose}>Cancelar</Button>
@@ -3848,17 +3879,29 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     disabled = true;
                     reason = 'Selecciona un cliente';
                   }
+                  const handleGuardar = () => {
+                    if (modalType === 'paquete') {
+                      const brutoInput = document.getElementById('modal-bruto');
+                      const leyInput = document.getElementById('modal-ley');
+                      const brutoVal = brutoInput?.value;
+                      const leyVal = leyInput?.value;
+                      if (brutoVal || leyVal) {
+                        setShowLineaPendiente(true);
+                        return;
+                      }
+                      savePaquete(formData);
+                    } else {
+                      if (modalType === 'categoria') saveCategoria(formData);
+                      if (modalType === 'cliente') saveCliente(formData);
+                      if (modalType === 'expedicion') saveExpedicion(formData);
+                    }
+                  };
                   return (
-                    <Button 
-                      className="flex-1" 
+                    <Button
+                      className="flex-1"
                       disabled={disabled}
                       disabledReason={reason}
-                      onClick={() => {
-                        if (modalType === 'categoria') saveCategoria(formData);
-                        if (modalType === 'cliente') saveCliente(formData);
-                        if (modalType === 'expedicion') saveExpedicion(formData);
-                        if (modalType === 'paquete') savePaquete(formData);
-                      }}
+                      onClick={handleGuardar}
                     >Guardar</Button>
                   );
                 })()}
