@@ -2444,10 +2444,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
     // Estado local para configuración general (evita guardar en cada tecla)
     const [limiteExposicionLocal, setLimiteExposicionLocal] = useState(configGeneral.limiteExposicionCliente || 100000);
+    const [seguroExpedicionLocal, setSeguroExpedicionLocal] = useState(configGeneral.seguroExpedicionDefault || 600000);
+
     const limiteHaCambiado = limiteExposicionLocal !== (configGeneral.limiteExposicionCliente || 100000);
+    const seguroHaCambiado = seguroExpedicionLocal !== (configGeneral.seguroExpedicionDefault || 600000);
+    const hayConfigCambios = limiteHaCambiado || seguroHaCambiado;
 
     const guardarConfigGeneral = () => {
-      updateConfigGeneral({ limiteExposicionCliente: limiteExposicionLocal });
+      updateConfigGeneral({
+        limiteExposicionCliente: limiteExposicionLocal,
+        seguroExpedicionDefault: seguroExpedicionLocal,
+      });
     };
     
     const agregarUsuario = async () => {
@@ -2748,25 +2755,45 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         {/* Sección Configuración General */}
         <div>
           <h2 className="text-xl font-bold text-amber-800 mb-4">⚙️ Configuración General</h2>
-          <Card>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-stone-600 mb-1">Límite exposición por cliente (€)</label>
-                <p className="text-xs text-stone-400 mb-2">Valor máximo de oro pendiente (paquetes por recoger + lingotes en entrega) por cliente</p>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={limiteExposicionLocal}
-                  onChange={(e) => setLimiteExposicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
-                  className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
-                  placeholder="100000"
-                />
-              </div>
-              {limiteHaCambiado && (
-                <Button onClick={guardarConfigGeneral}>💾 Guardar cambios</Button>
-              )}
+
+          {/* Subsección Seguros */}
+          <Card className="mb-4">
+            <h3 className="font-semibold text-stone-700 mb-3">🛡️ Seguros</h3>
+            <div>
+              <label className="block text-sm text-stone-600 mb-1">Seguro por defecto expedición (€)</label>
+              <p className="text-xs text-stone-400 mb-2">Valor del seguro que se asigna automáticamente al crear una nueva expedición</p>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={seguroExpedicionLocal}
+                onChange={(e) => setSeguroExpedicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
+                className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                placeholder="600000"
+              />
             </div>
           </Card>
+
+          {/* Subsección Exposición */}
+          <Card className="mb-4">
+            <h3 className="font-semibold text-stone-700 mb-3">📊 Exposición</h3>
+            <div>
+              <label className="block text-sm text-stone-600 mb-1">Límite exposición por cliente (€)</label>
+              <p className="text-xs text-stone-400 mb-2">Valor máximo de oro pendiente (paquetes por recoger + lingotes en entrega) por cliente</p>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={limiteExposicionLocal}
+                onChange={(e) => setLimiteExposicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
+                className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                placeholder="100000"
+              />
+            </div>
+          </Card>
+
+          {/* Botón guardar si hay cambios */}
+          {hayConfigCambios && (
+            <Button onClick={guardarConfigGeneral} className="w-full">💾 Guardar cambios de configuración</Button>
+          )}
         </div>
 
         {/* Separador */}
@@ -3000,7 +3027,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         // Get most recent precioFino across all expediciones as starting default
         const allPreciosFino = paquetes.filter(p => p.precioFino).map(p => p.precioFino);
         const defaultPrecio = allPreciosFino.length > 0 ? allPreciosFino[allPreciosFino.length - 1] : '';
-        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: 600000, matriculaId: null, bultos: null, horaExportacion: null, matriculaLog: null, bultosLog: null, horaLog: null };
+        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: configGeneral.seguroExpedicionDefault || 600000, matriculaId: null, bultos: null, horaExportacion: null, matriculaLog: null, bultosLog: null, horaLog: null };
       }
       if (modalType === 'paquete') {
         const defaultCliente = clientes[0];
