@@ -1777,12 +1777,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 brutoPorEstado[paq.estado] += totales.brutoTotal;
               });
 
-              // Pre-calcular suma de bruto por estado de pago
+              // Pre-calcular suma de bruto y euros por estado de pago
               const brutoPorEstadoPago = { pagado: 0, por_pagar: 0 };
+              const eurosPorEstadoPago = { pagado: 0, por_pagar: 0 };
               expedicionPaquetes.forEach(paq => {
                 const totales = calcularTotalesPaquete(paq, expPrecioPorDefecto);
                 const key = paq.estadoPago === 'pagado' ? 'pagado' : 'por_pagar';
                 brutoPorEstadoPago[key] += totales.brutoTotal;
+                eurosPorEstadoPago[key] += totales.totalFra || 0;
               });
 
               let lastClienteId = null;
@@ -1905,7 +1907,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           {sortedPaquetes.filter(p => (p.estadoPago === 'pagado' ? 'pagado' : 'por_pagar') === estadoPagoActual).length}
                         </span>
                         <span className={`text-sm font-mono font-bold ${estadoPagoActual === 'pagado' ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatNum(brutoPorEstadoPago[estadoPagoActual] || 0)}g
+                          {estadoPagoActual === 'pagado'
+                            ? `${formatNum(eurosPorEstadoPago[estadoPagoActual] || 0, 2)} €`
+                            : `${formatNum(brutoPorEstadoPago[estadoPagoActual] || 0)}g`
+                          }
                         </span>
                       </div>
                     )}
