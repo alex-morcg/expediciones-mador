@@ -126,6 +126,7 @@ export default function LingotesTracker({
   const [facturaFile, setFacturaFile] = useState(null);
   const [facturaSelection, setFacturaSelection] = useState({}); // { entregaId_idx: true }
   const [viewingFactura, setViewingFactura] = useState(null); // factura object to view
+  const [viewingExportFactura, setViewingExportFactura] = useState(null); // { exp, factura } - factura de exportación
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -2497,9 +2498,23 @@ export default function LingotesTracker({
             /* Tarjeta normal de exportación */
             <Card key={exp.id}>
               <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="text-lg font-bold text-stone-800">{exp.nombre}</h3>
-                  <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'}</p>
+                <div className="flex items-start gap-2">
+                  {/* Icono de factura si existe */}
+                  {exp.factura ? (
+                    <button
+                      onClick={() => setViewingExportFactura({ exp, factura: exp.factura })}
+                      className="text-xl hover:scale-110 transition-transform mt-0.5"
+                      title="Ver factura"
+                    >
+                      📄
+                    </button>
+                  ) : (
+                    <span className="text-xl opacity-30 mt-0.5" title="Sin factura">📄</span>
+                  )}
+                  <div>
+                    <h3 className="text-lg font-bold text-stone-800">{exp.nombre}</h3>
+                    <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'}</p>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -2546,13 +2561,12 @@ export default function LingotesTracker({
                   <span className="text-sm text-stone-600">Factura PDF:</span>
                   {exp.factura ? (
                     <div className="flex items-center gap-2">
-                      <a
-                        href={exp.factura.data}
-                        download={exp.factura.nombre}
+                      <button
+                        onClick={() => setViewingExportFactura({ exp, factura: exp.factura })}
                         className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                       >
                         📄 {exp.factura.nombre}
-                      </a>
+                      </button>
                       <button
                         onClick={() => removeFactura(exp)}
                         className="text-red-400 hover:text-red-600 text-sm"
@@ -2565,7 +2579,7 @@ export default function LingotesTracker({
                       {uploadingFactura === exp.id ? '⏳ Subiendo...' : '📤 Subir PDF'}
                       <input
                         type="file"
-                        accept=".pdf"
+                        accept=".pdf,image/*"
                         className="hidden"
                         onChange={(e) => handleFacturaUpload(exp.id, e.target.files[0])}
                         disabled={uploadingFactura === exp.id}
@@ -5221,6 +5235,60 @@ export default function LingotesTracker({
     );
   };
 
+  // Modal para ver factura de exportación
+  const ViewExportFacturaModal = () => {
+    if (!viewingExportFactura) return null;
+
+    const { exp, factura } = viewingExportFactura;
+    const isPdf = factura.tipo?.includes('pdf');
+
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewingExportFactura(null)}>
+        <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-4 border-b border-stone-200">
+            <div>
+              <h3 className="font-bold text-stone-800">{factura.nombre}</h3>
+              <p className="text-xs text-stone-500">Importación: {exp.nombre}</p>
+            </div>
+            <button
+              onClick={() => setViewingExportFactura(null)}
+              className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            {isPdf ? (
+              <iframe
+                src={factura.data}
+                className="w-full h-[70vh] rounded-xl"
+                title={factura.nombre}
+              />
+            ) : (
+              <img
+                src={factura.data}
+                alt={factura.nombre}
+                className="max-w-full h-auto rounded-xl mx-auto"
+              />
+            )}
+          </div>
+          <div className="p-4 border-t border-stone-200 flex gap-3">
+            <a
+              href={factura.data}
+              download={factura.nombre}
+              className="flex-1 py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-center font-medium"
+            >
+              📥 Descargar
+            </a>
+            <Button variant="secondary" className="flex-1" onClick={() => setViewingExportFactura(null)}>
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Tab button
   const TabBtn = ({ id, label, icon }) => (
     <button
@@ -5280,6 +5348,7 @@ export default function LingotesTracker({
       {showMultiCierreModal && <MultiCierreModal />}
       {showFacturaModal && <FacturaModal />}
       {viewingFactura && <ViewFacturaModal />}
+      {viewingExportFactura && <ViewExportFacturaModal />}
     </div>
   );
 }
