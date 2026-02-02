@@ -982,6 +982,50 @@ export default function LingotesTracker({
     // Combinar entregas cerradas + FUTURA cerrados
     const allLingotesCerrados = [...entregasCerrados, ...futuraCerrados];
 
+    // Stats por año: agrupamos por el año de la exportación de cada entrega
+    const statsPorAno = useMemo(() => {
+      const porAno = {};
+
+      // Procesar entregas normales
+      allEntregasCliente.forEach(entrega => {
+        const exportacion = getExportacion(entrega.exportacionId);
+        const ano = exportacion?.ano || 'Sin año';
+
+        if (!porAno[ano]) {
+          porAno[ano] = { ano, entregado: 0, cerrado: 0, devuelto: 0, importe: 0, margen: 0 };
+        }
+
+        porAno[ano].entregado += pesoEntrega(entrega);
+        porAno[ano].cerrado += pesoCerrado(entrega);
+        porAno[ano].devuelto += pesoDevuelto(entrega);
+        porAno[ano].importe += importeEntrega(entrega);
+
+        // Calcular margen de lingotes cerrados
+        (entrega.lingotes || []).filter(l => isCerrado(l)).forEach(l => {
+          const precioJofisa = l.precioJofisa || 0;
+          const precioCliente = l.precio || 0;
+          const pesoNeto = (l.peso || 0) - (l.pesoDevuelto || 0);
+          porAno[ano].margen += (precioCliente - precioJofisa) * pesoNeto;
+        });
+      });
+
+      // Procesar FUTURA cerrados (asignar a año actual si no hay otro criterio)
+      clienteFutura.filter(f => f.precio).forEach(f => {
+        const ano = new Date().getFullYear().toString(); // FUTURA al año actual
+        if (!porAno[ano]) {
+          porAno[ano] = { ano, entregado: 0, cerrado: 0, devuelto: 0, importe: 0, margen: 0 };
+        }
+        porAno[ano].cerrado += f.peso || 0;
+        porAno[ano].importe += f.importe || (f.precio * f.peso) || 0;
+        const margenFutura = ((f.precio || 0) - (f.precioJofisa || 0)) * (f.peso || 0);
+        porAno[ano].margen += margenFutura;
+      });
+
+      // Convertir a array y ordenar por año descendente
+      return Object.values(porAno)
+        .sort((a, b) => (b.ano || '').localeCompare(a.ano || ''));
+    }, [allEntregasCliente, clienteFutura, exportaciones]);
+
     const FilterBtn = ({ id, label, count }) => (
       <button
         onClick={() => setEntregaFilter(id)}
@@ -1954,6 +1998,42 @@ export default function LingotesTracker({
           };
 
           return (
+            <>
+            {/* Stats por Año */}
+            {statsPorAno.length > 0 && (
+              <Card className="mt-4">
+                <h3 className="font-bold text-stone-800 mb-3">📊 Resumen por Año</h3>
+                <div className="space-y-2">
+                  {statsPorAno.map(stat => (
+                    <div key={stat.ano} className="bg-stone-50 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-amber-700 text-lg">{stat.ano}</span>
+                        <span className="text-emerald-600 font-bold">{formatEur(stat.importe)}</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-xs">
+                        <div className="text-center">
+                          <div className="text-stone-500">Entregado</div>
+                          <div className="font-bold text-stone-700">{formatNum(stat.entregado, 0)}g</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-stone-500">Cerrado</div>
+                          <div className="font-bold text-emerald-600">{formatNum(stat.cerrado, 0)}g</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-stone-500">Devuelto</div>
+                          <div className="font-bold text-red-500">{formatNum(stat.devuelto, 0)}g</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-stone-500">Margen</div>
+                          <div className="font-bold text-blue-600">{formatEur(stat.margen)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             <Card className="mt-4">
               <button
                 onClick={() => setShowHistorial(!showHistorial)}
@@ -1989,6 +2069,7 @@ export default function LingotesTracker({
                 </div>
               )}
             </Card>
+            </>
           );
         })()}
       </div>
@@ -2001,11 +2082,15 @@ export default function LingotesTracker({
     const [editingExp, setEditingExp] = useState(null); // null or exportacion object
     const [uploadingFactura, setUploadingFactura] = useState(null); // exportacion id being uploaded
     const defaultFecha = new Date().toISOString().split('T')[0];
+    const defaultAno = new Date().getFullYear().toString();
     const defaultLingotes = [{ cantidad: 1, peso: 50 }];
-    const [formData, setFormData] = useState({ nombre: '', fecha: defaultFecha, lingotes: defaultLingotes, precioGramo: '' });
+    const [formData, setFormData] = useState({ nombre: '', fecha: defaultFecha, ano: defaultAno, lingotes: defaultLingotes, precioGramo: '' });
+
+    // Años disponibles para selector
+    const anosDisponibles = ['2024', '2025', '2026', '2027', '2028'];
 
     const resetForm = () => {
-      setFormData({ nombre: '', fecha: defaultFecha, lingotes: [{ cantidad: 1, peso: 50 }], precioGramo: '' });
+      setFormData({ nombre: '', fecha: defaultFecha, ano: defaultAno, lingotes: [{ cantidad: 1, peso: 50 }], precioGramo: '' });
     };
 
     const openNew = () => {
@@ -2021,6 +2106,7 @@ export default function LingotesTracker({
       setFormData({
         nombre: exp.nombre || '',
         fecha: exp.fecha || defaultFecha,
+        ano: exp.ano || defaultAno,
         lingotes: exp.lingotes && exp.lingotes.length > 0 ? exp.lingotes.map(l => ({ ...l })) : [{ cantidad: 1, peso: 50 }],
         precioGramo: exp.precioGramo ? String(exp.precioGramo) : '',
       });
@@ -2033,12 +2119,14 @@ export default function LingotesTracker({
       const original = isEditing ? {
         nombre: editingExp.nombre || '',
         fecha: editingExp.fecha || defaultFecha,
+        ano: editingExp.ano || defaultAno,
         lingotes: editingExp.lingotes || [{ cantidad: 1, peso: 50 }],
         precioGramo: editingExp.precioGramo ? String(editingExp.precioGramo) : '',
-      } : { nombre: '', fecha: defaultFecha, lingotes: defaultLingotes, precioGramo: '' };
+      } : { nombre: '', fecha: defaultFecha, ano: defaultAno, lingotes: defaultLingotes, precioGramo: '' };
 
       const hasChanges = formData.nombre !== original.nombre ||
         formData.fecha !== original.fecha ||
+        formData.ano !== original.ano ||
         formData.precioGramo !== original.precioGramo ||
         JSON.stringify(formData.lingotes) !== JSON.stringify(original.lingotes);
 
@@ -2136,6 +2224,7 @@ export default function LingotesTracker({
           nombre: formData.nombre,
           grExport,
           fecha: formData.fecha,
+          ano: formData.ano,
           lingotes: validLingotes,
           precioGramo: formData.precioGramo ? parseFloat(formData.precioGramo) : null,
         };
@@ -2236,9 +2325,15 @@ export default function LingotesTracker({
                   <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
                   <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
-                <div className="w-40">
+                <div className="w-24">
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Año</label>
+                  <select value={formData.ano} onChange={(e) => setFormData({ ...formData, ano: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    {anosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div className="w-36">
                   <label className="block text-sm font-medium text-stone-700 mb-1">Fecha</label>
-                  <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
               </div>
 
@@ -2372,9 +2467,15 @@ export default function LingotesTracker({
                       <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
                       <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
                     </div>
-                    <div className="w-40">
+                    <div className="w-24">
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Año</label>
+                      <select value={formData.ano} onChange={(e) => setFormData({ ...formData, ano: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        {anosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div className="w-36">
                       <label className="block text-sm font-medium text-stone-700 mb-1">Fecha</label>
-                      <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                      <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
                     </div>
                   </div>
 
@@ -2512,7 +2613,10 @@ export default function LingotesTracker({
                     <span className="text-xl opacity-30 mt-0.5" title="Sin factura">📄</span>
                   )}
                   <div>
-                    <h3 className="text-lg font-bold text-stone-800">{exp.nombre}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-stone-800">{exp.nombre}</h3>
+                      {exp.ano && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{exp.ano}</span>}
+                    </div>
                     <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'}</p>
                   </div>
                 </div>
