@@ -202,6 +202,8 @@ export default function MadorTracker() {
   const [marcarTodosModal, setMarcarTodosModal] = useState({ open: false, estadoId: null });
   const [showAlertaExposicion, setShowAlertaExposicion] = useState(false);
   const [alertaExposicionChecked, setAlertaExposicionChecked] = useState(false);
+  const [viewingExpedicionFactura, setViewingExpedicionFactura] = useState(null); // { expedicion, factura }
+  const [uploadingExpFactura, setUploadingExpFactura] = useState(false);
 
   // Helper functions
   const getNextPaqueteNumber = (expedicionId) => {
@@ -542,6 +544,94 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
     fechaSnooze.setDate(fechaSnooze.getDate() + dias);
     localStorage.setItem(snoozeKey, fechaSnooze.toISOString());
     setShowAlertaExposicion(false);
+  };
+
+  // Comprimir imagen para subida de facturas
+  const comprimirImagen = (file, maxSizeKB = 500) => {
+    return new Promise((resolve) => {
+      // Si no es imagen, devolver tal cual
+      if (!file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result });
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        let { width, height } = img;
+        const maxDim = 1600;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height / width) * maxDim;
+            width = maxDim;
+          } else {
+            width = (width / height) * maxDim;
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let quality = 0.8;
+        let result = canvas.toDataURL('image/jpeg', quality);
+
+        while (result.length > maxSizeKB * 1024 * 1.37 && quality > 0.1) {
+          quality -= 0.1;
+          result = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        resolve({
+          name: file.name.replace(/\.[^.]+$/, '.jpg'),
+          type: 'image/jpeg',
+          data: result,
+        });
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Subir factura de expedición
+  const handleExpedicionFacturaUpload = async (expedicionId, file) => {
+    if (!file) return;
+    setUploadingExpFactura(true);
+    try {
+      const comprimido = await comprimirImagen(file, 500);
+      const exp = expediciones.find(e => e.id === expedicionId);
+      if (exp) {
+        await fsaveExpedicion({
+          ...exp,
+          factura: {
+            nombre: comprimido.name,
+            tipo: comprimido.type,
+            data: comprimido.data,
+            fecha: new Date().toISOString(),
+          }
+        }, { id: expedicionId }, usuarioActivo);
+      }
+      setUploadingExpFactura(false);
+    } catch (err) {
+      console.error('Error uploading factura:', err);
+      alert('Error al subir factura: ' + err.message);
+      setUploadingExpFactura(false);
+    }
+  };
+
+  // Eliminar factura de expedición
+  const handleExpedicionFacturaRemove = async (expedicionId) => {
+    if (!confirm('¿Eliminar la factura de esta expedición?')) return;
+    const exp = expediciones.find(e => e.id === expedicionId);
+    if (exp) {
+      const { factura, ...rest } = exp;
+      await fsaveExpedicion({ ...rest, factura: null }, { id: expedicionId }, usuarioActivo);
+    }
   };
 
   // CRUD wrappers (delegate to Firestore hook)
@@ -1516,13 +1606,36 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           <Card>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-amber-600 font-semibold">📊 Totales</h3>
-              <button
-                onClick={() => exportarExpedicionPDF(selectedExpedicion)}
-                className="text-xl hover:scale-110 transition-transform"
-                title="Exportar lista paquetes PDF"
-              >
-                🚚
-              </button>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  onClick={() => exportarExpedicionPDF(selectedExpedicion)}
+                  className="text-xl hover:scale-110 transition-transform"
+                  title="Exportar lista paquetes PDF"
+                >
+                  🚚
+                </button>
+                {/* Factura de expedición */}
+                {exp?.factura ? (
+                  <button
+                    onClick={() => setViewingExpedicionFactura({ expedicion: exp, factura: exp.factura })}
+                    className="text-lg hover:scale-110 transition-transform"
+                    title="Ver factura de expedición"
+                  >
+                    📄
+                  </button>
+                ) : (
+                  <label className="cursor-pointer text-lg opacity-30 hover:opacity-60 transition-opacity" title="Subir factura de expedición">
+                    {uploadingExpFactura ? '⏳' : '📄'}
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      className="hidden"
+                      onChange={(e) => handleExpedicionFacturaUpload(selectedExpedicion, e.target.files[0])}
+                      disabled={uploadingExpFactura}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
@@ -2012,6 +2125,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-stone-800 font-bold text-lg">{exp.nombre} {esActual && <span className="text-amber-500">★</span>}</h3>
+                      {exp.ano && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{exp.ano}</span>}
                       <div className="flex gap-1">
                         {logisticaPendiente && (
                           <span className="bg-orange-500 text-white text-xs font-bold rounded-full px-1.5 h-5 flex items-center justify-center" title="Logística pendiente">🚗</span>
@@ -3163,6 +3277,95 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             })}
           </div>
         </Card>
+
+        {/* Resumen por Año y Cliente */}
+        <Card>
+          <h3 className="text-amber-600 font-semibold mb-3">📊 Resumen por Año y Cliente</h3>
+          {(() => {
+            // Agrupar paquetes por año de expedición y cliente
+            const statsPorAno = {};
+
+            filteredExpediciones.forEach(exp => {
+              const ano = exp.ano || 'Sin año';
+              if (!statsPorAno[ano]) {
+                statsPorAno[ano] = { ano, clientes: {}, totalBruto: 0, totalFino: 0, totalFra: 0, totalMargen: 0 };
+              }
+
+              const expPaquetes = paquetes.filter(p => p.expedicionId === exp.id);
+              expPaquetes.forEach(paq => {
+                const clienteId = paq.clienteId;
+                const cliente = clientes.find(c => c.id === clienteId);
+                if (!cliente) return;
+
+                if (!statsPorAno[ano].clientes[clienteId]) {
+                  statsPorAno[ano].clientes[clienteId] = {
+                    nombre: cliente.nombre,
+                    color: cliente.color,
+                    bruto: 0,
+                    fino: 0,
+                    fra: 0,
+                    margen: 0,
+                    paquetes: 0
+                  };
+                }
+
+                const bruto = paq.lineas.reduce((s, l) => s + Math.max(0, l.bruto || 0), 0);
+                const fino = paq.lineas.reduce((s, l) => s + calcularFinoLinea(l.bruto, l.ley), 0);
+                const fra = paq.factura?.total || 0;
+                const margen = paq.margen || 0;
+
+                statsPorAno[ano].clientes[clienteId].bruto += bruto;
+                statsPorAno[ano].clientes[clienteId].fino += fino;
+                statsPorAno[ano].clientes[clienteId].fra += fra;
+                statsPorAno[ano].clientes[clienteId].margen += margen;
+                statsPorAno[ano].clientes[clienteId].paquetes += 1;
+
+                statsPorAno[ano].totalBruto += bruto;
+                statsPorAno[ano].totalFino += fino;
+                statsPorAno[ano].totalFra += fra;
+                statsPorAno[ano].totalMargen += margen;
+              });
+            });
+
+            const anosOrdenados = Object.values(statsPorAno)
+              .filter(s => s.totalBruto > 0)
+              .sort((a, b) => (b.ano || '').localeCompare(a.ano || ''));
+
+            if (anosOrdenados.length === 0) {
+              return <p className="text-stone-400 text-center py-4">No hay datos para mostrar</p>;
+            }
+
+            return (
+              <div className="space-y-4">
+                {anosOrdenados.map(stat => (
+                  <div key={stat.ano} className="bg-stone-50 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-stone-200">
+                      <span className="font-bold text-amber-700 text-lg">{stat.ano}</span>
+                      <div className="text-right">
+                        <span className="text-stone-800 font-mono font-bold">{formatNum(stat.totalBruto)} g</span>
+                        <span className="text-stone-400 text-xs ml-2">({formatNum(stat.totalFino)} g fino)</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {Object.values(stat.clientes)
+                        .sort((a, b) => b.bruto - a.bruto)
+                        .map(c => (
+                          <div key={c.nombre} className="flex items-center justify-between py-1 px-2 hover:bg-stone-100 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color || '#999' }} />
+                              <span className="text-stone-700 text-sm">{c.nombre}</span>
+                              <span className="text-stone-400 text-xs">({c.paquetes} paq.)</span>
+                            </div>
+                            <span className="text-stone-700 font-mono text-sm">{formatNum(c.bruto)} g</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </Card>
       </div>
     );
   };
@@ -3180,7 +3383,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         if (editingItem) {
           // Auto-populate precioPorDefecto from most recent cierre if not set
           const defaultPrecio = editingItem.precioPorDefecto || getExpedicionPrecioPorDefecto(editingItem.id) || '';
-          return { ...editingItem, precioPorDefecto: defaultPrecio, esActual: expedicionActualId === editingItem.id };
+          return { ...editingItem, precioPorDefecto: defaultPrecio, esActual: expedicionActualId === editingItem.id, ano: editingItem.ano || new Date().getFullYear().toString() };
         }
         // Auto-suggest next expedition number
         const maxNum = expediciones.reduce((max, exp) => {
@@ -3191,7 +3394,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         // Get most recent precioFino across all expediciones as starting default
         const allPreciosFino = paquetes.filter(p => p.precioFino).map(p => p.precioFino);
         const defaultPrecio = allPreciosFino.length > 0 ? allPreciosFino[allPreciosFino.length - 1] : '';
-        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: configGeneral.seguroExpedicionDefault || 600000, matriculaId: null, bultos: null, horaExportacion: null, matriculaLog: null, bultosLog: null, horaLog: null };
+        return { nombre: suggestedName, fechaExportacion: null, esActual: false, precioPorDefecto: defaultPrecio, seguro: configGeneral.seguroExpedicionDefault || 600000, matriculaId: null, bultos: null, horaExportacion: null, matriculaLog: null, bultosLog: null, horaLog: null, ano: new Date().getFullYear().toString() };
       }
       if (modalType === 'paquete') {
         const defaultCliente = clientes[0];
@@ -3467,12 +3670,26 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           
           {modalType === 'expedicion' && (
             <>
-              <Input
-                label="Nombre"
-                value={formData.nombre}
-                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                placeholder="Ej: E50"
-              />
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Input
+                    label="Nombre"
+                    value={formData.nombre}
+                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                    placeholder="Ej: E50"
+                  />
+                </div>
+                <div className="w-24">
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Año</label>
+                  <select
+                    value={formData.ano || new Date().getFullYear().toString()}
+                    onChange={(e) => setFormData({ ...formData, ano: e.target.value })}
+                    className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  >
+                    {['2024', '2025', '2026', '2027', '2028'].map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+              </div>
               <Input
                 label="Precio por defecto (€/g)"
                 type="number"
@@ -4438,6 +4655,63 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   Entendido
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver Factura de Expedición */}
+      {viewingExpedicionFactura && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewingExpedicionFactura(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b border-stone-200">
+              <div>
+                <h3 className="font-bold text-stone-800">{viewingExpedicionFactura.factura.nombre}</h3>
+                <p className="text-xs text-stone-500">Expedición: {viewingExpedicionFactura.expedicion.nombre}</p>
+              </div>
+              <button
+                onClick={() => setViewingExpedicionFactura(null)}
+                className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              {viewingExpedicionFactura.factura.tipo?.includes('pdf') ? (
+                <iframe
+                  src={viewingExpedicionFactura.factura.data}
+                  className="w-full h-[70vh] rounded-xl"
+                  title={viewingExpedicionFactura.factura.nombre}
+                />
+              ) : (
+                <img
+                  src={viewingExpedicionFactura.factura.data}
+                  alt={viewingExpedicionFactura.factura.nombre}
+                  className="max-w-full h-auto rounded-xl mx-auto"
+                />
+              )}
+            </div>
+            <div className="p-4 border-t border-stone-200 flex gap-3">
+              <a
+                href={viewingExpedicionFactura.factura.data}
+                download={viewingExpedicionFactura.factura.nombre}
+                className="flex-1 py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-center font-medium"
+              >
+                📥 Descargar
+              </a>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={async () => {
+                  await handleExpedicionFacturaRemove(viewingExpedicionFactura.expedicion.id);
+                  setViewingExpedicionFactura(null);
+                }}
+              >
+                🗑️ Eliminar
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setViewingExpedicionFactura(null)}>
+                Cerrar
+              </Button>
             </div>
           </div>
         </div>
