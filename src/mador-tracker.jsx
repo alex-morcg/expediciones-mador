@@ -84,6 +84,7 @@ export default function MadorTracker() {
     updateLingotesConfig,
     saveLingoteFutura, deleteLingoteFutura, updateLingoteFutura,
     lingotesFacturas, saveLingoteFactura, deleteLingoteFactura, updateLingoteFactura,
+    logsGenerales, loadLogsGenerales, addLogGeneral,
   } = useFirestore(needsLingotes ? 'lingotes' : 'expediciones');
 
   // Local UI state
@@ -545,8 +546,8 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
 
   // CRUD wrappers (delegate to Firestore hook)
   const saveCategoria = (data) => { fsaveCategoria(data, editingItem); closeModal(); };
-  const saveCliente = (data) => { fsaveCliente(data, editingItem); closeModal(); };
-  const saveExpedicion = (data) => { fsaveExpedicion(data, editingItem); closeModal(); };
+  const saveCliente = (data) => { fsaveCliente(data, editingItem, usuarioActivo); closeModal(); };
+  const saveExpedicion = (data) => { fsaveExpedicion(data, editingItem, usuarioActivo); closeModal(); };
   const savePaquete = (data) => { fsavePaquete(data, editingItem, { usuarioActivo, getExpedicionNombre, getCliente, getCategoria, paquetes }); closeModal(); };
   const addLineaToPaquete = (paqueteId, linea) => faddLinea(paqueteId, linea, usuarioActivo);
   const removeLineaFromPaquete = (paqueteId, lineaId) => {
@@ -581,7 +582,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const handleDeleteCliente = (id) => {
     const cliente = clientes.find(c => c.id === id);
     if (!confirm(`¿Eliminar el cliente "${cliente?.nombre || 'Sin nombre'}"?`)) return;
-    deleteCliente(id);
+    deleteCliente(id, cliente?.nombre, usuarioActivo);
   };
 
   const handleDeleteExpedicion = (id) => {
@@ -591,7 +592,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
       ? `¿Eliminar la expedición "${exp?.nombre || 'Sin nombre'}" y sus ${numPaquetes} paquete(s)?`
       : `¿Eliminar la expedición "${exp?.nombre || 'Sin nombre'}"?`;
     if (!confirm(mensaje)) return;
-    deleteExpedicion(id);
+    deleteExpedicion(id, exp?.nombre, usuarioActivo);
   };
 
   const handleDeletePaquete = (id) => {
@@ -601,7 +602,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
       ? `¿Eliminar el paquete "${paq?.nombre || 'Sin nombre'}" con ${numLineas} línea(s)?`
       : `¿Eliminar el paquete "${paq?.nombre || 'Sin nombre'}"?`;
     if (!confirm(mensaje)) return;
-    deletePaquete(id);
+    deletePaquete(id, paq?.nombre, usuarioActivo);
   };
 
   // Tab content components
@@ -4266,6 +4267,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         onSaveFactura={saveLingoteFactura}
         onDeleteFactura={deleteLingoteFactura}
         onUpdateFactura={updateLingoteFactura}
+        onAddLogGeneral={(accion, descripcion, detalles) => addLogGeneral('lingotes', accion, descripcion, usuarioActivo, detalles)}
+        logsGenerales={logsGenerales}
+        loadLogsGenerales={loadLogsGenerales}
       />
     );
   }

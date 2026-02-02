@@ -316,6 +316,10 @@ export function useFirestore(activeSection = 'expediciones') {
   const [lingotesFutura, setLingotesFutura] = useState([]);
   const [lingotesFacturas, setLingotesFacturas] = useState([]);
 
+  // Logs generales - solo para Alex
+  const [logsGenerales, setLogsGenerales] = useState([]);
+  const logsLoaded = useRef(false);
+
   const [loading, setLoading] = useState(true);
   const seedTriggered = useRef(false);
   const lingotesUnsubscribers = useRef([]);
@@ -528,6 +532,33 @@ export function useFirestore(activeSection = 'expediciones') {
     await setDoc(doc(db, 'config', 'settings'), data, { merge: true });
   };
 
+  // Helper para guardar log general
+  const addLogGeneral = async (modulo, accion, descripcion, usuarioActivo, detalles = null) => {
+    try {
+      await addDoc(collection(db, 'logsGenerales'), {
+        modulo, // 'expediciones' | 'lingotes'
+        accion,
+        descripcion,
+        usuario: usuarioActivo,
+        fecha: new Date().toISOString(),
+        detalles,
+      });
+    } catch (err) {
+      console.error('Error guardando log general:', err);
+    }
+  };
+
+  // Cargar logs generales (solo para Alex)
+  const loadLogsGenerales = useCallback(async () => {
+    if (logsLoaded.current) return;
+    logsLoaded.current = true;
+
+    const q = query(collection(db, 'logsGenerales'), orderBy('fecha', 'desc'));
+    onSnapshot(q, (snap) => {
+      setLogsGenerales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, []);
+
   // Categorias
   const saveCategoria = async (data, editingItem) => {
     if (editingItem) {
@@ -543,17 +574,20 @@ export function useFirestore(activeSection = 'expediciones') {
   };
 
   // Clientes
-  const saveCliente = async (data, editingItem) => {
+  const saveCliente = async (data, editingItem, usuarioActivo) => {
     if (editingItem) {
       const { id, ...rest } = data;
       await updateDoc(doc(db, 'clientes', editingItem.id), rest);
+      addLogGeneral('expediciones', 'editar_cliente', `Editado cliente ${data.nombre}`, usuarioActivo);
     } else {
-      await addDoc(collection(db, 'clientes'), data);
+      const ref = await addDoc(collection(db, 'clientes'), data);
+      addLogGeneral('expediciones', 'crear_cliente', `Creado cliente ${data.nombre}`, usuarioActivo, { clienteId: ref.id });
     }
   };
 
-  const deleteCliente = async (id) => {
+  const deleteCliente = async (id, nombreCliente, usuarioActivo) => {
     await deleteDoc(doc(db, 'clientes', id));
+    addLogGeneral('expediciones', 'eliminar_cliente', `Eliminado cliente ${nombreCliente}`, usuarioActivo);
   };
 
   const updateClienteKilatajes = async (clienteId, kilatajes) => {
@@ -565,28 +599,31 @@ export function useFirestore(activeSection = 'expediciones') {
   };
 
   // Expediciones
-  const saveExpedicion = async (data, editingItem) => {
+  const saveExpedicion = async (data, editingItem, usuarioActivo) => {
     const { esActual, id, ...expedicionData } = data;
     if (editingItem) {
       await updateDoc(doc(db, 'expediciones', editingItem.id), expedicionData);
       if (esActual) {
         await setExpedicionActualId(editingItem.id);
       }
+      addLogGeneral('expediciones', 'editar_expedicion', `Editada expedición ${data.nombre}`, usuarioActivo, { expedicionId: editingItem.id });
     } else {
       const ref = await addDoc(collection(db, 'expediciones'), expedicionData);
       if (esActual) {
         await setExpedicionActualId(ref.id);
       }
+      addLogGeneral('expediciones', 'crear_expedicion', `Creada expedición ${data.nombre}`, usuarioActivo, { expedicionId: ref.id });
     }
   };
 
-  const deleteExpedicion = async (id) => {
+  const deleteExpedicion = async (id, nombreExpedicion, usuarioActivo) => {
     // Cascade: delete all paquetes for this expedicion
     const paqSnap = await getDocs(query(collection(db, 'paquetes'), where('expedicionId', '==', id)));
     const batch = writeBatch(db);
     paqSnap.docs.forEach(d => batch.delete(d.ref));
     batch.delete(doc(db, 'expediciones', id));
     await batch.commit();
+    addLogGeneral('expediciones', 'eliminar_expedicion', `Eliminada expedición ${nombreExpedicion} (${paqSnap.docs.length} paquetes)`, usuarioActivo);
   };
 
   // Paquetes
@@ -674,11 +711,13 @@ export function useFirestore(activeSection = 'expediciones') {
         creadoPor: modificacion,
         ultimaModificacion: modificacion,
       });
+      addLogGeneral('expediciones', 'crear_paquete', `Creado paquete ${nuevoNombre}`, usuarioActivo, { cliente: getCliente(data.clienteId)?.nombre });
     }
   };
 
-  const deletePaquete = async (id) => {
+  const deletePaquete = async (id, nombrePaquete, usuarioActivo) => {
     await deleteDoc(doc(db, 'paquetes', id));
+    addLogGeneral('expediciones', 'eliminar_paquete', `Eliminado paquete ${nombrePaquete}`, usuarioActivo);
   };
 
   const addLineaToPaquete = async (paqueteId, linea, usuarioActivo) => {
@@ -852,6 +891,11 @@ export function useFirestore(activeSection = 'expediciones') {
 
     updateData.logs = logs;
     await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
+
+    // Log general solo si se cerró (nuevo precio)
+    if (!oldPrecio && newPrecio) {
+      addLogGeneral('expediciones', 'cerrar_paquete', `Cerrado paquete ${paq.nombre} a ${precioFino}€/g`, usuarioActivo);
+    }
   };
 
   const updatePaqueteFactura = async (paqueteId, factura, usuarioActivo) => {
@@ -1231,5 +1275,10 @@ export function useFirestore(activeSection = 'expediciones') {
     saveLingoteFactura,
     deleteLingoteFactura,
     updateLingoteFactura,
+
+    // Logs generales
+    logsGenerales,
+    loadLogsGenerales,
+    addLogGeneral,
   };
 }

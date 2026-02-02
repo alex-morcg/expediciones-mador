@@ -98,6 +98,9 @@ export default function LingotesTracker({
   onSaveFactura,
   onDeleteFactura,
   onUpdateFactura,
+  onAddLogGeneral = () => {}, // (accion, descripcion, detalles) => void
+  logsGenerales = [],
+  loadLogsGenerales = () => {},
 }) {
   const [activeTab, setActiveTab] = useState('stock');
   const [selectedCliente, setSelectedCliente] = useState(null);
@@ -329,6 +332,15 @@ export default function LingotesTracker({
     setShowEntregaModal(false);
     setEditingEntregaClienteId(null);
 
+    // Log general
+    const clienteNombre = getCliente(data.clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral('crear_entrega', `Entrega creada a ${clienteNombre}: ${totalLingotes} lingotes (${totalPeso}g)`, {
+      clienteId: data.clienteId,
+      exportacionId: data.exportacionId,
+      totalLingotes,
+      totalPeso,
+    });
+
     // Check if client has FUTURA orphan lingotes → prompt to assign
     const clientFutura = (futuraLingotes || []).filter(f => f.clienteId === data.clienteId);
     if (clientFutura.length > 0) {
@@ -350,6 +362,14 @@ export default function LingotesTracker({
       pagado: data.pagado || false,
       estado: 'futura', // Estado especial: vendido sin exportación asignada
       fechaCreacion: new Date().toISOString(),
+    });
+
+    // Log general
+    const clienteNombre = getCliente(data.clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral('crear_futura', `FUTURA creado para ${clienteNombre}: ${data.peso}g`, {
+      clienteId: data.clienteId,
+      peso: data.peso,
+      precio: data.precio || null,
     });
 
     setShowFuturaModal(false);
@@ -388,6 +408,17 @@ export default function LingotesTracker({
     for (const fId of futuraIds) {
       await onDeleteFutura(fId);
     }
+
+    // Log general
+    const clienteId = targetEntrega.clienteId;
+    const clienteNombre = getCliente(clienteId)?.nombre || 'Desconocido';
+    const totalPeso = newLingotes.reduce((s, l) => s + (l.peso || 0), 0);
+    onAddLogGeneral('asignar_futura', `FUTURA asignado a entrega de ${clienteNombre}: ${futuraIds.length} lingotes (${totalPeso}g)`, {
+      clienteId,
+      entregaId: targetEntregaId,
+      futuraCount: futuraIds.length,
+      totalPeso,
+    });
 
     setShowAssignFuturaModal(false);
   };
@@ -440,6 +471,14 @@ export default function LingotesTracker({
 
         await onUpdateEntrega(eId, { lingotes, logs });
       }
+
+      // Log general para cierre bulk multi-entrega
+      onAddLogGeneral('cerrar_lingotes', `Cierre bulk multi-entrega: ${totalLingotes} lingotes (${totalPeso}g) a ${formatNum(data.precio)}€/g`, {
+        totalLingotes,
+        totalPeso,
+        precio: data.precio,
+        importe: data.precio * totalPeso,
+      });
     } else {
       // Cierre normal de una sola entrega
       const lingotes = [...entregaRef.lingotes];
@@ -472,6 +511,17 @@ export default function LingotesTracker({
       const logs = [...(entregaRef.logs || []), log];
 
       await onUpdateEntrega(entregaId, { lingotes, logs });
+
+      // Log general
+      const clienteNombre = getCliente(entregaRef.clienteId)?.nombre || 'Desconocido';
+      onAddLogGeneral('cerrar_lingotes', `Cierre de ${clienteNombre}: ${lingoteIndices.length} x ${peso}g (${totalPeso}g) a ${formatNum(data.precio)}€/g`, {
+        clienteId: entregaRef.clienteId,
+        entregaId,
+        totalLingotes: lingoteIndices.length,
+        totalPeso,
+        precio: data.precio,
+        importe: data.precio * totalPeso,
+      });
     }
 
     setShowCierreModal(false);
@@ -498,6 +548,16 @@ export default function LingotesTracker({
       fechaCierre: data.fechaCierre || null,
     });
 
+    // Log general
+    const clienteNombre = getCliente(f.clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral('cerrar_futura', `Cierre FUTURA de ${clienteNombre}: ${f.peso}g a ${formatNum(data.precio)}€/g`, {
+      clienteId: f.clienteId,
+      futuraId,
+      peso: f.peso,
+      precio: data.precio,
+      importe: data.precio * pesoNeto,
+    });
+
     setShowCierreModal(false);
     setSelectedFuturaId(null);
     setSelectedEntrega(null);
@@ -506,10 +566,14 @@ export default function LingotesTracker({
 
   // Cerrar múltiples lingotes FUTURA a la vez
   const cerrarFuturaMultiple = async (futuraIds, data) => {
+    let totalPeso = 0;
+    let clienteId = null;
     for (const futuraId of futuraIds) {
       const f = (futuraLingotes || []).find(fl => fl.id === futuraId);
       if (!f) continue;
+      if (!clienteId) clienteId = f.clienteId;
       const pesoNeto = (f.peso || 0) - (data.devolucion || 0);
+      totalPeso += pesoNeto;
       await onUpdateFutura(futuraId, {
         euroOnza: data.euroOnza || null,
         base: data.base || null,
@@ -523,6 +587,16 @@ export default function LingotesTracker({
         fechaCierre: data.fechaCierre || null,
       });
     }
+
+    // Log general
+    const clienteNombre = getCliente(clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral('cerrar_futura', `Cierre FUTURA bulk de ${clienteNombre}: ${futuraIds.length} lingotes (${totalPeso}g) a ${formatNum(data.precio)}€/g`, {
+      clienteId,
+      totalLingotes: futuraIds.length,
+      totalPeso,
+      precio: data.precio,
+      importe: data.precio * totalPeso,
+    });
 
     setShowCierreModal(false);
     setSelectedFuturaId(null);
@@ -565,6 +639,15 @@ export default function LingotesTracker({
       }
       await onSaveExportacion({ ...exportacion, lingotes: newLingotes }, exportacion.id);
     }
+
+    // Log general
+    const clienteNombre = getCliente(entrega.clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral('devolucion', `Devolución de ${clienteNombre}: ${lingoteIndices.length} x ${peso}g (${totalPeso}g)`, {
+      clienteId: entrega.clienteId,
+      entregaId,
+      totalLingotes: lingoteIndices.length,
+      totalPeso,
+    });
   };
 
   // Cancelar devolución: volver a poner lingotes en estado 'en_curso' y quitar del stock
@@ -606,17 +689,32 @@ export default function LingotesTracker({
     const lingotes = [...entrega.lingotes];
     const l = lingotes[lingoteIdx];
     let log;
+    let logAccion;
+    let logDesc;
     if (l.estado === 'pendiente_pago') {
       // Mark as paid → finalizado
       lingotes[lingoteIdx] = { ...l, pagado: true, estado: 'finalizado' };
       log = createLog('pago', `Pagado: 1 x ${l.peso}g (${formatEur(l.importe || 0)})`);
+      logAccion = 'marcar_pagado';
+      logDesc = `Pago registrado: ${l.peso}g (${formatEur(l.importe || 0)})`;
     } else if (l.estado === 'finalizado') {
       // Unmark paid → back to pendiente_pago
       lingotes[lingoteIdx] = { ...l, pagado: false, estado: 'pendiente_pago' };
       log = createLog('pago', `Desmarcado pago: 1 x ${l.peso}g`);
+      logAccion = 'desmarcar_pagado';
+      logDesc = `Pago desmarcado: ${l.peso}g`;
     }
     const logs = [...(entrega.logs || []), log];
     await onUpdateEntrega(entregaId, { lingotes, logs });
+
+    // Log general
+    const clienteNombre = getCliente(entrega.clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral(logAccion, `${logDesc} de ${clienteNombre}`, {
+      clienteId: entrega.clienteId,
+      entregaId,
+      peso: l.peso,
+      importe: l.importe,
+    });
   };
 
   const marcarPagadoFutura = async (futuraId) => {
@@ -2047,8 +2145,21 @@ export default function LingotesTracker({
             data.factura = editingExp.factura;
           }
           await onSaveExportacion(data, editingExp.id);
+
+          // Log general edición
+          onAddLogGeneral('editar_exportacion', `Exportación editada: ${data.nombre} (${grExport}g)`, {
+            exportacionId: editingExp.id,
+            nombre: data.nombre,
+            grExport,
+          });
         } else {
           await onSaveExportacion(data);
+
+          // Log general creación
+          onAddLogGeneral('crear_exportacion', `Exportación creada: ${data.nombre} (${grExport}g)`, {
+            nombre: data.nombre,
+            grExport,
+          });
 
           // Check if there are FUTURA lingotes pending assignment
           const totalFutura = (futuraLingotes || []).length;
@@ -2399,9 +2510,14 @@ export default function LingotesTracker({
                   </button>
                   {!exp.hasBeenUsed && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
-                          onDeleteExportacion(exp.id);
+                          await onDeleteExportacion(exp.id);
+                          // Log general
+                          onAddLogGeneral('eliminar_exportacion', `Exportación eliminada: ${exp.nombre} (${exp.grExport}g)`, {
+                            nombre: exp.nombre,
+                            grExport: exp.grExport,
+                          });
                         }
                       }}
                       className="text-red-400 hover:text-red-600 text-sm font-medium"
@@ -3314,6 +3430,135 @@ export default function LingotesTracker({
     );
   };
 
+  // Log General Section - Solo para Alex
+  const LogGeneralSection = ({ logsGenerales, loadLogsGenerales }) => {
+    const [showLogs, setShowLogs] = useState(false);
+    const [logsLoaded, setLogsLoaded] = useState(false);
+
+    const handleToggle = () => {
+      if (!logsLoaded) {
+        loadLogsGenerales();
+        setLogsLoaded(true);
+      }
+      setShowLogs(!showLogs);
+    };
+
+    // Agrupar logs por día y luego por usuario
+    const logsAgrupados = useMemo(() => {
+      if (!logsGenerales || logsGenerales.length === 0) return [];
+
+      // Agrupar por día
+      const porDia = {};
+      logsGenerales.forEach(log => {
+        const fecha = log.fecha?.split('T')[0] || 'Sin fecha';
+        if (!porDia[fecha]) porDia[fecha] = [];
+        porDia[fecha].push(log);
+      });
+
+      // Para cada día, agrupar por usuario
+      return Object.entries(porDia)
+        .sort((a, b) => b[0].localeCompare(a[0])) // Más reciente primero
+        .map(([fecha, logs]) => {
+          const porUsuario = {};
+          logs.forEach(log => {
+            const usuario = log.usuario || 'Sistema';
+            if (!porUsuario[usuario]) porUsuario[usuario] = [];
+            porUsuario[usuario].push(log);
+          });
+
+          // Ordenar cada usuario por hora
+          Object.values(porUsuario).forEach(userLogs => {
+            userLogs.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+          });
+
+          return { fecha, porUsuario };
+        });
+    }, [logsGenerales]);
+
+    const formatFecha = (fecha) => {
+      if (!fecha) return '-';
+      const d = new Date(fecha);
+      return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+    };
+
+    const formatHora = (fecha) => {
+      if (!fecha) return '-';
+      const d = new Date(fecha);
+      return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const getAccionEmoji = (accion) => {
+      const emojis = {
+        crear_exportacion: '📦',
+        editar_exportacion: '✏️',
+        eliminar_exportacion: '🗑️',
+        crear_entrega: '📤',
+        crear_futura: '🔮',
+        asignar_futura: '🔗',
+        cerrar_lingotes: '💰',
+        cerrar_futura: '💰',
+        devolucion: '↩️',
+        marcar_pagado: '✅',
+        desmarcar_pagado: '❌',
+        subir_factura_cliente: '📄',
+        crear_expedicion: '🚚',
+        editar_expedicion: '✏️',
+        eliminar_expedicion: '🗑️',
+        crear_paquete: '📋',
+        eliminar_paquete: '🗑️',
+        cerrar_paquete: '🔒',
+        crear_cliente: '👤',
+        editar_cliente: '✏️',
+        eliminar_cliente: '🗑️',
+      };
+      return emojis[accion] || '📝';
+    };
+
+    return (
+      <div>
+        <Button onClick={handleToggle} variant="secondary" className="w-full mb-4">
+          {showLogs ? '🔼 Ocultar Logs' : '🔽 Ver Logs de Actividad'}
+        </Button>
+
+        {showLogs && (
+          <div className="space-y-4 max-h-[500px] overflow-y-auto">
+            {logsAgrupados.length === 0 ? (
+              <p className="text-center text-stone-500 py-4">No hay logs registrados</p>
+            ) : (
+              logsAgrupados.map(({ fecha, porUsuario }) => (
+                <div key={fecha} className="border border-stone-200 rounded-xl overflow-hidden">
+                  <div className="bg-stone-100 px-3 py-2 font-bold text-stone-700 text-sm">
+                    📅 {formatFecha(fecha)}
+                  </div>
+                  <div className="divide-y divide-stone-100">
+                    {Object.entries(porUsuario).map(([usuario, logs]) => (
+                      <div key={usuario} className="p-3">
+                        <div className="font-medium text-amber-700 text-sm mb-2">
+                          👤 {usuario}
+                        </div>
+                        <div className="space-y-1 pl-4">
+                          {logs.map((log, idx) => (
+                            <div key={log.id || idx} className="flex items-start gap-2 text-xs">
+                              <span className="text-stone-400 font-mono whitespace-nowrap">
+                                {formatHora(log.fecha)}
+                              </span>
+                              <span>{getAccionEmoji(log.accion)}</span>
+                              <span className="text-stone-600">{log.descripcion}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Parametros View
   const ParametrosView = () => {
     const [tempUmbrales, setTempUmbrales] = useState({
@@ -3701,6 +3946,14 @@ export default function LingotesTracker({
             📥 Importar TODOS los datos históricos
           </Button>
         </Card>
+
+        {/* Log General - Solo Alex */}
+        {currentUser === 'Alex' && (
+          <Card>
+            <h3 className="font-bold text-stone-800 mb-4">📋 Log General de Actividad</h3>
+            <LogGeneralSection logsGenerales={logsGenerales} loadLogsGenerales={loadLogsGenerales} />
+          </Card>
+        )}
 
         {/* Reset data */}
         <Card>
@@ -4804,6 +5057,16 @@ export default function LingotesTracker({
         for (const f of selectedFutura) {
           await onUpdateFutura(f.futuraId, { nFactura: facturaId });
         }
+
+        // Log general
+        const totalImporte = selectedLingotes.reduce((s, l) => s + (l.importe || 0), 0);
+        onAddLogGeneral('subir_factura_cliente', `Factura subida para ${cliente.nombre}: ${selectedCount} lingotes (${formatEur(totalImporte)})`, {
+          clienteId: cliente.id,
+          facturaId,
+          lingotesCount: selectedCount,
+          totalImporte,
+          nombre: facturaFile.name,
+        });
 
         setShowFacturaModal(false);
         setFacturaFile(null);
