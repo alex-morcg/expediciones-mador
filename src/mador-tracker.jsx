@@ -3278,90 +3278,58 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           </div>
         </Card>
 
-        {/* Resumen por Año y Cliente */}
+        {/* Chart por Año y Cliente */}
         <Card>
-          <h3 className="text-amber-600 font-semibold mb-3">📊 Resumen por Año y Cliente</h3>
+          <h3 className="text-amber-600 font-semibold mb-4">Volumen Bruto por Año y Cliente</h3>
           {(() => {
             // Agrupar paquetes por año de expedición y cliente
-            const statsPorAno = {};
+            const dataByYear = {};
 
             filteredExpediciones.forEach(exp => {
               const ano = exp.ano || 'Sin año';
-              if (!statsPorAno[ano]) {
-                statsPorAno[ano] = { ano, clientes: {}, totalBruto: 0, totalFino: 0, totalFra: 0, totalMargen: 0 };
+              if (!dataByYear[ano]) {
+                dataByYear[ano] = { ano };
               }
 
               const expPaquetes = paquetes.filter(p => p.expedicionId === exp.id);
               expPaquetes.forEach(paq => {
-                const clienteId = paq.clienteId;
-                const cliente = clientes.find(c => c.id === clienteId);
+                const cliente = clientes.find(c => c.id === paq.clienteId);
                 if (!cliente) return;
 
-                if (!statsPorAno[ano].clientes[clienteId]) {
-                  statsPorAno[ano].clientes[clienteId] = {
-                    nombre: cliente.nombre,
-                    color: cliente.color,
-                    bruto: 0,
-                    fino: 0,
-                    fra: 0,
-                    margen: 0,
-                    paquetes: 0
-                  };
-                }
-
                 const bruto = paq.lineas.reduce((s, l) => s + Math.max(0, l.bruto || 0), 0);
-                const fino = paq.lineas.reduce((s, l) => s + calcularFinoLinea(l.bruto, l.ley), 0);
-                const fra = paq.factura?.total || 0;
-                const margen = paq.margen || 0;
-
-                statsPorAno[ano].clientes[clienteId].bruto += bruto;
-                statsPorAno[ano].clientes[clienteId].fino += fino;
-                statsPorAno[ano].clientes[clienteId].fra += fra;
-                statsPorAno[ano].clientes[clienteId].margen += margen;
-                statsPorAno[ano].clientes[clienteId].paquetes += 1;
-
-                statsPorAno[ano].totalBruto += bruto;
-                statsPorAno[ano].totalFino += fino;
-                statsPorAno[ano].totalFra += fra;
-                statsPorAno[ano].totalMargen += margen;
+                dataByYear[ano][cliente.nombre] = (dataByYear[ano][cliente.nombre] || 0) + bruto;
               });
             });
 
-            const anosOrdenados = Object.values(statsPorAno)
-              .filter(s => s.totalBruto > 0)
-              .sort((a, b) => (b.ano || '').localeCompare(a.ano || ''));
+            const chartDataByYear = Object.values(dataByYear)
+              .sort((a, b) => (a.ano || '').localeCompare(b.ano || ''));
 
-            if (anosOrdenados.length === 0) {
+            if (chartDataByYear.length === 0) {
               return <p className="text-stone-400 text-center py-4">No hay datos para mostrar</p>;
             }
 
             return (
-              <div className="space-y-4">
-                {anosOrdenados.map(stat => (
-                  <div key={stat.ano} className="bg-stone-50 rounded-xl p-3">
-                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-stone-200">
-                      <span className="font-bold text-amber-700 text-lg">{stat.ano}</span>
-                      <div className="text-right">
-                        <span className="text-stone-800 font-mono font-bold">{formatNum(stat.totalBruto)} g</span>
-                        <span className="text-stone-400 text-xs ml-2">({formatNum(stat.totalFino)} g fino)</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      {Object.values(stat.clientes)
-                        .sort((a, b) => b.bruto - a.bruto)
-                        .map(c => (
-                          <div key={c.nombre} className="flex items-center justify-between py-1 px-2 hover:bg-stone-100 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color || '#999' }} />
-                              <span className="text-stone-700 text-sm">{c.nombre}</span>
-                              <span className="text-stone-400 text-xs">({c.paquetes} paq.)</span>
-                            </div>
-                            <span className="text-stone-700 font-mono text-sm">{formatNum(c.bruto)} g</span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                ))}
+              <div className="w-full h-80 -ml-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartDataByYear} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                    <XAxis dataKey="ano" tick={{ fill: '#78716c', fontSize: 12 }} />
+                    <YAxis tick={{ fill: '#78716c', fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(1)}k`} />
+                    <Tooltip
+                      formatter={(value, name) => [`${formatNum(value)} g`, name]}
+                      contentStyle={{ backgroundColor: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    {filteredClientes.map((cliente) => (
+                      <Bar
+                        key={cliente.id}
+                        dataKey={cliente.nombre}
+                        stackId="a"
+                        fill={cliente.color || '#999999'}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             );
           })()}
@@ -3686,7 +3654,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     onChange={(e) => setFormData({ ...formData, ano: e.target.value })}
                     className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
                   >
-                    {['2024', '2025', '2026', '2027', '2028'].map(a => <option key={a} value={a}>{a}</option>)}
+                    {['2022', '2023', '2024', '2025', '2026', '2027', '2028'].map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
               </div>
