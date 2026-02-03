@@ -67,7 +67,7 @@ export default function MadorTracker() {
     saveCategoria: fsaveCategoria, deleteCategoria, saveCliente: fsaveCliente, deleteCliente, updateClienteKilatajes, updateClienteDatosFiscales,
     saveExpedicion: fsaveExpedicion, deleteExpedicion, savePaquete: fsavePaquete, deletePaquete,
     addLineaToPaquete: faddLinea, removeLineaFromPaquete: fremoveLinea, updatePaqueteCierre: fupdateCierre,
-    updatePaqueteFactura: fupdateFactura, updatePaqueteVerificacion: fupdateVerificacion,
+    updatePaqueteFactura: fupdateFactura, updatePaqueteVerificacion: fupdateVerificacion, updatePaqueteFechaFactura: fupdateFechaFactura,
     validarVerificacion: fvalidarVerificacion, updatePaqueteEstado: fupdateEstado, updatePaqueteEstadoPago: fupdateEstadoPago,
     marcarTodosComoEstado: fmarcarTodos, addComentarioToPaquete: faddComentario,
     deleteComentarioFromPaquete: fdeleteComentario,
@@ -647,7 +647,8 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   };
   const updatePaqueteCierre = (paqueteId, precioFino, cierreJofisa) => fupdateCierre(paqueteId, precioFino, cierreJofisa, usuarioActivo);
   const updatePaqueteFactura = (paqueteId, factura) => fupdateFactura(paqueteId, factura, usuarioActivo);
-  const updatePaqueteVerificacion = (paqueteId, verificacionIA) => fupdateVerificacion(paqueteId, verificacionIA, usuarioActivo);
+  const updatePaqueteVerificacion = (paqueteId, verificacionIA, fechaFactura = null) => fupdateVerificacion(paqueteId, verificacionIA, usuarioActivo, fechaFactura);
+  const updatePaqueteFechaFactura = (paqueteId, fechaFactura) => fupdateFechaFactura(paqueteId, fechaFactura, usuarioActivo);
   const validarVerificacion = (paqueteId) => fvalidarVerificacion(paqueteId, usuarioActivo);
   const updatePaqueteEstado = (paqueteId, estado) => fupdateEstado(paqueteId, estado, usuarioActivo, estadosPaquete);
   const updatePaqueteEstadoPago = (paqueteId, estadoPago) => fupdateEstadoPago(paqueteId, estadoPago, usuarioActivo);
@@ -819,6 +820,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
       const prompt = `Analiza esta factura/albarán y extrae:
 1. El importe TOTAL final (lo que paga el cliente)
 2. Cada línea de peso bruto con su ley/kilataje
+3. La fecha de la factura (formato YYYY-MM-DD)
 
 Nuestros datos del paquete son:
 - Total calculado: ${totales.totalFra.toFixed(2)} €
@@ -830,6 +832,7 @@ Compara CADA línea de peso de la factura con nuestras líneas. Indica discrepan
 Responde SOLO con JSON, sin texto adicional:
 {
   "total": número_o_null,
+  "fechaFactura": "YYYY-MM-DD" o null,
   "pesos": [{"bruto": número, "ley": número_o_null}],
   "pesosCuadran": true/false,
   "observaciones": "discrepancias por línea de gramos, o null si todo cuadra"
@@ -883,6 +886,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
         const diferencia = resultado.total - totales.totalFra;
 
+        // Guardar verificación y fechaFactura (si la extrajo la IA)
         updatePaqueteVerificacion(paq.id, {
           totalFactura: resultado.total,
           totalPaquete: totales.totalFra,
@@ -892,7 +896,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           observaciones: resultado.observaciones || null,
           fecha: new Date().toISOString(),
           archivoNombre: paq.factura.nombre
-        });
+        }, resultado.fechaFactura || null);
 
       } catch (error) {
         alert('Error al conectar con la IA: ' + error.message);
@@ -1442,9 +1446,9 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   </Button>
                 )}
                 
-                <Button 
-                  variant="danger" 
-                  size="sm" 
+                <Button
+                  variant="danger"
+                  size="sm"
                   className="w-full"
                   onClick={() => {
                     updatePaqueteFactura(paq.id, null);
@@ -1453,6 +1457,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 >
                   🗑️ Eliminar factura
                 </Button>
+
+                {/* Campo Fecha Factura editable */}
+                <div className="mt-3 pt-3 border-t border-stone-200">
+                  <label className="text-stone-500 text-xs block mb-1">📅 Fecha Factura</label>
+                  <input
+                    type="date"
+                    value={paq.fechaFactura || ''}
+                    onChange={(e) => updatePaqueteFechaFactura(paq.id, e.target.value || null)}
+                    className="w-full border border-stone-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
               </div>
             ) : (
               <div>
@@ -3331,6 +3346,84 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     ))}
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            );
+          })()}
+        </Card>
+
+        {/* Listado IGI por Mes */}
+        <Card>
+          <h3 className="text-amber-600 font-semibold mb-4">💰 IGI por Mes (según Fecha Factura)</h3>
+          {(() => {
+            // Agrupar paquetes por mes de fechaFactura
+            const igiPorMes = {};
+
+            paquetes.forEach(paq => {
+              // Solo paquetes con fechaFactura
+              if (!paq.fechaFactura) return;
+
+              const totales = calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(paq.expedicionId));
+              if (!totales.igi || totales.igi === 0) return;
+
+              // Extraer año-mes de la fechaFactura (formato YYYY-MM)
+              const fecha = new Date(paq.fechaFactura);
+              const mesKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+              const mesLabel = fecha.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+
+              if (!igiPorMes[mesKey]) {
+                igiPorMes[mesKey] = { label: mesLabel, total: 0, paquetes: [] };
+              }
+              igiPorMes[mesKey].total += totales.igi;
+              igiPorMes[mesKey].paquetes.push({
+                nombre: paq.nombre,
+                cliente: getCliente(paq.clienteId)?.nombre || 'Sin cliente',
+                igi: totales.igi,
+                fecha: paq.fechaFactura
+              });
+            });
+
+            // Ordenar por mes (más reciente primero)
+            const mesesOrdenados = Object.entries(igiPorMes)
+              .sort(([a], [b]) => b.localeCompare(a));
+
+            if (mesesOrdenados.length === 0) {
+              return (
+                <p className="text-stone-400 text-center py-4">
+                  No hay paquetes con fecha de factura e IGI calculado
+                </p>
+              );
+            }
+
+            const totalIGI = mesesOrdenados.reduce((sum, [, data]) => sum + data.total, 0);
+
+            return (
+              <div className="space-y-3">
+                {/* Total general */}
+                <div className="bg-amber-50 rounded-lg p-3 flex justify-between items-center">
+                  <span className="text-amber-800 font-semibold">Total IGI pendiente</span>
+                  <span className="text-amber-800 font-bold text-lg">{formatEur(totalIGI)}</span>
+                </div>
+
+                {/* Por mes */}
+                {mesesOrdenados.map(([mesKey, data]) => (
+                  <details key={mesKey} className="border border-stone-200 rounded-lg overflow-hidden">
+                    <summary className="bg-stone-50 px-3 py-2 cursor-pointer hover:bg-stone-100 flex justify-between items-center">
+                      <span className="text-stone-700 font-medium capitalize">{data.label}</span>
+                      <span className="text-amber-600 font-bold">{formatEur(data.total)}</span>
+                    </summary>
+                    <div className="p-2 space-y-1 bg-white">
+                      {data.paquetes.map((p, i) => (
+                        <div key={i} className="flex justify-between items-center text-sm py-1 px-2 hover:bg-stone-50 rounded">
+                          <div>
+                            <span className="text-stone-800 font-mono">{p.nombre}</span>
+                            <span className="text-stone-400 text-xs ml-2">({p.cliente})</span>
+                          </div>
+                          <span className="text-stone-600">{formatEur(p.igi)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ))}
               </div>
             );
           })()}

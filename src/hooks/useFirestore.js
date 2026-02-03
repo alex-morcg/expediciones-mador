@@ -917,7 +917,7 @@ export function useFirestore(activeSection = 'expediciones') {
     });
   };
 
-  const updatePaqueteVerificacion = async (paqueteId, verificacionIA, usuarioActivo) => {
+  const updatePaqueteVerificacion = async (paqueteId, verificacionIA, usuarioActivo, fechaFactura = null) => {
     const paq = paquetes.find(p => p.id === paqueteId);
     if (!paq) return;
     const modificacion = { usuario: usuarioActivo, fecha: new Date().toISOString() };
@@ -928,8 +928,32 @@ export function useFirestore(activeSection = 'expediciones') {
       accion: 'verificar_ia',
       detalles: verificacionIA ? { totalFactura: verificacionIA.totalFactura, diferencia: verificacionIA.diferencia } : null,
     };
-    await updateDoc(doc(db, 'paquetes', paqueteId), {
+    const updateData = {
       verificacionIA: verificacionIA || null,
+      ultimaModificacion: modificacion,
+      logs: [...(paq.logs || []), log],
+    };
+    // Si la IA extrajo fechaFactura, guardarla en el paquete
+    if (fechaFactura) {
+      updateData.fechaFactura = fechaFactura;
+    }
+    await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
+  };
+
+  // Actualizar solo la fecha de factura del paquete
+  const updatePaqueteFechaFactura = async (paqueteId, fechaFactura, usuarioActivo) => {
+    const paq = paquetes.find(p => p.id === paqueteId);
+    if (!paq) return;
+    const modificacion = { usuario: usuarioActivo, fecha: new Date().toISOString() };
+    const log = {
+      id: Date.now(),
+      fecha: modificacion.fecha,
+      usuario: usuarioActivo,
+      accion: 'actualizar_fecha_factura',
+      detalles: { antes: paq.fechaFactura || null, despues: fechaFactura },
+    };
+    await updateDoc(doc(db, 'paquetes', paqueteId), {
+      fechaFactura: fechaFactura || null,
       ultimaModificacion: modificacion,
       logs: [...(paq.logs || []), log],
     });
@@ -1237,6 +1261,7 @@ export function useFirestore(activeSection = 'expediciones') {
     updatePaqueteCierre,
     updatePaqueteFactura,
     updatePaqueteVerificacion,
+    updatePaqueteFechaFactura,
     validarVerificacion,
     updatePaqueteEstado,
     updatePaqueteEstadoPago,
