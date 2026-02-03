@@ -3415,7 +3415,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       {data.paquetes.map((p, i) => (
                         <div key={i} className="flex justify-between items-center text-sm py-1 px-2 hover:bg-stone-50 rounded">
                           <div className="flex items-center gap-2">
-                            <span className="text-stone-400 text-xs w-5">{new Date(p.fecha).getDate()}</span>
+                            <span className="text-stone-500 text-xs">📅{new Date(p.fecha).getDate()}</span>
                             <span className="text-stone-800 font-mono">{p.nombre}</span>
                             <span className="text-stone-400 text-xs">({p.cliente})</span>
                           </div>
