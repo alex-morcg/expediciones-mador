@@ -2127,7 +2127,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             const precioRef = getPrecioRefExpedicion(exp.id);
             const expPaqs = paquetes.filter(p => p.expedicionId === exp.id);
             const expNum = getExpNum(exp.nombre);
-            const showBadges = expNum > 52;
+            const showBadges = expNum > 53;
             const sinCerrar = showBadges ? expPaqs.filter(p => !p.precioFino).length : 0;
             const sinFactura = showBadges ? expPaqs.filter(p => p.precioFino && !p.factura).length : 0;
             const sinVerificar = showBadges ? expPaqs.filter(p => p.precioFino && p.factura && !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length : 0;
@@ -4508,9 +4508,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     );
   }
 
-  // Total pendientes across E53+ expeditions for tab badge
+  // Total pendientes across E54+ expeditions for tab badge
   const totalPendientes = expediciones.reduce((sum, exp) => {
-    if (getExpNum(exp.nombre) <= 52) return sum;
+    if (getExpNum(exp.nombre) <= 53) return sum;
     const expPaqs = paquetes.filter(p => p.expedicionId === exp.id);
     return sum + expPaqs.filter(p => !p.precioFino || !p.factura || !(p.verificacionIA?.validado && p.verificacionIA?.archivoNombre === p.factura?.nombre)).length;
   }, 0);
