@@ -626,7 +626,6 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
 
   // Eliminar factura de expedición
   const handleExpedicionFacturaRemove = async (expedicionId) => {
-    if (!confirm('¿Eliminar la factura de esta expedición?')) return;
     const exp = expediciones.find(e => e.id === expedicionId);
     if (exp) {
       const { factura, ...rest } = exp;
@@ -2333,8 +2332,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             <div className="space-y-3">
               {clientesConExposicion.map(exp => {
                 const { cliente, valorPaquetes, valorLingotes, totalExposicion, limiteExposicion, porcentaje, excedido, exceso, finoPaquetes, pesoLingotes, detallePaquetes } = exp;
-                const pctPaquetes = (valorPaquetes / limiteExposicion) * 100;
-                const pctLingotes = (valorLingotes / limiteExposicion) * 100;
+                // Calcular porcentajes respecto al máximo (límite o total si excede)
+                const maxValor = excedido ? totalExposicion : limiteExposicion;
+                const pctPaquetes = (valorPaquetes / maxValor) * 100;
+                const pctLingotes = (valorLingotes / maxValor) * 100;
                 const barWidth = excedido ? 100 : porcentaje;
                 const markPct = excedido ? (limiteExposicion / totalExposicion) * 100 : 100;
 
@@ -2360,13 +2361,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       {/* Segmento amarillo - Paquetes */}
                       <div
                         className="absolute top-0 left-0 h-full bg-amber-400 transition-all"
-                        style={{ width: `${Math.min(pctPaquetes, 100)}%` }}
+                        style={{ width: `${pctPaquetes}%` }}
                         title={`Paquetes: ${formatNum(valorPaquetes)} € (${formatNum(finoPaquetes, 2)}g fino)`}
                       />
                       {/* Segmento naranja - Lingotes */}
                       <div
                         className="absolute top-0 h-full bg-orange-500 transition-all"
-                        style={{ left: `${Math.min(pctPaquetes, 100)}%`, width: `${Math.min(pctLingotes, 100 - Math.min(pctPaquetes, 100))}%` }}
+                        style={{ left: `${pctPaquetes}%`, width: `${pctLingotes}%` }}
                         title={`Lingotes: ${formatNum(valorLingotes)} € (${formatNum(pesoLingotes, 2)}g)`}
                       />
                       {/* Marca roja del límite si se excede */}
@@ -4503,8 +4504,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         <nav className="bg-white border-b border-amber-200 flex shadow-sm">
           <TabButton id="expediciones" label="Expediciones" icon="📦" badge={totalPendientes} />
           <TabButton id="clientes" label="Clientes" icon="👥" badge={clientesEnAlerta.length} />
-          <TabButton id="parametros" label="Parámetros" icon="⚙️" />
           {tienePermiso('ver_estadisticas') && <TabButton id="estadisticas" label="Stats" icon="📊" />}
+          <TabButton id="parametros" label="Parámetros" icon="⚙️" />
         </nav>
         
         {/* Subnavegación contextual */}

@@ -982,50 +982,6 @@ export default function LingotesTracker({
     // Combinar entregas cerradas + FUTURA cerrados
     const allLingotesCerrados = [...entregasCerrados, ...futuraCerrados];
 
-    // Stats por año: agrupamos por el año de la exportación de cada entrega
-    const statsPorAno = useMemo(() => {
-      const porAno = {};
-
-      // Procesar entregas normales
-      allEntregasCliente.forEach(entrega => {
-        const exportacion = getExportacion(entrega.exportacionId);
-        const ano = exportacion?.ano || 'Sin año';
-
-        if (!porAno[ano]) {
-          porAno[ano] = { ano, entregado: 0, cerrado: 0, devuelto: 0, importe: 0, margen: 0 };
-        }
-
-        porAno[ano].entregado += pesoEntrega(entrega);
-        porAno[ano].cerrado += pesoCerrado(entrega);
-        porAno[ano].devuelto += pesoDevuelto(entrega);
-        porAno[ano].importe += importeEntrega(entrega);
-
-        // Calcular margen de lingotes cerrados
-        (entrega.lingotes || []).filter(l => isCerrado(l)).forEach(l => {
-          const precioJofisa = l.precioJofisa || 0;
-          const precioCliente = l.precio || 0;
-          const pesoNeto = (l.peso || 0) - (l.pesoDevuelto || 0);
-          porAno[ano].margen += (precioCliente - precioJofisa) * pesoNeto;
-        });
-      });
-
-      // Procesar FUTURA cerrados (asignar a año actual si no hay otro criterio)
-      clienteFutura.filter(f => f.precio).forEach(f => {
-        const ano = new Date().getFullYear().toString(); // FUTURA al año actual
-        if (!porAno[ano]) {
-          porAno[ano] = { ano, entregado: 0, cerrado: 0, devuelto: 0, importe: 0, margen: 0 };
-        }
-        porAno[ano].cerrado += f.peso || 0;
-        porAno[ano].importe += f.importe || (f.precio * f.peso) || 0;
-        const margenFutura = ((f.precio || 0) - (f.precioJofisa || 0)) * (f.peso || 0);
-        porAno[ano].margen += margenFutura;
-      });
-
-      // Convertir a array y ordenar por año descendente
-      return Object.values(porAno)
-        .sort((a, b) => (b.ano || '').localeCompare(a.ano || ''));
-    }, [allEntregasCliente, clienteFutura, exportaciones]);
-
     const FilterBtn = ({ id, label, count }) => (
       <button
         onClick={() => setEntregaFilter(id)}
@@ -1999,41 +1955,6 @@ export default function LingotesTracker({
 
           return (
             <>
-            {/* Stats por Año */}
-            {statsPorAno.length > 0 && (
-              <Card className="mt-4">
-                <h3 className="font-bold text-stone-800 mb-3">📊 Resumen por Año</h3>
-                <div className="space-y-2">
-                  {statsPorAno.map(stat => (
-                    <div key={stat.ano} className="bg-stone-50 rounded-xl p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-amber-700 text-lg">{stat.ano}</span>
-                        <span className="text-emerald-600 font-bold">{formatEur(stat.importe)}</span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        <div className="text-center">
-                          <div className="text-stone-500">Entregado</div>
-                          <div className="font-bold text-stone-700">{formatNum(stat.entregado, 0)}g</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-stone-500">Cerrado</div>
-                          <div className="font-bold text-emerald-600">{formatNum(stat.cerrado, 0)}g</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-stone-500">Devuelto</div>
-                          <div className="font-bold text-red-500">{formatNum(stat.devuelto, 0)}g</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-stone-500">Margen</div>
-                          <div className="font-bold text-blue-600">{formatEur(stat.margen)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
             <Card className="mt-4">
               <button
                 onClick={() => setShowHistorial(!showHistorial)}
@@ -5240,13 +5161,13 @@ export default function LingotesTracker({
                         isSelected ? 'bg-amber-100 border border-amber-300' : 'bg-stone-50 hover:bg-stone-100'
                       }`}
                     >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                         isSelected ? 'bg-amber-500 border-amber-500 text-white' : 'border-stone-300'
                       }`}>
                         {isSelected && '✓'}
                       </div>
                       {l.isFutura ? (
-                        <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">FUTURA</span>
+                        <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">FUT</span>
                       ) : (
                         <span
                           className="px-1.5 py-0.5 rounded text-xs font-bold"
@@ -5254,7 +5175,9 @@ export default function LingotesTracker({
                         >{formatEntregaShort(l.fechaEntrega)}</span>
                       )}
                       <span className="font-mono text-sm">{l.peso}g</span>
-                      <span className="text-xs text-stone-400">{formatEur(l.importe || 0)}</span>
+                      <span className="text-xs text-stone-500">{formatNum(l.precio || 0)}€/g</span>
+                      <span className="text-xs text-stone-400">{l.fechaCierre ? new Date(l.fechaCierre).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) : '—'}</span>
+                      <span className="text-xs text-emerald-600 font-medium ml-auto">{formatEur(l.importe || 0)}</span>
                     </div>
                   );
                 })}
