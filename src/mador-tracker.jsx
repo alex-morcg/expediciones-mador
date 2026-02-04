@@ -91,6 +91,7 @@ export default function MadorTracker() {
   const [statsExpDesde, setStatsExpDesde] = useState(null);
   const [statsExpHasta, setStatsExpHasta] = useState(null);
   const [statsClienteId, setStatsClienteId] = useState(null);
+  const [activeTooltip, setActiveTooltip] = useState(null); // 'totalFra' | 'fraJofisa' | null
 
   // Código de URL (sin nombre de parámetro, ej: ?a7x9k2mf)
   const [codigoUrl, setCodigoUrl] = useState(() => {
@@ -1671,12 +1672,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               </div>
               <div className="relative group">
                 <span className="text-stone-500">Total Fra</span>
-                <p className="text-stone-800 font-mono font-medium cursor-help">{formatNum(totales.totalFra)} €</p>
+                <p
+                  className="text-stone-800 font-mono font-medium cursor-help"
+                  onClick={() => setActiveTooltip(activeTooltip === 'totalFra' ? null : 'totalFra')}
+                >{formatNum(totales.totalFra)} €</p>
                 {totales.totalFraEstimado > 0 && (
                   <p className="text-stone-400 text-xs italic font-mono">~{formatNum(totales.totalFraEstimado)} € estimado</p>
                 )}
-                {/* Tooltip desglose Total Fra */}
-                <div className="absolute z-50 hidden group-hover:block bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1">
+                {/* Tooltip desglose Total Fra - hover en desktop, click/tap en mobile */}
+                <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'totalFra' ? 'block' : 'hidden group-hover:block'}`}>
                   <div className="space-y-1">
                     {totales.porPaquete?.filter(p => p.totalFra > 0).map((p, i) => (
                       <div key={i} className="flex justify-between gap-4">
@@ -1693,9 +1697,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               </div>
               <div className="relative group">
                 <span className="text-stone-500">Fra Jofisa</span>
-                <p className="text-stone-800 font-mono font-medium cursor-help">{formatNum(totales.totalFraJofisa)} €</p>
-                {/* Tooltip desglose Fra Jofisa */}
-                <div className="absolute z-50 hidden group-hover:block bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1">
+                <p
+                  className="text-stone-800 font-mono font-medium cursor-help"
+                  onClick={() => setActiveTooltip(activeTooltip === 'fraJofisa' ? null : 'fraJofisa')}
+                >{formatNum(totales.totalFraJofisa)} €</p>
+                {/* Tooltip desglose Fra Jofisa - hover en desktop, click/tap en mobile */}
+                <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'fraJofisa' ? 'block' : 'hidden group-hover:block'}`}>
                   <div className="space-y-1">
                     {totales.porPaquete?.filter(p => p.fraJofisa > 0).map((p, i) => (
                       <div key={i} className="flex justify-between gap-4">
