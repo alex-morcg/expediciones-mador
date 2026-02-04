@@ -150,12 +150,18 @@ export default function LingotesTracker({
       const pendiente = entregado - cerrado - devuelto;
       const enCurso = entregasCliente.reduce((sum, e) => sum + lingotesEnCurso(e).length, 0);
       const importeTotal = entregasCliente.reduce((sum, e) => sum + importeEntrega(e), 0);
+      // Stats solo de entregas en curso (no finalizadas)
+      const entregasEnCursoList = entregasCliente.filter(e => isEntregaEnCurso(e));
+      const enCursoEntregado = entregasEnCursoList.reduce((sum, e) => sum + pesoEntrega(e), 0);
+      const enCursoCerrado = entregasEnCursoList.reduce((sum, e) => sum + pesoCerrado(e), 0);
+      const enCursoDevuelto = entregasEnCursoList.reduce((sum, e) => sum + pesoDevuelto(e), 0);
+      const enCursoPendiente = enCursoEntregado - enCursoCerrado - enCursoDevuelto;
       // Futura: standalone orphan lingotes (sold but not in any entrega)
       const clienteFutura = (futuraLingotes || []).filter(f => f.clienteId === cliente.id);
       const futuraCount = clienteFutura.length;
       const futuraWeight = clienteFutura.reduce((sum, f) => sum + (f.peso || 0), 0);
       const futuraCerradoWeight = clienteFutura.filter(f => f.precio).reduce((sum, f) => sum + (f.peso || 0), 0);
-      return { ...cliente, entregado, cerrado, devuelto, pendiente, enCurso, importeTotal, futuraCount, futuraWeight, futuraCerradoWeight };
+      return { ...cliente, entregado, cerrado, devuelto, pendiente, enCurso, importeTotal, enCursoEntregado, enCursoCerrado, enCursoDevuelto, enCursoPendiente, futuraCount, futuraWeight, futuraCerradoWeight };
     }).filter(c => c.entregado > 0 || c.enCurso > 0 || c.futuraCount > 0);
   }, [clientes, entregas, futuraLingotes]);
 
@@ -889,14 +895,14 @@ export default function LingotesTracker({
                 <div className="flex items-end justify-between">
                   <div>
                     <div className="text-3xl font-black" style={{ color: cliente.color }}>
-                      {formatNum(cliente.pendiente, 0)}
+                      {formatNum(cliente.enCursoPendiente, 0)}
                       <span className="text-lg font-normal text-stone-400 ml-1">g</span>
                     </div>
                   </div>
                   <div className="text-right text-xs text-stone-500">
-                    <div>📦 {formatNum(cliente.entregado, 0)}g</div>
-                    {cliente.cerrado > 0 && <div>✅ {formatNum(cliente.cerrado, 0)}g</div>}
-                    {cliente.devuelto > 0 && <div>↩️ {formatNum(cliente.devuelto, 0)}g</div>}
+                    <div>📦 {formatNum(cliente.enCursoEntregado, 0)}g</div>
+                    {cliente.enCursoCerrado > 0 && <div>✅ {formatNum(cliente.enCursoCerrado, 0)}g</div>}
+                    {cliente.enCursoDevuelto > 0 && <div>↩️ {formatNum(cliente.enCursoDevuelto, 0)}g</div>}
                     {cliente.futuraCerradoWeight > 0 && (
                       <div className="text-red-500 font-semibold">-{formatNum(cliente.futuraCerradoWeight, 0)}g FUTURA</div>
                     )}
