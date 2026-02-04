@@ -162,8 +162,8 @@ export default function LingotesTracker({
     const totalCerrado = entregas.reduce((sum, e) => sum + pesoCerrado(e), 0);
     const totalDevuelto = entregas.reduce((sum, e) => sum + pesoDevuelto(e), 0);
     const stockClientes = totalEntregado - totalCerrado - totalDevuelto;
-    // Futura: total weight of orphan lingotes (negative stock)
-    const totalFutura = (futuraLingotes || []).reduce((sum, f) => sum + (f.peso || 0), 0);
+    // Futura: only count CLOSED futura (with precio) as negative stock - these are actual sales without physical stock
+    const totalFutura = (futuraLingotes || []).filter(f => f.precio).reduce((sum, f) => sum + (f.peso || 0), 0);
     return { totalEntregado, totalCerrado, totalDevuelto, stockClientes, totalFutura };
   }, [entregas, futuraLingotes]);
 
@@ -894,8 +894,8 @@ export default function LingotesTracker({
                   <div className="text-right text-xs text-stone-500">
                     <div>Entregado: {formatNum(cliente.entregado, 0)}g</div>
                     <div>Cerrado: {formatNum(cliente.cerrado, 0)}g</div>
-                    {cliente.futuraWeight > 0 && (
-                      <div className="text-red-500 font-semibold">-{formatNum(cliente.futuraWeight, 0)}g FUTURA</div>
+                    {cliente.futuraCerradoWeight > 0 && (
+                      <div className="text-red-500 font-semibold">-{formatNum(cliente.futuraCerradoWeight, 0)}g FUTURA</div>
                     )}
                   </div>
                 </div>
