@@ -894,8 +894,10 @@ export default function LingotesTracker({
                     </div>
                   </div>
                   <div className="text-right text-xs text-stone-500">
-                    <div>Entregado: {formatNum(cliente.entregado, 0)}g</div>
-                    <div>Cerrado: {formatNum(cliente.cerrado, 0)}g</div>
+                    <div>📦 {formatNum(cliente.entregado, 0)}g</div>
+                    <div>⏳ {formatNum(cliente.pendiente, 0)}g</div>
+                    {cliente.cerrado > 0 && <div>✅ {formatNum(cliente.cerrado, 0)}g</div>}
+                    {cliente.devuelto > 0 && <div>↩️ {formatNum(cliente.devuelto, 0)}g</div>}
                     {cliente.futuraCerradoWeight > 0 && (
                       <div className="text-red-500 font-semibold">-{formatNum(cliente.futuraCerradoWeight, 0)}g FUTURA</div>
                     )}

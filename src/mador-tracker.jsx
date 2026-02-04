@@ -1682,7 +1682,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 {/* Tooltip desglose Total Fra - hover en desktop, click/tap en mobile */}
                 <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'totalFra' ? 'block' : 'hidden group-hover:block'}`}>
                   <div className="space-y-1">
-                    {totales.porPaquete?.filter(p => p.totalFra > 0).map((p, i) => (
+                    {totales.porPaquete?.filter(p => p.totalFra > 0).sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true })).map((p, i) => (
                       <div key={i} className="flex justify-between gap-4">
                         <span className={p.esEstimado ? 'text-stone-400' : ''}>{p.esEstimado ? '~' : ''}{p.nombre}</span>
                         <span className="font-mono">{formatNum(p.totalFra)} €</span>
@@ -1704,7 +1704,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 {/* Tooltip desglose Fra Jofisa - hover en desktop, click/tap en mobile */}
                 <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'fraJofisa' ? 'block' : 'hidden group-hover:block'}`}>
                   <div className="space-y-1">
-                    {totales.porPaquete?.filter(p => p.fraJofisa > 0).map((p, i) => (
+                    {totales.porPaquete?.filter(p => p.fraJofisa > 0).sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true })).map((p, i) => (
                       <div key={i} className="flex justify-between gap-4">
                         <span>{p.nombre}</span>
                         <span className="font-mono">{formatNum(p.fraJofisa)} €</span>
