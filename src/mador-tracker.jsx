@@ -291,6 +291,7 @@ export default function MadorTracker() {
     let totalFraEstimado = 0;
     const porCategoria = {};
     const porCliente = {};
+    const porPaquete = []; // Detalle por paquete para tooltips
 
     expedicionPaquetes.forEach(paq => {
       const totales = calcularTotalesPaquete(paq, precioPorDefecto);
@@ -300,6 +301,14 @@ export default function MadorTracker() {
       totalFra += totales.totalFra;
       totalFraJofisa += totales.fraJofisa;
       totalMargen += totales.margen;
+
+      // Guardar detalle por paquete
+      porPaquete.push({
+        nombre: paq.nombre,
+        totalFra: totales.totalFra,
+        fraJofisa: totales.fraJofisa,
+        esEstimado: totales.esEstimado,
+      });
 
       const cat = getCategoria(paq.categoriaId);
       if (cat) {
@@ -333,7 +342,7 @@ export default function MadorTracker() {
         : 0;
     });
     
-    return { sumaBruto, sumaFino, totalFra, totalFraJofisa, totalMargen, totalFraEstimado, precioMedioBruto, porCategoria, porCliente, numPaquetes: expedicionPaquetes.length };
+    return { sumaBruto, sumaFino, totalFra, totalFraJofisa, totalMargen, totalFraEstimado, precioMedioBruto, porCategoria, porCliente, porPaquete, numPaquetes: expedicionPaquetes.length };
   };
 
   // Exportar PDF simple con lista de paquetes y peso bruto
@@ -1660,16 +1669,46 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <span className="text-stone-500">Fino Total</span>
                 <p className="text-stone-800 font-mono font-medium">{formatNum(totales.sumaFino)} g</p>
               </div>
-              <div>
+              <div className="relative group">
                 <span className="text-stone-500">Total Fra</span>
-                <p className="text-stone-800 font-mono font-medium">{formatNum(totales.totalFra)} €</p>
+                <p className="text-stone-800 font-mono font-medium cursor-help">{formatNum(totales.totalFra)} €</p>
                 {totales.totalFraEstimado > 0 && (
                   <p className="text-stone-400 text-xs italic font-mono">~{formatNum(totales.totalFraEstimado)} € estimado</p>
                 )}
+                {/* Tooltip desglose Total Fra */}
+                <div className="absolute z-50 hidden group-hover:block bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1">
+                  <div className="space-y-1">
+                    {totales.porPaquete?.filter(p => p.totalFra > 0).map((p, i) => (
+                      <div key={i} className="flex justify-between gap-4">
+                        <span className={p.esEstimado ? 'text-stone-400' : ''}>{p.esEstimado ? '~' : ''}{p.nombre}</span>
+                        <span className="font-mono">{formatNum(p.totalFra)} €</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-stone-600 pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                      <span>Total</span>
+                      <span className="font-mono">{formatNum(totales.totalFra)} €</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
+              <div className="relative group">
                 <span className="text-stone-500">Fra Jofisa</span>
-                <p className="text-stone-800 font-mono font-medium">{formatNum(totales.totalFraJofisa)} €</p>
+                <p className="text-stone-800 font-mono font-medium cursor-help">{formatNum(totales.totalFraJofisa)} €</p>
+                {/* Tooltip desglose Fra Jofisa */}
+                <div className="absolute z-50 hidden group-hover:block bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1">
+                  <div className="space-y-1">
+                    {totales.porPaquete?.filter(p => p.fraJofisa > 0).map((p, i) => (
+                      <div key={i} className="flex justify-between gap-4">
+                        <span>{p.nombre}</span>
+                        <span className="font-mono">{formatNum(p.fraJofisa)} €</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-stone-600 pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                      <span>Total</span>
+                      <span className="font-mono">{formatNum(totales.totalFraJofisa)} €</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div>
                 {(() => {
