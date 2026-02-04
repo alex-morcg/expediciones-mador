@@ -693,6 +693,10 @@ export function useFirestore(activeSection = 'expediciones') {
 
       updateData.logs = logs;
       await updateDoc(doc(db, 'paquetes', editingItem.id), updateData);
+      // Log general si hubo cambios
+      if (cambios.length > 0) {
+        addLogGeneral('expediciones', 'editar_paquete', `Editado ${nuevoNombre}: ${cambios.join(', ')}`, usuarioActivo, { paqueteId: editingItem.id });
+      }
     } else {
       const log = {
         id: Date.now(),
@@ -775,6 +779,7 @@ export function useFirestore(activeSection = 'expediciones') {
     }
 
     await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
+    addLogGeneral('expediciones', 'añadir_linea', `Añadida línea a ${paq.nombre}: ${linea.bruto}g ley ${linea.ley}`, usuarioActivo, { paqueteId });
   };
 
   const removeLineaFromPaquete = async (paqueteId, lineaId, usuarioActivo) => {
@@ -831,6 +836,9 @@ export function useFirestore(activeSection = 'expediciones') {
     }
 
     await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
+    if (linea) {
+      addLogGeneral('expediciones', 'eliminar_linea', `Eliminada línea de ${paq.nombre}: ${linea.bruto}g ley ${linea.ley}`, usuarioActivo, { paqueteId });
+    }
   };
 
   const updatePaqueteCierre = async (paqueteId, precioFino, cierreJofisa, usuarioActivo) => {
@@ -938,6 +946,9 @@ export function useFirestore(activeSection = 'expediciones') {
       updateData.fechaFactura = fechaFactura;
     }
     await updateDoc(doc(db, 'paquetes', paqueteId), updateData);
+    if (verificacionIA) {
+      addLogGeneral('expediciones', 'verificar_ia', `Verificación IA de ${paq.nombre} (dif: ${verificacionIA.diferencia?.toFixed(2) || 0}€)`, usuarioActivo, { paqueteId, diferencia: verificacionIA.diferencia });
+    }
   };
 
   // Actualizar solo la fecha de factura del paquete
@@ -957,6 +968,7 @@ export function useFirestore(activeSection = 'expediciones') {
       ultimaModificacion: modificacion,
       logs: [...(paq.logs || []), log],
     });
+    addLogGeneral('expediciones', 'actualizar_fecha_factura', `Fecha factura de ${paq.nombre}: ${paq.fechaFactura || 'vacío'} → ${fechaFactura || 'vacío'}`, usuarioActivo, { paqueteId });
   };
 
   const validarVerificacion = async (paqueteId, usuarioActivo) => {
@@ -1003,6 +1015,7 @@ export function useFirestore(activeSection = 'expediciones') {
       ultimaModificacion: modificacion,
       logs: [...(paq.logs || []), log],
     });
+    addLogGeneral('expediciones', 'cambiar_estado', `${paq.nombre}: ${estadoAnterior?.nombre || 'Sin estado'} → ${estadoNuevo?.nombre}`, usuarioActivo, { paqueteId });
   };
 
   const updatePaqueteEstadoPago = async (paqueteId, estadoPago, usuarioActivo) => {
@@ -1023,6 +1036,8 @@ export function useFirestore(activeSection = 'expediciones') {
       ultimaModificacion: modificacion,
       logs: [...(paq.logs || []), log],
     });
+    const estadosNombres = { por_pagar: 'Por pagar', pagado: 'Pagado', parcial: 'Parcial' };
+    addLogGeneral('expediciones', 'cambiar_estado_pago', `${paq.nombre}: ${estadosNombres[estadoAnterior] || estadoAnterior} → ${estadosNombres[estadoPago] || estadoPago}`, usuarioActivo, { paqueteId });
   };
 
   const marcarTodosComoEstado = async (expedicionId, estadoId, usuarioActivo, estadosPaqueteList) => {
