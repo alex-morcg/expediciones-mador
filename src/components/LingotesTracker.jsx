@@ -127,6 +127,8 @@ export default function LingotesTracker({
   const [facturaSelection, setFacturaSelection] = useState({}); // { entregaId_idx: true }
   const [viewingFactura, setViewingFactura] = useState(null); // factura object to view
   const [viewingExportFactura, setViewingExportFactura] = useState(null); // { exp, factura } - factura de exportación
+  const [showNewFuturaModal, setShowNewFuturaModal] = useState(false); // Modal para crear FUTURA con precio
+  const [newFuturaData, setNewFuturaData] = useState(null); // { clienteId, cantidad, peso }
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -1026,11 +1028,11 @@ export default function LingotesTracker({
         const nombre = formatEntregaShort(e.fechaEntrega);
         return [nombre, pesoEntrega(e), pesoCerrado(e), pesoEntrega(e) - pesoCerrado(e) - pesoDevuelto(e)];
       });
-      // Añadir FUTURA pendientes si hay
-      const futuraPendientes = clienteFutura.filter(f => !f.precio);
-      if (futuraPendientes.length > 0) {
-        const futuraPeso = futuraPendientes.reduce((sum, f) => sum + (f.peso || 0), 0);
-        resumenData.push(['FUTURA', futuraPeso, 0, futuraPeso]);
+      // Añadir FUTURA cerrados si hay (cuentan como entregado Y cerrado)
+      const futuraCerrados = clienteFutura.filter(f => f.precio);
+      if (futuraCerrados.length > 0) {
+        const futuraPeso = futuraCerrados.reduce((sum, f) => sum + (f.peso || 0), 0);
+        resumenData.push(['FUTURA', futuraPeso, futuraPeso, 0]);
       }
       // Total
       const totalEntregado = resumenData.reduce((sum, r) => sum + r[1], 0);
@@ -1083,16 +1085,16 @@ export default function LingotesTracker({
           ]);
         });
       });
-      // Añadir FUTURA pendientes
-      futuraPendientes.forEach(f => {
+      // Añadir FUTURA cerrados al detalle
+      futuraCerrados.forEach(f => {
         lingotesData.push([
           'FUTURA',
           `${f.peso}g`,
-          '',
-          '',
-          '',
-          '',
-          '',
+          'CERRADO',
+          f.precio ? formatNum(f.precio) : '',
+          f.precio ? formatNum(f.peso * f.precio, 0) + ' €' : '',
+          f.fechaCierre || '',
+          f.pagado ? '✓' : '',
         ]);
       });
 
@@ -1197,24 +1199,23 @@ export default function LingotesTracker({
           </button>
           <div className="text-center pt-6">
             <h2 className="text-xl font-bold mb-1">{cliente.nombre}</h2>
-            {/* Cuadrados grandes: stats de entregas EN CURSO + FUTURA pendientes */}
+            {/* Cuadrados grandes: stats de entregas EN CURSO + FUTURA cerrados */}
             {(() => {
-              // FUTURA sin cerrar (pendientes)
-              const futuraPendientes = clienteFutura.filter(f => !f.precio);
-              const futuraPendienteWeight = futuraPendientes.reduce((sum, f) => sum + (f.peso || 0), 0);
-              const futuraCerradosWeight = clienteFutura.filter(f => f.precio).reduce((sum, f) => sum + (f.peso || 0), 0);
+              // FUTURA cerrados (con precio) - estos cuentan como entregado y cerrado
+              const futuraCerrados = clienteFutura.filter(f => f.precio);
+              const futuraCerradosWeight = futuraCerrados.reduce((sum, f) => sum + (f.peso || 0), 0);
 
               // Nombres para mostrar
               const nombresEnCurso = entregasEnCursoList.map(e => {
                 return formatEntregaShort(e.fechaEntrega);
               });
-              const hasFuturaPendiente = futuraPendientes.length > 0;
-              const todosNombres = [...nombresEnCurso, ...(hasFuturaPendiente ? ['FUTURA'] : [])].join(' · ');
+              const hasFuturaCerrados = futuraCerrados.length > 0;
+              const todosNombres = [...nombresEnCurso, ...(hasFuturaCerrados ? ['FUTURA'] : [])].join(' · ');
 
-              // Stats combinadas
-              const totalEntregado = enCursoEntregado + futuraPendienteWeight;
+              // Stats combinadas: FUTURA cerrados cuentan como entregado Y cerrado (pendiente = 0)
+              const totalEntregado = enCursoEntregado + futuraCerradosWeight;
               const totalCerrado = enCursoCerrado + futuraCerradosWeight;
-              const totalPendiente = enCursoPendiente + futuraPendienteWeight;
+              const totalPendiente = enCursoPendiente; // FUTURA cerrados no tienen pendiente
 
               return (
                 <div className="grid grid-cols-5 gap-2 mt-4">
@@ -1222,7 +1223,7 @@ export default function LingotesTracker({
                   <div className="flex items-center justify-center">
                     <span
                       className="px-1.5 py-0.5 rounded font-bold text-xs"
-                      style={{ backgroundColor: entregasEnCursoList[0] ? getEntregaColor(entregasEnCursoList[0].fechaEntrega) + '40' : hasFuturaPendiente ? 'rgba(239,68,68,0.3)' : 'transparent' }}
+                      style={{ backgroundColor: entregasEnCursoList[0] ? getEntregaColor(entregasEnCursoList[0].fechaEntrega) + '40' : hasFuturaCerrados ? 'rgba(239,68,68,0.3)' : 'transparent' }}
                     >
                       {todosNombres || '-'}
                     </span>
@@ -1234,7 +1235,7 @@ export default function LingotesTracker({
                   </div>
                   <div className="bg-white/20 rounded-xl p-2 text-center">
                     <div className="text-lg">✅</div>
-                    <div className="text-lg font-bold">{formatNum(enCursoCerrado, 0)}</div>
+                    <div className="text-lg font-bold">{formatNum(totalCerrado, 0)}</div>
                     <div className="text-xs text-white/70">Cerrado</div>
                   </div>
                   <div className="bg-white/20 rounded-xl p-2 text-center">
@@ -1307,139 +1308,54 @@ export default function LingotesTracker({
           </button>
         </div>
 
-        {/* FUTURA pendientes de asignar - solo si hay stock (ya llegó exportación) */}
-        {clienteFutura.length > 0 && stockRealTotal > 0 && (
-          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📦</span>
-                <h3 className="font-bold text-amber-800">FUTURA pendientes de asignar</h3>
+        {/* FUTURA cerrados pendientes de asignar a entrega física - solo si hay stock */}
+        {(() => {
+          const futuraCerrados = clienteFutura.filter(f => f.precio);
+          const futuraCerradosWeight = futuraCerrados.reduce((sum, f) => sum + (f.peso || 0), 0);
+
+          if (futuraCerrados.length === 0 || stockRealTotal === 0) return null;
+
+          return (
+            <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📦</span>
+                  <h3 className="font-bold text-amber-800">FUTURA pendientes de asignar</h3>
+                </div>
+                <div className="text-sm text-amber-600 font-semibold">
+                  {futuraCerrados.length} lingotes &bull; {formatNum(futuraCerradosWeight, 0)}g
+                </div>
               </div>
-              <div className="text-sm text-amber-600 font-semibold">
-                {clienteFutura.length} lingotes &bull; {formatNum(futuraWeight, 0)}g
+              <p className="text-xs text-amber-700 mb-3">Hay stock disponible. Asigna estos lingotes FUTURA a una entrega física.</p>
+
+              {/* Mostrar FUTURA cerrados */}
+              <div className="mb-3 p-2 bg-emerald-50/50 rounded-lg border border-emerald-200">
+                <div className="text-xs font-semibold text-emerald-700 mb-1">
+                  Cerrados ({futuraCerrados.length})
+                </div>
+                {futuraCerrados.map(f => (
+                  <div key={f.id} className="flex items-center justify-between text-sm py-1 px-2">
+                    <span className="font-mono text-emerald-700">{f.peso}g</span>
+                    <span className="text-xs text-emerald-600 font-semibold">{formatNum(f.precio)} €/g</span>
+                  </div>
+                ))}
               </div>
+
+              <Button className="w-full" onClick={() => setShowAssignFuturaModal(true)}>
+                Asignar a nueva entrega
+              </Button>
             </div>
-            <p className="text-xs text-amber-700 mb-3">Hay stock disponible. Asigna estos lingotes a una entrega o ciérralos.</p>
-
-            {/* Lingotes FUTURA - agrupados por peso con selector de cantidad */}
-            {(() => {
-              const futuraSinCerrar = clienteFutura.filter(f => !f.precio);
-              const futuraCerrados = clienteFutura.filter(f => f.precio);
-
-              // Agrupar sin cerrar por peso
-              const porPeso = {};
-              futuraSinCerrar.forEach(f => {
-                if (!porPeso[f.peso]) porPeso[f.peso] = { peso: f.peso, ids: [] };
-                porPeso[f.peso].ids.push(f.id);
-              });
-              const grupos = Object.values(porPeso);
-
-              return (
-                <>
-                  {/* Sección Cerrar - con selectores de cantidad */}
-                  {grupos.length > 0 && (
-                    <div className="mb-3">
-                      <div className="text-xs font-semibold text-stone-500 mb-2">Cerrar</div>
-                      {grupos.map(grupo => {
-                        const key = `futura_${cliente.id}_${grupo.peso}`;
-                        const cantidad = futuraCierreCantidad[key] || 1;
-                        const maxCantidad = grupo.ids.length;
-                        const quickOptions = [1, 2, 4].filter(n => n <= maxCantidad);
-
-                        const handleCerrar = () => {
-                          const idsToClose = grupo.ids.slice(0, cantidad);
-                          setSelectedFuturaIds(idsToClose);
-                          setSelectedFuturaId(idsToClose[0]);
-                          setShowCierreModal(true);
-                        };
-
-                        return (
-                          <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
-                            <span className="font-mono font-semibold text-amber-700">{maxCantidad} x {grupo.peso}g</span>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
-                                {quickOptions.map(n => (
-                                  <button
-                                    key={n}
-                                    onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: n })}
-                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                                      cantidad === n
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                                    }`}
-                                  >
-                                    {n}
-                                  </button>
-                                ))}
-                                {maxCantidad > 1 && (
-                                  <input
-                                    type="number"
-                                    inputMode="numeric"
-                                    min="1"
-                                    max={maxCantidad}
-                                    value={cantidad}
-                                    onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                                      !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
-                                    }`}
-                                  />
-                                )}
-                              </div>
-                              <button
-                                onClick={handleCerrar}
-                                className="px-3 py-1.5 text-xs rounded-xl font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-                              >
-                                Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Sección Cerrados */}
-                  {futuraCerrados.length > 0 && (
-                    <div className="mb-3 p-2 bg-emerald-50/50 rounded-lg border border-emerald-200">
-                      <div className="text-xs font-semibold text-emerald-700 mb-1">
-                        Cerrados ({futuraCerrados.length})
-                      </div>
-                      {futuraCerrados.map(f => (
-                        <div key={f.id} className="flex items-center justify-between text-sm py-1 px-2">
-                          <span className="font-mono text-emerald-700">{f.peso}g</span>
-                          <span className="text-xs text-emerald-600 font-semibold">{formatNum(f.precio)} €/g</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-
-            <Button className="w-full" onClick={() => setShowAssignFuturaModal(true)}>
-              Asignar a nueva entrega
-            </Button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* En Curso */}
         {(() => {
-          // FUTURA sin cerrar (solo mostrar cuando no hay stock)
-          const futuraSinCerrar = stockRealTotal === 0 ? clienteFutura.filter(f => !f.precio) : [];
-          // Mostrar sección si: hay entregas en curso, hay FUTURA sin cerrar, o no hay stock (para poder añadir)
-          const showEnCurso = entregasConEnCurso.length > 0 || futuraSinCerrar.length > 0 || stockRealTotal === 0;
+          // Mostrar sección si: hay entregas en curso o no hay stock (para poder añadir FUTURA)
+          const showEnCurso = entregasConEnCurso.length > 0 || stockRealTotal === 0;
 
           if (!showEnCurso) return null;
 
-          // Agrupar FUTURA sin cerrar por peso
-          const futuraPorPeso = {};
-          futuraSinCerrar.forEach(f => {
-            if (!futuraPorPeso[f.peso]) futuraPorPeso[f.peso] = { peso: f.peso, ids: [] };
-            futuraPorPeso[f.peso].ids.push(f.id);
-          });
-          const futuraGrupos = Object.values(futuraPorPeso);
-
-          const totalLingotesEnCurso = entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0) + futuraSinCerrar.length;
+          const totalLingotesEnCurso = entregasConEnCurso.reduce((s, e) => s + lingotesEnCurso(e).length, 0);
 
           return (
           <Card>
@@ -1718,31 +1634,14 @@ export default function LingotesTracker({
                   <Button
                     size="sm"
                     variant="success"
-                    onClick={async () => {
-                      const cant = futuraCierreCantidad[`new_${cliente.id}`] || 1;
-                      const peso = futuraCierreCantidad[`newPeso_${cliente.id}`] || 50;
-                      // Crear los FUTURA
-                      const newIds = [];
-                      for (let i = 0; i < cant; i++) {
-                        const newId = await onSaveFutura({
-                          clienteId: cliente.id,
-                          peso,
-                          precio: null,
-                          importe: 0,
-                          nFactura: null,
-                          fechaCierre: null,
-                          pagado: false,
-                          estado: 'futura',
-                          fechaCreacion: new Date().toISOString(),
-                        });
-                        if (newId) newIds.push(newId);
-                      }
-                      // Abrir modal de cierre con los nuevos IDs
-                      if (newIds.length > 0) {
-                        setSelectedFuturaIds(newIds);
-                        setSelectedFuturaId(newIds[0]);
-                        setShowCierreModal(true);
-                      }
+                    onClick={() => {
+                      // Abrir modal de nuevo FUTURA (pedirá precio antes de crear)
+                      setNewFuturaData({
+                        clienteId: cliente.id,
+                        cantidad: futuraCierreCantidad[`new_${cliente.id}`] || 1,
+                        peso: futuraCierreCantidad[`newPeso_${cliente.id}`] || 50,
+                      });
+                      setShowNewFuturaModal(true);
                     }}
                   >
                     Cerrar {(futuraCierreCantidad[`new_${cliente.id}`] || 1) > 1 ? `(${futuraCierreCantidad[`new_${cliente.id}`]})` : ''}
@@ -4586,6 +4485,236 @@ export default function LingotesTracker({
     );
   };
 
+  // New Futura Modal - crear FUTURA directamente con precio (ya cerrados)
+  const NewFuturaModal = () => {
+    if (!newFuturaData) return null;
+    const { clienteId, cantidad, peso } = newFuturaData;
+    const cliente = getCliente(clienteId);
+    const pesoTotal = cantidad * peso;
+
+    const [formData, setFormData] = useState({
+      euroOnza: '',
+      baseCliente: '',
+      precioJofisa: '',
+      margen: 6,
+      fechaCierre: new Date().toISOString().split('T')[0],
+      nFactura: '',
+    });
+    const [euroOnzaConfirmado, setEuroOnzaConfirmado] = useState(false);
+
+    const hasChanges = formData.euroOnza !== '' || formData.baseCliente !== '' || formData.nFactura !== '';
+
+    const handleClose = () => {
+      if (hasChanges && !confirm('¿Descartar los cambios?')) return;
+      setShowNewFuturaModal(false);
+      setNewFuturaData(null);
+    };
+
+    // Calculations
+    const euroOnzaNum = parseFloat(formData.euroOnza) || 0;
+    const base = (euroOnzaConfirmado && euroOnzaNum) ? Math.ceil((euroOnzaNum / 31.10349) * 100) / 100 : 0;
+    const baseClienteNum = parseFloat(formData.baseCliente) || 0;
+    const precioJofisaNum = parseFloat(formData.precioJofisa) || 0;
+    const margenNum = parseFloat(formData.margen) || 0;
+    const precioCliente = baseClienteNum ? Math.round((baseClienteNum * (1 + margenNum / 100)) * 100) / 100 : 0;
+    const importeTotal = precioCliente * pesoTotal;
+
+    const confirmarEuroOnza = () => {
+      if (!euroOnzaNum) return;
+      const baseCalc = Math.ceil((euroOnzaNum / 31.10349) * 100) / 100;
+      const precioJofisaCalc = Math.round((baseCalc + 0.25) * 100) / 100;
+      setFormData(prev => ({
+        ...prev,
+        baseCliente: prev.baseCliente || baseCalc.toFixed(2),
+        precioJofisa: prev.precioJofisa || precioJofisaCalc.toFixed(2),
+      }));
+      setEuroOnzaConfirmado(true);
+    };
+
+    const handleSave = async () => {
+      if (!precioCliente) {
+        alert('Debes introducir un precio válido');
+        return;
+      }
+
+      const margenCierre = (baseClienteNum - base) * pesoTotal;
+      const importeJofisaTotal = precioJofisaNum * pesoTotal;
+      const margenTotal = importeTotal - importeJofisaTotal;
+
+      // Crear los FUTURA ya con precio (cerrados)
+      for (let i = 0; i < cantidad; i++) {
+        await onSaveFutura({
+          clienteId,
+          peso,
+          euroOnza: euroOnzaNum,
+          base,
+          baseCliente: baseClienteNum,
+          precioJofisa: precioJofisaNum,
+          margen: margenNum,
+          precio: precioCliente,
+          importe: precioCliente * peso,
+          nFactura: formData.nFactura || null,
+          fechaCierre: formData.fechaCierre,
+          pagado: false,
+          estado: 'futura',
+          fechaCreacion: new Date().toISOString(),
+          margenCierre: Math.round((margenCierre / cantidad) * 100) / 100,
+          margenTotal: Math.round((margenTotal / cantidad) * 100) / 100,
+        });
+      }
+
+      onAddLogGeneral('crear_futura', `FUTURA cerrado: ${cantidad} x ${peso}g a ${formatNum(precioCliente)}€/g para ${cliente?.nombre}`, {
+        clienteId,
+        cantidad,
+        peso,
+        precioCliente,
+        importeTotal,
+      });
+
+      setShowNewFuturaModal(false);
+      setNewFuturaData(null);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
+        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-red-800 mb-2">Cerrar FUTURA</h3>
+          <p className="text-sm text-stone-500 mb-4">
+            {cliente?.nombre} • {cantidad} x {peso}g = {pesoTotal}g
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">€/Onza</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={formData.euroOnza}
+                  onChange={(e) => {
+                    setFormData({ ...formData, euroOnza: e.target.value });
+                    setEuroOnzaConfirmado(false);
+                  }}
+                  className={`flex-1 border rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-red-400 ${euroOnzaConfirmado ? 'border-emerald-400 bg-emerald-50' : 'border-stone-300'}`}
+                  placeholder="Ej: 3693,42"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={confirmarEuroOnza}
+                  disabled={!euroOnzaNum || euroOnzaConfirmado}
+                  className={`px-4 py-2 rounded-xl font-semibold transition-all ${
+                    euroOnzaConfirmado
+                      ? 'bg-emerald-100 text-emerald-600 cursor-default'
+                      : euroOnzaNum
+                        ? 'bg-red-500 text-white hover:bg-red-600'
+                        : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                  }`}
+                >
+                  {euroOnzaConfirmado ? '✓' : 'OK'}
+                </button>
+              </div>
+            </div>
+
+            {base > 0 && (
+              <div className="bg-stone-50 rounded-xl p-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-500">Base (€/Onza ÷ 31,10349):</span>
+                  <span className="font-mono font-semibold text-stone-800">{formatNum(base)} €/g</span>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={formData.baseCliente}
+                onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })}
+                className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
+                placeholder="Se rellena con OK"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={formData.precioJofisa}
+                  onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })}
+                  className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Margen (%)</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  value={formData.margen}
+                  onChange={(e) => setFormData({ ...formData, margen: e.target.value })}
+                  className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Fecha cierre</label>
+              <input
+                type="date"
+                value={formData.fechaCierre}
+                onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })}
+                className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Nº Factura (opcional)</label>
+              <input
+                type="text"
+                value={formData.nFactura}
+                onChange={(e) => setFormData({ ...formData, nFactura: e.target.value })}
+                className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400"
+                placeholder="2026-XX"
+              />
+            </div>
+
+            {precioCliente > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-stone-600">Precio cliente:</span>
+                  <span className="font-mono font-semibold">{formatNum(precioCliente)} €/g</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-red-800">Total:</span>
+                  <span className="font-mono font-bold text-red-800 text-lg">{formatEur(importeTotal)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <Button variant="secondary" className="flex-1" onClick={handleClose}>Cancelar</Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              onClick={handleSave}
+              disabled={!precioCliente}
+            >
+              Cerrar FUTURA
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Assign Futura Modal - select orphan FUTURA lingotes and assign to a real entrega
   // Also allows adding extra lingotes from stock
   const AssignFuturaModal = () => {
@@ -5371,6 +5500,7 @@ export default function LingotesTracker({
       {showEntregaModal && <EntregaModal />}
       {showCierreModal && <CierreModal />}
       {showFuturaModal && <FuturaModal />}
+      {showNewFuturaModal && <NewFuturaModal />}
       {showAssignFuturaModal && <AssignFuturaModal />}
       {showMultiCierreModal && <MultiCierreModal />}
       {showFacturaModal && <FacturaModal />}
