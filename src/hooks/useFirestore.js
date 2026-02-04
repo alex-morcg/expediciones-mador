@@ -980,6 +980,9 @@ export function useFirestore(activeSection = 'expediciones') {
       ultimaModificacion: modificacion,
       logs: [...(paq.logs || []), log],
     });
+    // Añadir al log general
+    const diferencia = paq.verificacionIA?.diferencia || 0;
+    addLogGeneral('expediciones', 'validar_verificacion', `Validada verificación de ${paq.nombre} (dif: ${diferencia.toFixed(2)}€)`, usuarioActivo, { paqueteId, diferencia });
   };
 
   const updatePaqueteEstado = async (paqueteId, estado, usuarioActivo, estadosPaqueteList) => {
