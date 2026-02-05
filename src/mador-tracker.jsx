@@ -1060,14 +1060,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               const baseClienteNum = parseFloat(cierreData.baseCliente) || 0;
               const precioJofisaNum = parseFloat(cierreData.precioJofisa) || 0;
 
-              // Detectar si hay cambios respecto a lo guardado
-              const hayCambios = cierreData.confirmado && baseClienteNum > 0 && (
-                baseClienteNum !== paq.precioFino ||
-                precioJofisaNum !== paq.cierreJofisa
-              );
+              // Si confirmado y tiene valores, se puede guardar
+              const puedeGuardar = cierreData.confirmado && baseClienteNum > 0;
               const noPuedeGuardar = !cierreData.confirmado ? 'Pulsa OK para calcular' :
-                                     baseClienteNum <= 0 ? 'Introduce €/Onza y pulsa OK' :
-                                     !hayCambios ? 'No hay cambios' : '';
+                                     baseClienteNum <= 0 ? 'Introduce €/Onza y pulsa OK' : '';
 
               // Función para confirmar €/Onza y auto-rellenar
               const confirmarEuroOnza = () => {
@@ -1108,18 +1104,32 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       />
                       <button
                         type="button"
-                        onClick={confirmarEuroOnza}
-                        disabled={!euroOnzaNum || cierreData.confirmado}
+                        onClick={() => {
+                          if (cierreData.confirmado) {
+                            // Resetear para volver a introducir €/Onza
+                            setCierreData({
+                              euroOnza: cierreData.euroOnza,
+                              baseReal: '',
+                              baseCliente: '',
+                              precioJofisa: '',
+                              fechaCierre: new Date().toISOString().split('T')[0],
+                              confirmado: false
+                            });
+                          } else {
+                            confirmarEuroOnza();
+                          }
+                        }}
+                        disabled={!euroOnzaNum}
                         className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                           cierreData.confirmado
-                            ? 'bg-green-100 text-green-600 cursor-default'
+                            ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
                             : euroOnzaNum
                               ? 'text-white hover:opacity-90'
                               : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                         }`}
                         style={!cierreData.confirmado && euroOnzaNum ? { backgroundColor: clienteColor } : {}}
                       >
-                        {cierreData.confirmado ? '✓' : 'OK'}
+                        {cierreData.confirmado ? '↻' : 'OK'}
                       </button>
                     </div>
                   </div>
