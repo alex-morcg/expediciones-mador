@@ -2022,6 +2022,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <div className="flex-1 overflow-y-auto mb-3 border border-stone-200 rounded-lg">
                   {expedicionPaquetes.map(paq => {
                     const estadoActual = estadosPaquete.find(e => e.id === paq.estado);
+                    const cliente = getCliente(paq.clienteId);
                     const isSelected = marcarTodosModal.selectedPaquetes.includes(paq.id);
                     return (
                       <div
@@ -2043,6 +2044,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           className="w-4 h-4 accent-amber-500"
                         />
                         <span className="text-lg">{estadoActual?.icon || '📦'}</span>
+                        {cliente?.abreviacion && (
+                          <span
+                            className="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
+                            style={{ backgroundColor: (cliente?.color || '#f59e0b') + '20', color: cliente?.color || '#f59e0b' }}
+                          >{cliente.abreviacion}</span>
+                        )}
                         <span className="text-sm text-stone-700 flex-1">{paq.nombre}</span>
                       </div>
                     );
