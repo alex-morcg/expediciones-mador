@@ -200,7 +200,7 @@ export default function MadorTracker() {
   const [showTextModal, setShowTextModal] = useState(false);
   const [textModalContent, setTextModalContent] = useState('');
   const [ordenVista, setOrdenVista] = useState('normal'); // 'normal', 'cliente', 'estado'
-  const [marcarTodosModal, setMarcarTodosModal] = useState({ open: false, estadoId: null });
+  const [marcarTodosModal, setMarcarTodosModal] = useState({ open: false, estadoId: null, selectedPaquetes: [] });
   const [showAlertaExposicion, setShowAlertaExposicion] = useState(false);
   const [alertaExposicionChecked, setAlertaExposicionChecked] = useState(false);
   const [viewingExpedicionFactura, setViewingExpedicionFactura] = useState(null); // { expedicion, factura }
@@ -662,7 +662,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const validarVerificacion = (paqueteId) => fvalidarVerificacion(paqueteId, usuarioActivo);
   const updatePaqueteEstado = (paqueteId, estado) => fupdateEstado(paqueteId, estado, usuarioActivo, estadosPaquete);
   const updatePaqueteEstadoPago = (paqueteId, estadoPago) => fupdateEstadoPago(paqueteId, estadoPago, usuarioActivo);
-  const marcarTodosComoEstado = (expedicionId, estadoId) => { fmarcarTodos(expedicionId, estadoId, usuarioActivo, estadosPaquete); setMarcarTodosModal({ open: false, estadoId: null }); };
+  const marcarTodosComoEstado = (expedicionId, estadoId) => { fmarcarTodos(expedicionId, estadoId, usuarioActivo, estadosPaquete); setMarcarTodosModal({ open: false, estadoId: null, selectedPaquetes: [] }); };
   const addComentarioToPaquete = (paqueteId, texto) => faddComentario(paqueteId, texto, usuarioActivo);
   const deleteComentarioFromPaquete = (paqueteId, comentarioId) => {
     const paq = paquetes.find(p => p.id === paqueteId);
@@ -1973,15 +1973,31 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             <Button size="sm" onClick={() => openModal('paquete', null)}>+ Nuevo</Button>
           </div>
           
-          {/* Marcar todos como — solo visible en vista por estado */}
+          {/* Marcar paquetes como — solo visible en vista por estado */}
           {ordenVista === 'estado' && (
           <div className="flex items-center gap-2 bg-stone-100 rounded-lg p-2">
-            <span className="text-stone-600 text-sm">Marcar todos como:</span>
+            <span className="text-stone-600 text-sm">Marcar</span>
+            <button
+              onClick={() => setMarcarTodosModal(prev => ({
+                ...prev,
+                open: true,
+                selectedPaquetes: prev.selectedPaquetes.length > 0 ? prev.selectedPaquetes : expedicionPaquetes.map(p => p.id)
+              }))}
+              className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 border border-amber-300"
+            >
+              {marcarTodosModal.selectedPaquetes.length > 0
+                ? `${marcarTodosModal.selectedPaquetes.length} seleccionados`
+                : 'todos'}
+            </button>
+            <span className="text-stone-600 text-sm">como:</span>
             <select
               value=""
               onChange={(e) => {
                 if (e.target.value) {
-                  setMarcarTodosModal({ open: true, estadoId: e.target.value });
+                  const paquetesAMarcar = marcarTodosModal.selectedPaquetes.length > 0
+                    ? marcarTodosModal.selectedPaquetes
+                    : expedicionPaquetes.map(p => p.id);
+                  setMarcarTodosModal({ open: true, estadoId: e.target.value, selectedPaquetes: paquetesAMarcar });
                 }
               }}
               className="flex-1 bg-white border border-stone-300 rounded-lg px-2 py-1 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
@@ -1994,24 +2010,89 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           </div>
           )}
           
-          {/* Modal de confirmación */}
+          {/* Modal de selección de paquetes */}
           {marcarTodosModal.open && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setMarcarTodosModal({ open: false, estadoId: null })}>
-              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-stone-800 mb-3">⚠️ Confirmar cambio masivo</h3>
-                <p className="text-stone-600 mb-4">
-                  ¿Estás seguro de que quieres marcar los <strong>{expedicionPaquetes.length} paquetes</strong> de esta expedición como <strong>"{estadosPaquete.find(e => e.id === marcarTodosModal.estadoId)?.nombre}"</strong>?
-                </p>
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setMarcarTodosModal({ open: false, estadoId: null, selectedPaquetes: [] })}>
+              <div className="bg-white rounded-2xl p-4 w-full max-w-sm shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold text-stone-800 mb-3">
+                  {marcarTodosModal.estadoId ? '⚠️ Confirmar cambio' : '📦 Seleccionar paquetes'}
+                </h3>
+
+                {/* Lista de paquetes */}
+                <div className="flex-1 overflow-y-auto mb-3 border border-stone-200 rounded-lg">
+                  {expedicionPaquetes.map(paq => {
+                    const estadoActual = estadosPaquete.find(e => e.id === paq.estado);
+                    const isSelected = marcarTodosModal.selectedPaquetes.includes(paq.id);
+                    return (
+                      <div
+                        key={paq.id}
+                        onClick={() => {
+                          const newSelected = isSelected
+                            ? marcarTodosModal.selectedPaquetes.filter(id => id !== paq.id)
+                            : [...marcarTodosModal.selectedPaquetes, paq.id];
+                          setMarcarTodosModal(prev => ({ ...prev, selectedPaquetes: newSelected }));
+                        }}
+                        className={`flex items-center gap-2 p-2 cursor-pointer border-b border-stone-100 last:border-b-0 ${
+                          isSelected ? 'bg-amber-50' : 'hover:bg-stone-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          className="w-4 h-4 accent-amber-500"
+                        />
+                        <span className="text-lg">{estadoActual?.icon || '📦'}</span>
+                        <span className="text-sm text-stone-700 flex-1">{paq.nombre}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Botones seleccionar todos / ninguno */}
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setMarcarTodosModal(prev => ({ ...prev, selectedPaquetes: expedicionPaquetes.map(p => p.id) }))}
+                    className="flex-1 text-xs text-amber-600 hover:text-amber-800"
+                  >Seleccionar todos</button>
+                  <button
+                    onClick={() => setMarcarTodosModal(prev => ({ ...prev, selectedPaquetes: [] }))}
+                    className="flex-1 text-xs text-stone-500 hover:text-stone-700"
+                  >Ninguno</button>
+                </div>
+
+                {/* Info del nuevo estado si ya está seleccionado */}
+                {marcarTodosModal.estadoId && (
+                  <p className="text-stone-600 text-sm mb-3">
+                    Cambiar <strong>{marcarTodosModal.selectedPaquetes.length} paquetes</strong> a <strong>"{estadosPaquete.find(e => e.id === marcarTodosModal.estadoId)?.icon} {estadosPaquete.find(e => e.id === marcarTodosModal.estadoId)?.nombre}"</strong>
+                  </p>
+                )}
+
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
-                    className="flex-1" 
-                    onClick={() => setMarcarTodosModal({ open: false, estadoId: null })}
-                  >Cancelar</Button>
-                  <Button 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
-                    onClick={() => marcarTodosComoEstado(selectedExpedicion, marcarTodosModal.estadoId)}
-                  >Confirmar</Button>
+                    onClick={() => setMarcarTodosModal({ open: false, estadoId: null, selectedPaquetes: [] })}
+                  >Cancelar</Button>
+                  {marcarTodosModal.estadoId ? (
+                    <Button
+                      className="flex-1"
+                      disabled={marcarTodosModal.selectedPaquetes.length === 0}
+                      onClick={() => {
+                        // Cambiar estado de los paquetes seleccionados
+                        marcarTodosModal.selectedPaquetes.forEach(paqId => {
+                          updatePaqueteEstado(paqId, marcarTodosModal.estadoId);
+                        });
+                        setMarcarTodosModal({ open: false, estadoId: null, selectedPaquetes: [] });
+                      }}
+                    >Confirmar</Button>
+                  ) : (
+                    <Button
+                      className="flex-1"
+                      disabled={marcarTodosModal.selectedPaquetes.length === 0}
+                      onClick={() => setMarcarTodosModal(prev => ({ ...prev, open: false }))}
+                    >OK ({marcarTodosModal.selectedPaquetes.length})</Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -4265,42 +4346,143 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               {/* Cierre */}
               <div className="border-t border-amber-200 pt-3 mt-3">
                 <h4 className="text-amber-700 font-medium mb-2">🔒 Cierre (opcional)</h4>
-                <div className="flex gap-2">
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-amber-800 text-xs mb-1">Base €/g</label>
+
+                {/* €/Onza + OK */}
+                <div className="mb-2">
+                  <label className="block text-amber-800 text-xs mb-1">€/Onza</label>
+                  <div className="flex gap-2">
                     <input
                       type="number"
                       inputMode="decimal"
                       step="0.01"
-                      value={formData.precioFino ?? ''}
-                      onChange={(e) => setFormData({ ...formData, precioFino: e.target.value === '' ? null : parseFloat(e.target.value) })}
-                      className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                      placeholder="Ej: 2650"
+                      value={formData.euroOnza ?? ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        euroOnza: e.target.value === '' ? null : parseFloat(e.target.value),
+                        cierreConfirmado: false
+                      })}
+                      className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (formData.cierreConfirmado) {
+                          // Reset
+                          setFormData({
+                            ...formData,
+                            baseReal: null,
+                            precioFino: null,
+                            cierreJofisa: null,
+                            cierreConfirmado: false
+                          });
+                        } else if (formData.euroOnza > 0) {
+                          const baseCalc = Math.ceil((formData.euroOnza / 31.10349) * 100) / 100;
+                          const precioJofisaCalc = Math.round((baseCalc - 0.25) * 100) / 100;
+                          setFormData({
+                            ...formData,
+                            baseReal: baseCalc,
+                            precioFino: baseCalc,
+                            cierreJofisa: precioJofisaCalc,
+                            cierreConfirmado: true
+                          });
+                        }
+                      }}
+                      disabled={!formData.euroOnza}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                        formData.cierreConfirmado
+                          ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                          : formData.euroOnza
+                            ? 'bg-amber-500 text-white hover:bg-amber-600'
+                            : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {formData.cierreConfirmado ? '↻' : 'OK'}
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-amber-800 text-xs mb-1">Cierre Jofisa</label>
-                    <div className="flex gap-1">
+                </div>
+
+                {/* Campos que aparecen tras confirmar */}
+                {formData.cierreConfirmado && (
+                  <>
+                    {/* Base Real (solo lectura) */}
+                    <div className="bg-amber-50 rounded-lg p-2 mb-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-amber-600">Base Real (€/Onza ÷ 31,10349):</span>
+                        <span className="font-mono font-semibold text-amber-800">{formData.baseReal?.toFixed(2)} €/g</span>
+                      </div>
+                    </div>
+
+                    {/* Base Cliente + botones descuento */}
+                    <div className="mb-2">
+                      <label className="block text-amber-800 text-xs mb-1">Base Cliente €/g</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          value={formData.precioFino ?? ''}
+                          onChange={(e) => setFormData({ ...formData, precioFino: e.target.value === '' ? null : parseFloat(e.target.value) })}
+                          className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                        />
+                        {[-0.02, -0.05, -0.10].map(desc => (
+                          <button
+                            key={desc}
+                            type="button"
+                            onClick={() => {
+                              if (formData.precioFino > 0) {
+                                const nuevo = Math.round((formData.precioFino + desc) * 100) / 100;
+                                setFormData({ ...formData, precioFino: nuevo });
+                              }
+                            }}
+                            className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-lg border border-amber-300 hover:bg-amber-200"
+                          >
+                            {desc.toFixed(2).replace('.', ',')}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Diferencia */}
+                      {formData.baseReal && formData.precioFino && formData.baseReal !== formData.precioFino && (
+                        <p className="text-xs mt-1">
+                          <span className="text-stone-500">Diferencia: {((formData.precioFino - formData.baseReal)).toFixed(2).replace('.', ',')} €/g</span>
+                          {formData.lineas?.length > 0 && (() => {
+                            const finoTotal = formData.lineas.reduce((sum, l) => sum + calcularFinoLinea(l.bruto, l.ley), 0);
+                            const diffTotal = (formData.baseReal - formData.precioFino) * finoTotal;
+                            return (
+                              <span className={`ml-2 font-semibold ${diffTotal > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                = {diffTotal > 0 ? '+' : ''}{diffTotal.toFixed(2).replace('.', ',')} €
+                              </span>
+                            );
+                          })()}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Precio Jofisa */}
+                    <div className="mb-2">
+                      <label className="block text-amber-800 text-xs mb-1">Precio Jofisa €/g (Base Real - 0,25)</label>
                       <input
                         type="number"
                         inputMode="decimal"
                         step="0.01"
                         value={formData.cierreJofisa ?? ''}
-                        onChange={(e) => setFormData({ ...formData, cierreJofisa: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-                        className="flex-1 min-w-0 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                        onChange={(e) => setFormData({ ...formData, cierreJofisa: e.target.value === '' ? null : parseFloat(e.target.value) })}
+                        className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (formData.precioFino > 0) {
-                            setFormData({ ...formData, cierreJofisa: parseFloat((formData.precioFino - 0.25).toFixed(2)) });
-                          }
-                        }}
-                        className="px-2 py-1 text-sm bg-amber-100 text-amber-700 rounded-lg border border-amber-300 hover:bg-amber-200"
-                        title="Auto-rellenar con Base - 0,25"
-                      >🪄</button>
                     </div>
-                  </div>
-                </div>
+
+                    {/* Fecha Cierre */}
+                    <div>
+                      <label className="block text-amber-800 text-xs mb-1">Fecha Cierre</label>
+                      <input
+                        type="date"
+                        value={formData.fechaCierre || new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })}
+                        className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}

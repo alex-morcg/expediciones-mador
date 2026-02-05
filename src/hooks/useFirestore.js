@@ -650,7 +650,7 @@ export function useFirestore(activeSection = 'expediciones') {
         detalles: { cambios }
       } : null;
 
-      const { id, ...rest } = data;
+      const { id, cierreConfirmado, ...rest } = data; // Excluir cierreConfirmado (solo UI)
       const updateData = {
         ...rest,
         nombre: nuevoNombre,
@@ -705,7 +705,7 @@ export function useFirestore(activeSection = 'expediciones') {
         accion: 'crear_paquete',
         detalles: null,
       };
-      const { id, ...rest } = data;
+      const { id, cierreConfirmado, ...rest } = data; // Excluir cierreConfirmado (solo UI)
       await addDoc(collection(db, 'paquetes'), {
         ...rest,
         nombre: nuevoNombre,
