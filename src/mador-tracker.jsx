@@ -805,6 +805,33 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
       fechaCierre: new Date().toISOString().split('T')[0],
       confirmado: false // true cuando se pulsa OK
     });
+
+    // Cargar datos de cierre cuando se selecciona un paquete que ya tiene cierre
+    useEffect(() => {
+      if (selectedPaquete) {
+        const paq = paquetes.find(p => p.id === selectedPaquete);
+        if (paq?.euroOnza) {
+          setCierreData({
+            euroOnza: paq.euroOnza?.toString() || '',
+            baseReal: paq.baseReal?.toString() || '',
+            baseCliente: paq.precioFino?.toString() || '',
+            precioJofisa: paq.cierreJofisa?.toString() || '',
+            fechaCierre: paq.fechaCierre || new Date().toISOString().split('T')[0],
+            confirmado: true
+          });
+        } else {
+          setCierreData({
+            euroOnza: '',
+            baseReal: '',
+            baseCliente: '',
+            precioJofisa: '',
+            fechaCierre: new Date().toISOString().split('T')[0],
+            confirmado: false
+          });
+        }
+      }
+    }, [selectedPaquete, paquetes]);
+
     const [verificandoFactura, setVerificandoFactura] = useState(false);
     const [showLogsModal, setShowLogsModal] = useState(false);
     const [viewingPdf, setViewingPdf] = useState(null); // { data, nombre, tipo }
@@ -1250,22 +1277,6 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         }
                       }}
                     >✓ Guardar Cierre</Button>
-                  )}
-
-                  {/* Mostrar cierre actual si existe */}
-                  {paq.precioFino && (
-                    <div className="mt-3 pt-3 border-t border-stone-200">
-                      <p className="text-xs text-stone-500">Cierre actual:</p>
-                      <p className="font-mono text-sm">
-                        {paq.euroOnza && <><span className="text-stone-500">€/Onza:</span> <span className="font-semibold">{formatNum(paq.euroOnza)}</span> · </>}
-                        {paq.baseReal && <><span className="text-stone-500">Base Real:</span> <span className="font-semibold">{formatNum(paq.baseReal)}</span> · </>}
-                        <span className="text-stone-500">Base Cl:</span> <span className="font-semibold">{formatNum(paq.precioFino)} €/g</span>
-                        {paq.cierreJofisa && <> · <span className="text-stone-500">Jofisa:</span> <span className="font-semibold">{formatNum(paq.cierreJofisa)} €/g</span></>}
-                      </p>
-                      {paq.fechaCierre && (
-                        <p className="text-xs text-stone-400 mt-1">Fecha: {paq.fechaCierre}</p>
-                      )}
-                    </div>
                   )}
                 </div>
               );
