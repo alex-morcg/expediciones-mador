@@ -797,7 +797,14 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   // Expediciones Tab (incluye detalle de paquete)
   const ExpedicionesTab = () => {
     const [newLinea, setNewLinea] = useState({ bruto: '', ley: '' });
-    const [cierreData, setCierreData] = useState({ precioFino: '', cierreJofisa: '' });
+    const [cierreData, setCierreData] = useState({
+      euroOnza: '',
+      baseReal: '',
+      baseCliente: '',
+      precioJofisa: '',
+      fechaCierre: new Date().toISOString().split('T')[0],
+      confirmado: false // true cuando se pulsa OK
+    });
     const [verificandoFactura, setVerificandoFactura] = useState(false);
     const [showLogsModal, setShowLogsModal] = useState(false);
     const [viewingPdf, setViewingPdf] = useState(null); // { data, nombre, tipo }
@@ -1048,81 +1055,182 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           <Card style={{ backgroundColor: clienteColor + '10', borderColor: clienteColor + '40' }}>
             <h3 className="font-semibold mb-3" style={{ color: clienteColor }}>🔒 Cierre</h3>
             {(() => {
-              const precioFino = parseFloat(cierreData.precioFino) || paq.precioFino || 0;
-              const cierreJofisa = parseFloat(cierreData.cierreJofisa) || paq.cierreJofisa || 0;
-              const esperado = precioFino ? (precioFino - 0.25) : 0;
-              const diferencia = precioFino ? Math.abs(cierreJofisa - esperado) : 0;
-              const esIncorrecto = precioFino && diferencia > 0.001;
-              
-              // Detectar si hay cambios
-              const precioFinalNuevo = cierreData.precioFino ? parseFloat(cierreData.precioFino) : null;
-              const cierreJofisaNuevo = cierreData.cierreJofisa ? parseFloat(cierreData.cierreJofisa) : null;
-              const hayCambios = (precioFinalNuevo !== null && precioFinalNuevo !== paq.precioFino) || 
-                                 (cierreJofisaNuevo !== null && cierreJofisaNuevo !== paq.cierreJofisa);
-              const noPuedeGuardar = !hayCambios ? 'No hay cambios que guardar' : 
-                                     (!paq.precioFino && !cierreData.precioFino) ? 'Introduce un precio fino' : '';
-              
+              const euroOnzaNum = parseFloat(cierreData.euroOnza) || 0;
+              const baseRealNum = parseFloat(cierreData.baseReal) || 0;
+              const baseClienteNum = parseFloat(cierreData.baseCliente) || 0;
+              const precioJofisaNum = parseFloat(cierreData.precioJofisa) || 0;
+
+              // Detectar si hay cambios respecto a lo guardado
+              const hayCambios = cierreData.confirmado && baseClienteNum > 0 && (
+                baseClienteNum !== paq.precioFino ||
+                precioJofisaNum !== paq.cierreJofisa
+              );
+              const noPuedeGuardar = !cierreData.confirmado ? 'Pulsa OK para calcular' :
+                                     baseClienteNum <= 0 ? 'Introduce €/Onza y pulsa OK' :
+                                     !hayCambios ? 'No hay cambios' : '';
+
+              // Función para confirmar €/Onza y auto-rellenar
+              const confirmarEuroOnza = () => {
+                if (!euroOnzaNum) return;
+                const baseCalc = Math.ceil((euroOnzaNum / 31.10349) * 100) / 100;
+                const precioJofisaCalc = Math.round((baseCalc - 0.25) * 100) / 100;
+                setCierreData({
+                  ...cierreData,
+                  baseReal: baseCalc.toFixed(2),
+                  baseCliente: baseCalc.toFixed(2),
+                  precioJofisa: precioJofisaCalc.toFixed(2),
+                  confirmado: true
+                });
+              };
+
+              // Botones de descuento rápido
+              const aplicarDescuento = (descuento) => {
+                if (!baseRealNum) return;
+                const nuevoBaseCliente = Math.round((baseRealNum + descuento) * 100) / 100;
+                setCierreData({ ...cierreData, baseCliente: nuevoBaseCliente.toFixed(2) });
+              };
+
               return (
-                <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                  <div className="flex gap-2 flex-1">
-                    <div className="flex-1 min-w-0">
-                      <label className="block text-xs mb-1" style={{ color: clienteColor }}>Precio fino €/g</label>
+                <div className="space-y-3">
+                  {/* Fila 1: €/Onza + OK */}
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: clienteColor }}>€/Onza</label>
+                    <div className="flex gap-2">
                       <input
                         type="number"
                         inputMode="decimal"
-                        placeholder="€/g"
-                        value={cierreData.precioFino || paq.precioFino || ''}
-                        onChange={(e) => setCierreData({ ...cierreData, precioFino: e.target.value })}
-                        className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none"
-                        style={{ border: `1px solid ${clienteColor}50` }}
+                        step="0.01"
+                        placeholder="Ej: 2650"
+                        value={cierreData.euroOnza}
+                        onChange={(e) => setCierreData({ ...cierreData, euroOnza: e.target.value, confirmado: false })}
+                        className="flex-1 bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none font-mono"
+                        style={{ border: `1px solid ${cierreData.confirmado ? '#22c55e' : clienteColor}50` }}
                       />
+                      <button
+                        type="button"
+                        onClick={confirmarEuroOnza}
+                        disabled={!euroOnzaNum || cierreData.confirmado}
+                        className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                          cierreData.confirmado
+                            ? 'bg-green-100 text-green-600 cursor-default'
+                            : euroOnzaNum
+                              ? 'text-white hover:opacity-90'
+                              : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                        }`}
+                        style={!cierreData.confirmado && euroOnzaNum ? { backgroundColor: clienteColor } : {}}
+                      >
+                        {cierreData.confirmado ? '✓' : 'OK'}
+                      </button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <label className="block text-xs mb-1" style={{ color: clienteColor }}>Cierre Jofisa</label>
-                      <div className="flex gap-1">
+                  </div>
+
+                  {/* Fila 2: Base Real (solo lectura) */}
+                  {cierreData.confirmado && (
+                    <div className="bg-stone-50 rounded-lg p-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-stone-500">Base Real (€/Onza ÷ 31,10349):</span>
+                        <span className="font-mono font-semibold text-stone-800">{cierreData.baseReal} €/g</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fila 3: Base Cliente + botones descuento */}
+                  {cierreData.confirmado && (
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: clienteColor }}>Base Cliente €/g</label>
+                      <div className="flex gap-2">
                         <input
                           type="number"
                           inputMode="decimal"
-                          placeholder="€/g"
-                          value={cierreData.cierreJofisa || paq.cierreJofisa || ''}
-                          onChange={(e) => setCierreData({ ...cierreData, cierreJofisa: e.target.value })}
-                          className="flex-1 min-w-0 rounded-lg px-3 py-2 placeholder-stone-400 focus:outline-none"
-                          style={esIncorrecto
-                            ? { backgroundColor: '#fef2f2', border: '2px solid #f87171', color: '#991b1b' }
-                            : { backgroundColor: 'white', border: `1px solid ${clienteColor}50`, color: '#1c1917' }
-                          }
+                          step="0.01"
+                          value={cierreData.baseCliente}
+                          onChange={(e) => setCierreData({ ...cierreData, baseCliente: e.target.value })}
+                          className="flex-1 bg-white rounded-lg px-3 py-2 text-stone-800 focus:outline-none font-mono"
+                          style={{ border: `1px solid ${clienteColor}50` }}
                         />
                         <button
                           type="button"
-                          onClick={() => {
-                            const precio = parseFloat(cierreData.precioFino) || paq.precioFino || 0;
-                            if (precio > 0) {
-                              setCierreData({ ...cierreData, cierreJofisa: (precio - 0.25).toFixed(2) });
-                            }
-                          }}
-                          className="px-2 py-1 text-sm rounded-lg transition-colors"
+                          onClick={() => aplicarDescuento(-0.02)}
+                          className="px-2 py-1 text-xs rounded-lg transition-colors"
                           style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
-                          title="Auto-rellenar con Precio fino - 0,25"
-                        >🪄</button>
+                        >-0,02</button>
+                        <button
+                          type="button"
+                          onClick={() => aplicarDescuento(-0.05)}
+                          className="px-2 py-1 text-xs rounded-lg transition-colors"
+                          style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
+                        >-0,05</button>
+                        <button
+                          type="button"
+                          onClick={() => aplicarDescuento(-0.10)}
+                          className="px-2 py-1 text-xs rounded-lg transition-colors"
+                          style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
+                        >-0,10</button>
                       </div>
-                      {esIncorrecto && (
-                        <p className="text-red-600 text-xs mt-1">Esperado: {formatNum(esperado, 2)} (mg aplicado: {formatNum(cierreJofisa - precioFino, 2)})</p>
+                      {baseClienteNum !== baseRealNum && baseClienteNum > 0 && (
+                        <p className="text-xs mt-1" style={{ color: clienteColor }}>
+                          Diferencia: {formatNum(baseClienteNum - baseRealNum, 2)} €/g
+                        </p>
                       )}
                     </div>
-                  </div>
-                  <Button
-                    className="self-start sm:self-end"
-                    disabled={!!noPuedeGuardar}
-                    disabledReason={noPuedeGuardar}
-                    onClick={() => {
-                      const precioFinal = cierreData.precioFino !== '' ? parseFloat(cierreData.precioFino) : paq.precioFino;
-                      const cierreJofisaFinal = cierreData.cierreJofisa !== '' ? parseFloat(cierreData.cierreJofisa) : paq.cierreJofisa;
-                      if (precioFinal && !isNaN(precioFinal)) {
-                        updatePaqueteCierre(paq.id, precioFinal, cierreJofisaFinal || (precioFinal - 0.25));
-                        setCierreData({ precioFino: '', cierreJofisa: '' });
-                      }
-                    }}
-                  >✓ Guardar</Button>
+                  )}
+
+                  {/* Fila 4: Precio Jofisa (solo lectura) */}
+                  {cierreData.confirmado && (
+                    <div className="bg-stone-50 rounded-lg p-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-stone-500">Precio Jofisa (Base Real - 0,25):</span>
+                        <span className="font-mono font-semibold text-stone-800">{cierreData.precioJofisa} €/g</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fila 5: Fecha Cierre */}
+                  {cierreData.confirmado && (
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: clienteColor }}>Fecha Cierre</label>
+                      <input
+                        type="date"
+                        value={cierreData.fechaCierre}
+                        onChange={(e) => setCierreData({ ...cierreData, fechaCierre: e.target.value })}
+                        className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 focus:outline-none"
+                        style={{ border: `1px solid ${clienteColor}50` }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Botón Guardar */}
+                  {cierreData.confirmado && (
+                    <Button
+                      className="w-full"
+                      disabled={!!noPuedeGuardar}
+                      disabledReason={noPuedeGuardar}
+                      onClick={() => {
+                        if (baseClienteNum > 0) {
+                          updatePaqueteCierre(paq.id, baseClienteNum, precioJofisaNum);
+                          setCierreData({
+                            euroOnza: '',
+                            baseReal: '',
+                            baseCliente: '',
+                            precioJofisa: '',
+                            fechaCierre: new Date().toISOString().split('T')[0],
+                            confirmado: false
+                          });
+                        }
+                      }}
+                    >✓ Guardar Cierre</Button>
+                  )}
+
+                  {/* Mostrar cierre actual si existe */}
+                  {paq.precioFino && (
+                    <div className="mt-3 pt-3 border-t border-stone-200">
+                      <p className="text-xs text-stone-500">Cierre actual:</p>
+                      <p className="font-mono text-sm">
+                        Base Cliente: <span className="font-semibold">{formatNum(paq.precioFino)} €/g</span>
+                        {paq.cierreJofisa && <> · Jofisa: <span className="font-semibold">{formatNum(paq.cierreJofisa)} €/g</span></>}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })()}
