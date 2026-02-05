@@ -655,7 +655,7 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
     if (!confirm(`¿Eliminar línea: ${formatNum(linea?.bruto || 0)}g / ${formatNum(linea?.ley || 0, 0)} ley?`)) return;
     fremoveLinea(paqueteId, lineaId, usuarioActivo);
   };
-  const updatePaqueteCierre = (paqueteId, precioFino, cierreJofisa) => fupdateCierre(paqueteId, precioFino, cierreJofisa, usuarioActivo);
+  const updatePaqueteCierre = (paqueteId, cierreData) => fupdateCierre(paqueteId, cierreData, usuarioActivo);
   const updatePaqueteFactura = (paqueteId, factura) => fupdateFactura(paqueteId, factura, usuarioActivo);
   const updatePaqueteVerificacion = (paqueteId, verificacionIA, fechaFactura = null) => fupdateVerificacion(paqueteId, verificacionIA, usuarioActivo, fechaFactura);
   const updatePaqueteFechaFactura = (paqueteId, fechaFactura) => fupdateFechaFactura(paqueteId, fechaFactura, usuarioActivo);
@@ -1083,10 +1083,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 });
               };
 
-              // Botones de descuento rápido
+              // Botones de descuento rápido (acumulativo sobre Base Cliente actual)
               const aplicarDescuento = (descuento) => {
-                if (!baseRealNum) return;
-                const nuevoBaseCliente = Math.round((baseRealNum + descuento) * 100) / 100;
+                if (!baseClienteNum) return;
+                const nuevoBaseCliente = Math.round((baseClienteNum + descuento) * 100) / 100;
                 setCierreData({ ...cierreData, baseCliente: nuevoBaseCliente.toFixed(2) });
               };
 
@@ -1222,7 +1222,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       disabledReason={noPuedeGuardar}
                       onClick={() => {
                         if (baseClienteNum > 0) {
-                          updatePaqueteCierre(paq.id, baseClienteNum, precioJofisaNum);
+                          updatePaqueteCierre(paq.id, {
+                            precioFino: baseClienteNum,
+                            cierreJofisa: precioJofisaNum,
+                            euroOnza: euroOnzaNum,
+                            baseReal: baseRealNum,
+                            fechaCierre: cierreData.fechaCierre,
+                          });
                           setCierreData({
                             euroOnza: '',
                             baseReal: '',
@@ -1241,9 +1247,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     <div className="mt-3 pt-3 border-t border-stone-200">
                       <p className="text-xs text-stone-500">Cierre actual:</p>
                       <p className="font-mono text-sm">
-                        Base Cliente: <span className="font-semibold">{formatNum(paq.precioFino)} €/g</span>
-                        {paq.cierreJofisa && <> · Jofisa: <span className="font-semibold">{formatNum(paq.cierreJofisa)} €/g</span></>}
+                        {paq.euroOnza && <><span className="text-stone-500">€/Onza:</span> <span className="font-semibold">{formatNum(paq.euroOnza)}</span> · </>}
+                        {paq.baseReal && <><span className="text-stone-500">Base Real:</span> <span className="font-semibold">{formatNum(paq.baseReal)}</span> · </>}
+                        <span className="text-stone-500">Base Cl:</span> <span className="font-semibold">{formatNum(paq.precioFino)} €/g</span>
+                        {paq.cierreJofisa && <> · <span className="text-stone-500">Jofisa:</span> <span className="font-semibold">{formatNum(paq.cierreJofisa)} €/g</span></>}
                       </p>
+                      {paq.fechaCierre && (
+                        <p className="text-xs text-stone-400 mt-1">Fecha: {paq.fechaCierre}</p>
+                      )}
                     </div>
                   )}
                 </div>

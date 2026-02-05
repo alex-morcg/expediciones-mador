@@ -841,15 +841,27 @@ export function useFirestore(activeSection = 'expediciones') {
     }
   };
 
-  const updatePaqueteCierre = async (paqueteId, precioFino, cierreJofisa, usuarioActivo) => {
+  const updatePaqueteCierre = async (paqueteId, cierreDataParam, usuarioActivo) => {
     const paq = paquetes.find(p => p.id === paqueteId);
     if (!paq) return;
+
+    // Soportar formato antiguo (precioFino, cierreJofisa) y nuevo (objeto)
+    let precioFino, cierreJofisa, euroOnza, baseReal, fechaCierre;
+    if (typeof cierreDataParam === 'object' && cierreDataParam !== null) {
+      ({ precioFino, cierreJofisa, euroOnza, baseReal, fechaCierre } = cierreDataParam);
+    } else {
+      // Formato antiguo: segundo arg es precioFino, tercero es cierreJofisa (que viene como usuarioActivo aquí)
+      precioFino = cierreDataParam;
+      cierreJofisa = usuarioActivo;
+      usuarioActivo = arguments[3]; // El cuarto argumento
+    }
+
     // Normalizar a números para comparación
     const oldPrecio = paq.precioFino ?? null;
     const oldCierre = paq.cierreJofisa ?? null;
     const newPrecio = precioFino ?? null;
     const newCierre = cierreJofisa ?? null;
-    if (oldPrecio === newPrecio && oldCierre === newCierre) return;
+    if (oldPrecio === newPrecio && oldCierre === newCierre && !euroOnza) return;
 
     const modificacion = { usuario: usuarioActivo, fecha: new Date().toISOString() };
     const log = {
@@ -860,6 +872,7 @@ export function useFirestore(activeSection = 'expediciones') {
       detalles: {
         precioFino: { antes: paq.precioFino, despues: precioFino },
         cierreJofisa: { antes: paq.cierreJofisa, despues: cierreJofisa },
+        euroOnza: euroOnza || null,
       },
     };
 
@@ -869,6 +882,11 @@ export function useFirestore(activeSection = 'expediciones') {
       cierreJofisa,
       ultimaModificacion: modificacion,
     };
+
+    // Guardar campos adicionales si existen
+    if (euroOnza !== undefined) updateData.euroOnza = euroOnza;
+    if (baseReal !== undefined) updateData.baseReal = baseReal;
+    if (fechaCierre !== undefined) updateData.fechaCierre = fechaCierre;
 
     // Recalcular verificación si existe y cambió el precio fino
     if (oldPrecio !== newPrecio && paq.verificacionIA && paq.verificacionIA.totalFactura != null) {
