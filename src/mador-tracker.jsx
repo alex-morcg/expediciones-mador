@@ -1167,21 +1167,36 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
                         >-0,10</button>
                       </div>
-                      {baseClienteNum !== baseRealNum && baseClienteNum > 0 && (
-                        <p className="text-xs mt-1" style={{ color: clienteColor }}>
-                          Diferencia: {formatNum(baseClienteNum - baseRealNum, 2)} €/g
-                        </p>
-                      )}
+                      {baseClienteNum !== baseRealNum && baseClienteNum > 0 && (() => {
+                        const diffPorGramo = baseClienteNum - baseRealNum;
+                        const finoTotal = totales.finoTotalCalculo || totales.finoTotal || 0;
+                        const diffTotal = diffPorGramo * finoTotal * -1; // Invertido: si cobras menos, ganas más
+                        const esPositivo = diffTotal > 0;
+                        return (
+                          <p className="text-xs mt-1">
+                            <span style={{ color: clienteColor }}>Diferencia: {formatNum(diffPorGramo, 2)} €/g</span>
+                            <span className={`ml-2 font-semibold ${esPositivo ? 'text-green-600' : 'text-red-600'}`}>
+                              = {esPositivo ? '+' : ''}{formatNum(diffTotal, 2)} €
+                            </span>
+                          </p>
+                        );
+                      })()}
                     </div>
                   )}
 
-                  {/* Fila 4: Precio Jofisa (solo lectura) */}
+                  {/* Fila 4: Precio Jofisa (editable) */}
                   {cierreData.confirmado && (
-                    <div className="bg-stone-50 rounded-lg p-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-stone-500">Precio Jofisa (Base Real - 0,25):</span>
-                        <span className="font-mono font-semibold text-stone-800">{cierreData.precioJofisa} €/g</span>
-                      </div>
+                    <div>
+                      <label className="block text-xs mb-1" style={{ color: clienteColor }}>Precio Jofisa €/g (Base Real - 0,25)</label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        value={cierreData.precioJofisa}
+                        onChange={(e) => setCierreData({ ...cierreData, precioJofisa: e.target.value })}
+                        className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 focus:outline-none font-mono"
+                        style={{ border: `1px solid ${clienteColor}50` }}
+                      />
                     </div>
                   )}
 
