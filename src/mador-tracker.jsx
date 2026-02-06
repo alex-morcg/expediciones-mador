@@ -709,28 +709,28 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const TabButton = ({ id, label, icon, badge }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex-1 py-3 px-2 text-xs sm:text-sm font-medium transition-all duration-300 relative ${
+      className={`flex-1 py-2.5 px-3 text-xs sm:text-sm font-medium transition-all duration-300 relative btn-press ${
         activeTab === id
-          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-md'
-          : 'text-amber-700 hover:text-amber-900 hover:bg-amber-100'
+          ? 'tab-pill-active'
+          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/[0.03]'
       }`}
-      style={{ borderRadius: activeTab === id ? '8px' : '0' }}
+      style={{ borderRadius: '100px', margin: '4px 2px' }}
     >
-      <span className="block relative inline-block">
-        {icon}
+      <span className="relative inline-flex items-center gap-1.5">
+        <span className="text-sm">{icon}</span>
+        <span>{label}</span>
         {badge > 0 && (
-          <span className="absolute -top-1 -right-3 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{badge}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] absolute -top-0.5 -right-2" />
         )}
       </span>
-      <span className="block mt-1">{label}</span>
     </button>
   );
 
   const Card = ({ children, className = '', onClick, style = {} }) => (
-    <div 
+    <div
       onClick={onClick}
-      className={`bg-white border rounded-xl p-4 shadow-sm ${onClick ? 'cursor-pointer hover:shadow-md transition-all' : ''} ${className}`}
-      style={{ borderColor: '#fcd34d80', ...style }}
+      className={`glass-card p-5 ${onClick ? 'cursor-pointer glass-card-interactive' : ''} ${className}`}
+      style={style}
     >
       {children}
     </div>
@@ -738,23 +738,24 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
 
   const Button = ({ children, onClick, variant = 'primary', size = 'md', className = '', disabled = false, disabledReason = '' }) => {
     const variants = {
-      primary: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600 shadow-sm',
-      secondary: 'bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200',
-      danger: 'bg-red-100 text-red-700 border border-red-300 hover:bg-red-200',
-      ghost: 'text-amber-700 hover:bg-amber-100',
+      primary: 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
+      secondary: 'bg-[var(--accent-soft)] text-[var(--accent-text)] border border-[var(--accent-border)] hover:bg-[var(--accent-border)]',
+      danger: 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger-border)] hover:bg-[var(--danger)]  hover:text-white',
+      ghost: 'text-[var(--text-secondary)] hover:bg-black/[0.04]',
+      success: 'bg-[var(--success)] text-white hover:opacity-90 shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
     };
     const sizes = {
-      sm: 'px-2 py-1 text-xs',
+      sm: 'px-3 py-1.5 text-xs',
       md: 'px-4 py-2 text-sm',
       lg: 'px-6 py-3 text-base',
     };
-    const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed grayscale' : '';
+    const disabledStyle = disabled ? 'opacity-40 cursor-not-allowed' : '';
     return (
-      <button 
-        onClick={disabled ? undefined : onClick} 
+      <button
+        onClick={disabled ? undefined : onClick}
         disabled={disabled}
         title={disabled ? disabledReason : undefined}
-        className={`${variants[variant]} ${sizes[size]} rounded-lg font-medium transition-all duration-200 ${disabledStyle} ${className}`}
+        className={`${variants[variant]} ${sizes[size]} rounded-[var(--radius-lg)] font-medium transition-all duration-200 btn-press ${disabledStyle} ${className}`}
       >
         {children}
       </button>
@@ -763,22 +764,22 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
 
   const Input = ({ label, type, ...props }) => (
     <div className="mb-3">
-      {label && <label className="block text-amber-800 text-sm mb-1 font-medium">{label}</label>}
+      {label && <label className="block text-[var(--text-secondary)] text-[13px] mb-1.5 font-medium">{label}</label>}
       <input
         type={type}
         inputMode={type === 'number' ? 'decimal' : undefined}
         {...props}
-        className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-colors"
+        className="input-glass"
       />
     </div>
   );
 
   const Select = ({ label, options, ...props }) => (
     <div className="mb-3">
-      {label && <label className="block text-amber-800 text-sm mb-1 font-medium">{label}</label>}
-      <select 
+      {label && <label className="block text-[var(--text-secondary)] text-[13px] mb-1.5 font-medium">{label}</label>}
+      <select
         {...props}
-        className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-colors"
+        className="input-glass"
       >
         {options.map(opt => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -788,9 +789,9 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   );
 
   const Checkbox = ({ label, ...props }) => (
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" {...props} className="w-4 h-4 accent-amber-500" />
-      <span className="text-stone-700 text-sm">{label}</span>
+    <label className="flex items-center gap-2.5 cursor-pointer">
+      <input type="checkbox" {...props} className="w-4 h-4 rounded accent-[var(--accent)]" />
+      <span className="text-[var(--text-primary)] text-sm">{label}</span>
     </label>
   );
 
@@ -963,13 +964,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         <div className="space-y-4">
           <Card style={{ backgroundColor: clienteColor + '10', borderColor: clienteColor + '40' }}>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-stone-500">Cliente:</span> <span className="text-stone-800 font-medium">{cliente?.nombre}</span></div>
-              <div><span className="text-stone-500">Categoría:</span> <span className="text-stone-800 font-medium">{categoria?.nombre}</span></div>
-              <div><span className="text-stone-500">Descuento:</span> <span className="text-stone-800 font-medium">{paq.descuento}%</span></div>
-              <div><span className="text-stone-500">IGI:</span> <span className="text-stone-800 font-medium">{paq.igi}%</span></div>
-              <div className="col-span-2 pt-2 border-t border-stone-200 mt-1">
+              <div><span className="text-[var(--text-tertiary)]">Cliente:</span> <span className="text-[var(--text-primary)] font-medium">{cliente?.nombre}</span></div>
+              <div><span className="text-[var(--text-tertiary)]">Categoría:</span> <span className="text-[var(--text-primary)] font-medium">{categoria?.nombre}</span></div>
+              <div><span className="text-[var(--text-tertiary)]">Descuento:</span> <span className="text-[var(--text-primary)] font-medium">{paq.descuento}%</span></div>
+              <div><span className="text-[var(--text-tertiary)]">IGI:</span> <span className="text-[var(--text-primary)] font-medium">{paq.igi}%</span></div>
+              <div className="col-span-2 pt-2 border-t border-black/[0.06] mt-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-stone-500">Estado pago:</span>
+                  <span className="text-[var(--text-tertiary)]">Estado pago:</span>
                   <button
                     onClick={() => updatePaqueteEstadoPago(paq.id, paq.estadoPago === 'pagado' ? 'por_pagar' : 'pagado')}
                     className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
@@ -982,7 +983,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   </button>
                 </div>
                 {paq.estadoPagoLog && (
-                  <p className="text-xs text-stone-400 mt-1 text-right">
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1 text-right">
                     {getUsuario(paq.estadoPagoLog.usuario)?.nombre || paq.estadoPagoLog.usuario} • {new Date(paq.estadoPagoLog.fecha).toLocaleDateString('es-ES')}
                   </p>
                 )}
@@ -999,7 +1000,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 return (
                   <div 
                     key={linea.id} 
-                    className="flex justify-between items-start gap-2 rounded-lg p-2"
+                    className="flex justify-between items-start gap-2 rounded-[var(--radius-md)] p-2"
                     style={esNegativa 
                       ? { backgroundColor: '#fef2f2', border: '1px solid #fecaca' }
                       : { backgroundColor: clienteColor + '15', border: `1px solid ${clienteColor}30` }
@@ -1007,8 +1008,8 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-x-2 text-sm">
-                        <span className={`font-medium ${esNegativa ? 'text-red-700' : 'text-stone-800'}`}>{linea.bruto}g</span>
-                        <span className="text-stone-500">× {linea.ley}</span>
+                        <span className={`font-medium ${esNegativa ? 'text-red-700' : 'text-[var(--text-primary)]'}`}>{linea.bruto}g</span>
+                        <span className="text-[var(--text-tertiary)]">× {linea.ley}</span>
                         <span className="font-medium" style={{ color: esNegativa ? '#dc2626' : clienteColor }}>= {formatNum(fino, 2)}g</span>
                       </div>
                       {esNegativa && <span className="text-xs text-red-500">(no cuenta peso)</span>}
@@ -1017,7 +1018,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   </div>
                 );
               })}
-              {paq.lineas.length === 0 && <p className="text-stone-400 text-center py-4">Sin líneas</p>}
+              {paq.lineas.length === 0 && <p className="text-[var(--text-tertiary)] text-center py-4">Sin líneas</p>}
               {paq.lineas.length > 1 && (
                 <div className="mt-2 pt-2 border-t text-right" style={{ borderColor: clienteColor + '30' }}>
                   <span className="font-semibold" style={{ color: clienteColor }}>
@@ -1038,7 +1039,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   placeholder="Bruto (g)"
                   value={newLinea.bruto}
                   onChange={(e) => setNewLinea({ ...newLinea, bruto: e.target.value })}
-                  className="flex-1 min-w-0 bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none"
+                  className="flex-1 min-w-0 bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none"
                   style={{ border: `1px solid ${clienteColor}50` }}
                 />
                 <input
@@ -1047,7 +1048,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   placeholder="Ley"
                   value={newLinea.ley}
                   onChange={(e) => setNewLinea({ ...newLinea, ley: e.target.value })}
-                  className="flex-1 min-w-0 bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none"
+                  className="flex-1 min-w-0 bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none"
                   style={{ border: `1px solid ${clienteColor}50` }}
                 />
               </div>
@@ -1126,7 +1127,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         placeholder="Ej: 2650"
                         value={cierreData.euroOnza}
                         onChange={(e) => setCierreData({ ...cierreData, euroOnza: e.target.value, confirmado: false })}
-                        className="flex-1 bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none font-mono"
+                        className="flex-1 bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none font-mono"
                         style={{ border: `1px solid ${cierreData.confirmado ? '#22c55e' : clienteColor}50` }}
                       />
                       <button
@@ -1147,12 +1148,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           }
                         }}
                         disabled={!euroOnzaNum}
-                        className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                        className={`px-4 py-2 rounded-[var(--radius-md)] font-semibold transition-all ${
                           cierreData.confirmado
-                            ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                            ? 'bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent-border)]'
                             : euroOnzaNum
                               ? 'text-white hover:opacity-90'
-                              : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                              : 'bg-black/[0.06] text-[var(--text-tertiary)] cursor-not-allowed'
                         }`}
                         style={!cierreData.confirmado && euroOnzaNum ? { backgroundColor: clienteColor } : {}}
                       >
@@ -1163,10 +1164,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
                   {/* Fila 2: Base Real (solo lectura) */}
                   {cierreData.confirmado && (
-                    <div className="bg-stone-50 rounded-lg p-3">
+                    <div className="bg-black/[0.02] rounded-[var(--radius-md)] p-3">
                       <div className="flex justify-between text-sm">
-                        <span className="text-stone-500">Base Real (€/Onza ÷ 31,10349):</span>
-                        <span className="font-mono font-semibold text-stone-800">{cierreData.baseReal} €/g</span>
+                        <span className="text-[var(--text-tertiary)]">Base Real (€/Onza ÷ 31,10349):</span>
+                        <span className="font-mono font-semibold text-[var(--text-primary)]">{cierreData.baseReal} €/g</span>
                       </div>
                     </div>
                   )}
@@ -1182,25 +1183,25 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           step="0.01"
                           value={cierreData.baseCliente}
                           onChange={(e) => setCierreData({ ...cierreData, baseCliente: e.target.value })}
-                          className="flex-1 bg-white rounded-lg px-3 py-2 text-stone-800 focus:outline-none font-mono"
+                          className="flex-1 bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none font-mono"
                           style={{ border: `1px solid ${clienteColor}50` }}
                         />
                         <button
                           type="button"
                           onClick={() => aplicarDescuento(-0.02)}
-                          className="px-2 py-1 text-xs rounded-lg transition-colors"
+                          className="px-2 py-1 text-xs rounded-[var(--radius-md)] transition-colors"
                           style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
                         >-0,02</button>
                         <button
                           type="button"
                           onClick={() => aplicarDescuento(-0.05)}
-                          className="px-2 py-1 text-xs rounded-lg transition-colors"
+                          className="px-2 py-1 text-xs rounded-[var(--radius-md)] transition-colors"
                           style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
                         >-0,05</button>
                         <button
                           type="button"
                           onClick={() => aplicarDescuento(-0.10)}
-                          className="px-2 py-1 text-xs rounded-lg transition-colors"
+                          className="px-2 py-1 text-xs rounded-[var(--radius-md)] transition-colors"
                           style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
                         >-0,10</button>
                       </div>
@@ -1231,7 +1232,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         step="0.01"
                         value={cierreData.precioJofisa}
                         onChange={(e) => setCierreData({ ...cierreData, precioJofisa: e.target.value })}
-                        className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 focus:outline-none font-mono"
+                        className="w-full bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none font-mono"
                         style={{ border: `1px solid ${clienteColor}50` }}
                       />
                     </div>
@@ -1245,7 +1246,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         type="date"
                         value={cierreData.fechaCierre}
                         onChange={(e) => setCierreData({ ...cierreData, fechaCierre: e.target.value })}
-                        className="w-full bg-white rounded-lg px-3 py-2 text-stone-800 focus:outline-none"
+                        className="w-full bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none"
                         style={{ border: `1px solid ${clienteColor}50` }}
                       />
                     </div>
@@ -1293,15 +1294,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   <button
                     key={estado.id}
                     onClick={() => updatePaqueteEstado(paq.id, estado.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] border-2 transition-all ${
                       isActive 
-                        ? 'border-current shadow-sm' 
-                        : 'border-transparent bg-stone-100 hover:bg-stone-200'
+                        ? 'border-current shadow-[0_1px_3px_rgba(0,0,0,0.04)]' 
+                        : 'border-transparent bg-black/[0.04] hover:bg-black/[0.06]'
                     }`}
                     style={isActive ? { borderColor: estado.color, backgroundColor: estado.color + '20', color: estado.color } : {}}
                   >
                     <span>{estado.icon}</span>
-                    <span className={`text-sm font-medium ${isActive ? '' : 'text-stone-600'}`}>{estado.nombre}</span>
+                    <span className={`text-sm font-medium ${isActive ? '' : 'text-[var(--text-secondary)]'}`}>{estado.nombre}</span>
                   </button>
                 );
               })}
@@ -1318,11 +1319,11 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 {paq.comentarios.map(com => {
                   const usuario = getUsuario(com.usuario);
                   return (
-                    <div key={com.id} className="bg-white/50 rounded-lg p-3 group" style={{ border: `1px solid ${clienteColor}30` }}>
+                    <div key={com.id} className="bg-white/50 rounded-[var(--radius-md)] p-3 group" style={{ border: `1px solid ${clienteColor}30` }}>
                       <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-sm text-stone-700">{usuario?.nombre}</span>
+                        <span className="font-medium text-sm text-[var(--text-primary)]">{usuario?.nombre}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-stone-400 text-xs">{tiempoRelativo(com.fecha)}</span>
+                          <span className="text-[var(--text-tertiary)] text-xs">{tiempoRelativo(com.fecha)}</span>
                           <button
                             onClick={() => deleteComentarioFromPaquete(paq.id, com.id)}
                             className="text-red-400 hover:text-red-600 text-xs opacity-50 hover:opacity-100 transition-opacity"
@@ -1330,7 +1331,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           >✕</button>
                         </div>
                       </div>
-                      <p className="text-stone-700 text-sm">{com.texto}</p>
+                      <p className="text-[var(--text-primary)] text-sm">{com.texto}</p>
                     </div>
                   );
                 })}
@@ -1350,7 +1351,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     setNewComentario('');
                   }
                 }}
-                className="flex-1 bg-white rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none"
+                className="flex-1 bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none"
                 style={{ border: `1px solid ${clienteColor}50` }}
               />
               <Button 
@@ -1369,27 +1370,27 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           <Card style={{ backgroundColor: clienteColor + '10', borderColor: clienteColor + '40' }}>
             <h3 className="font-semibold mb-3" style={{ color: clienteColor }}>💰 Cálculos</h3>
             {totales.esEstimado && (
-              <div className="mb-3 px-2 py-1 rounded text-xs bg-stone-100 text-stone-500 italic">
+              <div className="mb-3 px-2 py-1 rounded text-xs bg-black/[0.04] text-[var(--text-tertiary)] italic">
                 Precio estimado ({formatNum(getExpedicionPrecioPorDefecto(paq.expedicionId))} €/g) — sin precio fino asignado
               </div>
             )}
             <div className="space-y-2 text-sm font-mono">
-              <div className="flex justify-between"><span className="text-stone-500">Fino (peso):</span><span className="text-stone-800 font-medium">{formatNum(totales.finoTotal, 2)} g</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Fino (peso):</span><span className="text-[var(--text-primary)] font-medium">{formatNum(totales.finoTotal, 2)} g</span></div>
               {totales.finoTotalCalculo !== totales.finoTotal && (
-                <div className="flex justify-between"><span className="text-stone-500">Fino (cálculo €):</span><span style={{ color: clienteColor }} className="font-medium">{formatNum(totales.finoTotalCalculo, 2)} g</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Fino (cálculo €):</span><span style={{ color: clienteColor }} className="font-medium">{formatNum(totales.finoTotalCalculo, 2)} g</span></div>
               )}
-              <div className="flex justify-between"><span className="text-stone-500">Base:</span><span className={totales.esEstimado ? 'text-stone-400 font-medium italic' : 'text-stone-800 font-medium'}>{totales.esEstimado ? '~' : ''}{formatNum(totales.base)} €</span></div>
-              <div className="flex justify-between"><span className="text-stone-500">Descuento ({paq.descuento}%):</span><span className="text-red-600 font-medium">-{formatNum(totales.descuento)} €</span></div>
-              <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Base cliente:</span><span className={totales.esEstimado ? 'text-stone-400 font-medium italic' : 'text-stone-800 font-medium'}>{totales.esEstimado ? '~' : ''}{formatNum(totales.baseCliente)} €</span></div>
-              <div className="flex justify-between"><span className="text-stone-500">IGI ({paq.igi}%):</span><span className="text-stone-800 font-medium">+{formatNum(totales.igi)} €</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Base:</span><span className={totales.esEstimado ? 'text-[var(--text-tertiary)] font-medium italic' : 'text-[var(--text-primary)] font-medium'}>{totales.esEstimado ? '~' : ''}{formatNum(totales.base)} €</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Descuento ({paq.descuento}%):</span><span className="text-red-600 font-medium">-{formatNum(totales.descuento)} €</span></div>
+              <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-[var(--text-tertiary)]">Base cliente:</span><span className={totales.esEstimado ? 'text-[var(--text-tertiary)] font-medium italic' : 'text-[var(--text-primary)] font-medium'}>{totales.esEstimado ? '~' : ''}{formatNum(totales.baseCliente)} €</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">IGI ({paq.igi}%):</span><span className="text-[var(--text-primary)] font-medium">+{formatNum(totales.igi)} €</span></div>
               <div className="flex justify-between pt-2 text-base" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}Total Fra (cl):</span><span className="font-bold" style={{ color: totales.esEstimado ? '#9ca3af' : clienteColor }}>{totales.esEstimado ? '~' : ''}{formatNum(totales.totalFra)} €</span></div>
-              <div className="flex justify-between mt-4 pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-stone-500">Fra a Jofisa:</span><span className="text-stone-800 font-medium">{formatNum(totales.fraJofisa)} €</span></div>
-              <div className="flex justify-between"><span className="text-stone-500">Margen:</span><span className={totales.margen >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{formatNum(totales.margen, 0)} €</span></div>
+              <div className="flex justify-between mt-4 pt-2" style={{ borderTop: `1px solid ${clienteColor}30` }}><span className="text-[var(--text-tertiary)]">Fra a Jofisa:</span><span className="text-[var(--text-primary)] font-medium">{formatNum(totales.fraJofisa)} €</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Margen:</span><span className={totales.margen >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{formatNum(totales.margen, 0)} €</span></div>
             </div>
           </Card>
           
           <button 
-            className="w-full py-2 px-4 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 rounded-[var(--radius-md)] font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ 
               backgroundColor: clienteColor + '15', 
               color: clienteColor, 
@@ -1409,36 +1410,36 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             <h3 className="font-semibold mb-3" style={{ color: clienteColor }}>📄 Factura</h3>
             {paq.factura ? (
               <div className="space-y-2">
-                <div className="bg-white/50 rounded-lg p-3 flex items-center gap-3" style={{ border: `1px solid ${clienteColor}30` }}>
+                <div className="bg-white/50 rounded-[var(--radius-md)] p-3 flex items-center gap-3" style={{ border: `1px solid ${clienteColor}30` }}>
                   <span className="text-2xl">{paq.factura.tipo?.startsWith('image/') ? '🖼️' : '📎'}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-stone-800 font-medium truncate">{paq.factura.nombre}</p>
-                    <p className="text-stone-500 text-xs">{paq.factura.tipo?.startsWith('image/') ? 'Imagen' : 'PDF'}</p>
+                    <p className="text-[var(--text-primary)] font-medium truncate">{paq.factura.nombre}</p>
+                    <p className="text-[var(--text-tertiary)] text-xs">{paq.factura.tipo?.startsWith('image/') ? 'Imagen' : 'PDF'}</p>
                   </div>
                   <Button size="sm" onClick={() => setViewingPdf({ data: paq.factura.data, nombre: paq.factura.nombre, tipo: paq.factura.tipo })}>Ver</Button>
                 </div>
                 
                 {/* Resultado de verificación guardado */}
                 {paq.verificacionIA && paq.verificacionIA.archivoNombre === paq.factura.nombre && (
-                  <div className={`rounded-lg p-3 ${
+                  <div className={`rounded-[var(--radius-md)] p-3 ${
                     paq.verificacionIA.validado
                       ? 'bg-green-50 border border-green-200'
-                      : 'bg-amber-50 border border-amber-200'
+                      : 'bg-[var(--accent-soft)] border border-[var(--accent-border)]'
                   }`}>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-stone-600 text-sm font-medium">🤖 Verificación IA</span>
-                      <span className="text-stone-400 text-xs">
+                      <span className="text-[var(--text-secondary)] text-sm font-medium">🤖 Verificación IA</span>
+                      <span className="text-[var(--text-tertiary)] text-xs">
                         {new Date(paq.verificacionIA.fecha).toLocaleDateString('es-ES')}
                       </span>
                     </div>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-stone-500">Total factura:</span>
-                        <span className="text-stone-800 font-mono font-medium">{formatNum(paq.verificacionIA.totalFactura)} €</span>
+                        <span className="text-[var(--text-tertiary)]">Total factura:</span>
+                        <span className="text-[var(--text-primary)] font-mono font-medium">{formatNum(paq.verificacionIA.totalFactura)} €</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-stone-500">Total paquete:</span>
-                        <span className="text-stone-800 font-mono font-medium">{formatNum(paq.verificacionIA.totalPaquete)} €</span>
+                        <span className="text-[var(--text-tertiary)]">Total paquete:</span>
+                        <span className="text-[var(--text-primary)] font-mono font-medium">{formatNum(paq.verificacionIA.totalPaquete)} €</span>
                       </div>
                       {(() => {
                         const dif = paq.verificacionIA.diferencia;
@@ -1448,7 +1449,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                             <span className="font-medium">Diferencia:</span>
                             <span className={`font-mono font-bold ${
                               Math.abs(dif) < 0.5
-                                ? 'text-stone-500'
+                                ? 'text-[var(--text-tertiary)]'
                                 : difDisplay > 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
                               {difDisplay > 0 ? '+' : ''}{formatNum(difDisplay)} €
@@ -1478,10 +1479,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         if (matches.length > 0) {
                           return (
                             <div className="bg-white/60 rounded p-2 mt-1">
-                              <span className="text-stone-500 text-xs block mb-1">Comparación líneas:</span>
+                              <span className="text-[var(--text-tertiary)] text-xs block mb-1">Comparación líneas:</span>
                               <table className="w-full text-[10px] border-collapse">
                                 <thead>
-                                  <tr className="text-stone-400">
+                                  <tr className="text-[var(--text-tertiary)]">
                                     <th className="text-left py-0.5">Factura</th>
                                     <th className="text-left py-0.5">Ley Fra</th>
                                     <th className="text-left py-0.5">Datos</th>
@@ -1497,11 +1498,11 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                                     const pesosDiff = pesoFra !== pesoDat;
                                     const leyesDiff = leyFra !== leyDat;
                                     return (
-                                      <tr key={i} className="border-t border-stone-200">
-                                        <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoFra}g</td>
-                                        <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyFra}</td>
-                                        <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{pesoDat}g</td>
-                                        <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-stone-600'}`}>{leyDat}</td>
+                                      <tr key={i} className="border-t border-black/[0.06]">
+                                        <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-[var(--text-secondary)]'}`}>{pesoFra}g</td>
+                                        <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-[var(--text-secondary)]'}`}>{leyFra}</td>
+                                        <td className={`py-0.5 font-mono ${pesosDiff ? 'text-red-600 font-semibold' : 'text-[var(--text-secondary)]'}`}>{pesoDat}g</td>
+                                        <td className={`py-0.5 font-mono ${leyesDiff ? 'text-red-600 font-semibold' : 'text-[var(--text-secondary)]'}`}>{leyDat}</td>
                                       </tr>
                                     );
                                   })}
@@ -1515,10 +1516,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         if (paq.verificacionIA.pesosCuadran && pesosFra.length > 0 && pesosData.length > 0) {
                           return (
                             <div className="bg-white/60 rounded p-2 mt-1">
-                              <span className="text-stone-500 text-xs block mb-1">Comparación líneas:</span>
+                              <span className="text-[var(--text-tertiary)] text-xs block mb-1">Comparación líneas:</span>
                               <table className="w-full text-[10px] border-collapse">
                                 <thead>
-                                  <tr className="text-stone-400">
+                                  <tr className="text-[var(--text-tertiary)]">
                                     <th className="text-left py-0.5">Factura</th>
                                     <th className="text-left py-0.5">Ley Fra</th>
                                     <th className="text-left py-0.5">Datos</th>
@@ -1529,7 +1530,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                                   {pesosFra.map((pFra, i) => {
                                     const pDat = pesosData[i] || {};
                                     return (
-                                      <tr key={i} className="border-t border-stone-200">
+                                      <tr key={i} className="border-t border-black/[0.06]">
                                         <td className="py-0.5 font-mono text-green-600">{pFra.bruto}g</td>
                                         <td className="py-0.5 font-mono text-green-600">{pFra.ley || '-'}</td>
                                         <td className="py-0.5 font-mono text-green-600">{pDat.bruto || '-'}g</td>
@@ -1547,8 +1548,8 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         if (obs && obs.trim()) {
                           return (
                             <div className="bg-white/60 rounded p-2 mt-1">
-                              <span className="text-stone-500 text-xs block mb-1">Obs:</span>
-                              <span className="text-stone-700 text-xs">{obs}</span>
+                              <span className="text-[var(--text-tertiary)] text-xs block mb-1">Obs:</span>
+                              <span className="text-[var(--text-primary)] text-xs">{obs}</span>
                             </div>
                           );
                         }
@@ -1557,10 +1558,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         if (pesosFra.length > 0) {
                           return (
                             <details className="mt-1">
-                              <summary className="text-stone-400 text-xs cursor-pointer hover:text-stone-600">Ver pesos extraídos</summary>
+                              <summary className="text-[var(--text-tertiary)] text-xs cursor-pointer hover:text-[var(--text-secondary)]">Ver pesos extraídos</summary>
                               <div className="mt-1 space-y-0.5">
                                 {pesosFra.map((p, i) => (
-                                  <div key={i} className="flex justify-between text-xs text-stone-500">
+                                  <div key={i} className="flex justify-between text-xs text-[var(--text-tertiary)]">
                                     <span>{p.bruto}g</span>
                                     {p.ley && <span>ley {p.ley}</span>}
                                   </div>
@@ -1583,8 +1584,8 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         </p>
                       </div>
                     ) : (
-                      <div className="mt-3 pt-2 border-t border-amber-200">
-                        <p className="text-amber-700 text-xs mb-2">⚠️ Revisa la diferencia y confirma</p>
+                      <div className="mt-3 pt-2 border-t border-[var(--accent-border)]">
+                        <p className="text-[var(--accent-text)] text-xs mb-2">⚠️ Revisa la diferencia y confirma</p>
                         <Button 
                           size="sm" 
                           className="w-full"
@@ -1624,13 +1625,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 </Button>
 
                 {/* Campo Fecha Factura editable */}
-                <div className="mt-3 pt-3 border-t border-stone-200">
-                  <label className="text-stone-500 text-xs block mb-1">📅 Fecha Factura</label>
+                <div className="mt-3 pt-3 border-t border-black/[0.06]">
+                  <label className="text-[var(--text-tertiary)] text-xs block mb-1">📅 Fecha Factura</label>
                   <input
                     type="date"
                     value={paq.fechaFactura || ''}
                     onChange={(e) => updatePaqueteFechaFactura(paq.id, e.target.value || null)}
-                    className="w-full border border-stone-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                    className="w-full border border-black/[0.08] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                   />
                 </div>
               </div>
@@ -1638,12 +1639,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               <div>
                 <label className="block w-full cursor-pointer">
                   <div 
-                    className="border-2 border-dashed rounded-lg p-6 text-center transition-colors"
+                    className="border-2 border-dashed rounded-[var(--radius-md)] p-6 text-center transition-colors"
                     style={{ borderColor: clienteColor + '50' }}
                   >
                     <span className="text-3xl block mb-2">📤</span>
                     <span style={{ color: clienteColor }}>Subir imagen o PDF</span>
-                    <p className="text-stone-400 text-xs mt-1">Toca para seleccionar archivo</p>
+                    <p className="text-[var(--text-tertiary)] text-xs mt-1">Toca para seleccionar archivo</p>
                   </div>
                   <input 
                     type="file" 
@@ -1671,7 +1672,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           
           {/* Botón de Logs */}
           <button 
-            className="w-full py-2 px-4 rounded-lg font-medium transition-all"
+            className="w-full py-2 px-4 rounded-[var(--radius-md)] font-medium transition-all"
             style={{ 
               backgroundColor: clienteColor + '15', 
               color: clienteColor, 
@@ -1684,7 +1685,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           
           <div className="flex gap-2">
             <button 
-              className="flex-1 py-2 px-4 rounded-lg font-medium transition-all"
+              className="flex-1 py-2 px-4 rounded-[var(--radius-md)] font-medium transition-all"
               style={{ 
                 backgroundColor: clienteColor + '15', 
                 color: clienteColor, 
@@ -1714,9 +1715,9 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           )}
 
           {showLogsModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowLogsModal(false)}>
-              <div className="bg-white border border-amber-300 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
-                <h3 className="text-xl font-bold text-amber-800 mb-4">📋 Historial de cambios - {paq.nombre}</h3>
+            <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setShowLogsModal(false)}>
+              <div className="bg-white border border-[var(--accent-border)] rounded-[var(--radius-xl)] p-6 w-full max-w-lg max-h-[80vh] shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-bold text-[var(--accent-text)] mb-4">📋 Historial de cambios - {paq.nombre}</h3>
                 
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {(paq.logs || []).slice().reverse().map(log => {
@@ -1747,14 +1748,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     }[log.accion] || log.accion;
                     
                     return (
-                      <div key={log.id} className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div key={log.id} className="bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-md)] p-3">
                         <div className="flex justify-between items-start mb-1">
-                          <span className="font-medium text-stone-700">{usuario?.nombre || log.usuario}</span>
-                          <span className="text-stone-400 text-xs">{tiempoRelativo(log.fecha)}</span>
+                          <span className="font-medium text-[var(--text-primary)]">{usuario?.nombre || log.usuario}</span>
+                          <span className="text-[var(--text-tertiary)] text-xs">{tiempoRelativo(log.fecha)}</span>
                         </div>
-                        <p className="text-stone-700 text-sm">{textoAccion}</p>
+                        <p className="text-[var(--text-primary)] text-sm">{textoAccion}</p>
                         {log.accion === 'editar_datos' && log.detalles?.cambios && (
-                          <ul className="mt-1 text-xs text-stone-500">
+                          <ul className="mt-1 text-xs text-[var(--text-tertiary)]">
                             {log.detalles.cambios.map((c, i) => <li key={i}>• {c}</li>)}
                           </ul>
                         )}
@@ -1762,7 +1763,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     );
                   })}
                   {(!paq.logs || paq.logs.length === 0) && (
-                    <p className="text-stone-400 text-center py-8">No hay registros</p>
+                    <p className="text-[var(--text-tertiary)] text-center py-8">No hay registros</p>
                   )}
                 </div>
                 
@@ -1784,7 +1785,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         <div className="space-y-4">
           <Card>
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-amber-600 font-semibold">📊 Totales</h3>
+              <h3 className="text-[var(--accent)] font-semibold">📊 Totales</h3>
               <div className="flex flex-col items-center gap-1">
                 <button
                   onClick={() => exportarExpedicionPDF(selectedExpedicion)}
@@ -1818,28 +1819,28 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-stone-500">Bruto Total</span>
-                <p className="text-stone-800 font-mono font-medium">{formatNum(totales.sumaBruto)} g</p>
+                <span className="text-[var(--text-tertiary)]">Bruto Total</span>
+                <p className="text-[var(--text-primary)] font-mono font-medium">{formatNum(totales.sumaBruto)} g</p>
               </div>
               <div>
-                <span className="text-stone-500">Fino Total</span>
-                <p className="text-stone-800 font-mono font-medium">{formatNum(totales.sumaFino)} g</p>
+                <span className="text-[var(--text-tertiary)]">Fino Total</span>
+                <p className="text-[var(--text-primary)] font-mono font-medium">{formatNum(totales.sumaFino)} g</p>
               </div>
               <div className="relative group">
-                <span className="text-stone-500">Total Fra</span>
+                <span className="text-[var(--text-tertiary)]">Total Fra</span>
                 <p
-                  className="text-stone-800 font-mono font-medium cursor-help"
+                  className="text-[var(--text-primary)] font-mono font-medium cursor-help"
                   onClick={() => setActiveTooltip(activeTooltip === 'totalFra' ? null : 'totalFra')}
                 >{formatNum(totales.totalFra)} €</p>
                 {totales.totalFraEstimado > 0 && (
-                  <p className="text-stone-400 text-xs italic font-mono">~{formatNum(totales.totalFraEstimado)} € estimado</p>
+                  <p className="text-[var(--text-tertiary)] text-xs italic font-mono">~{formatNum(totales.totalFraEstimado)} € estimado</p>
                 )}
                 {/* Tooltip desglose Total Fra - hover en desktop, click/tap en mobile */}
-                <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'totalFra' ? 'block' : 'hidden group-hover:block'}`}>
+                <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-[var(--radius-md)] p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'totalFra' ? 'block' : 'hidden group-hover:block'}`}>
                   <div className="space-y-1">
                     {totales.porPaquete?.filter(p => p.totalFra > 0).sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true })).map((p, i) => (
                       <div key={i} className="flex justify-between gap-4">
-                        <span className={p.esEstimado ? 'text-stone-400' : ''}>{p.esEstimado ? '~' : ''}{p.nombre}</span>
+                        <span className={p.esEstimado ? 'text-[var(--text-tertiary)]' : ''}>{p.esEstimado ? '~' : ''}{p.nombre}</span>
                         <span className="font-mono">{formatNum(p.totalFra)} €</span>
                       </div>
                     ))}
@@ -1851,13 +1852,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 </div>
               </div>
               <div className="relative group">
-                <span className="text-stone-500">Fra Jofisa</span>
+                <span className="text-[var(--text-tertiary)]">Fra Jofisa</span>
                 <p
-                  className="text-stone-800 font-mono font-medium cursor-help"
+                  className="text-[var(--text-primary)] font-mono font-medium cursor-help"
                   onClick={() => setActiveTooltip(activeTooltip === 'fraJofisa' ? null : 'fraJofisa')}
                 >{formatNum(totales.totalFraJofisa)} €</p>
                 {/* Tooltip desglose Fra Jofisa - hover en desktop, click/tap en mobile */}
-                <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-lg p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'fraJofisa' ? 'block' : 'hidden group-hover:block'}`}>
+                <div className={`absolute z-50 bg-stone-800 text-white text-xs rounded-[var(--radius-md)] p-3 shadow-lg min-w-48 -left-2 top-full mt-1 ${activeTooltip === 'fraJofisa' ? 'block' : 'hidden group-hover:block'}`}>
                   <div className="space-y-1">
                     {totales.porPaquete?.filter(p => p.fraJofisa > 0).sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true })).map((p, i) => (
                       <div key={i} className="flex justify-between gap-4">
@@ -1890,9 +1891,9 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   const mgTotal = totales.totalMargen + euroSobraTotal;
                   return (
                     <>
-                      <span className="text-stone-500 flex items-center gap-1">
+                      <span className="text-[var(--text-tertiary)] flex items-center gap-1">
                         Resultados
-                        <button onClick={() => setShowResultadosModal(true)} className="text-amber-500 hover:text-amber-700 text-base">🔍</button>
+                        <button onClick={() => setShowResultadosModal(true)} className="text-[var(--accent)] hover:text-[var(--accent-text)] text-base">🔍</button>
                         {faltaDatos && tieneEnJofisa && <span className="text-red-500 text-xs font-bold">!</span>}
                       </span>
                       <p className={`font-mono text-xs ${totales.totalMargen >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -1903,8 +1904,8 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 })()}
               </div>
               <div>
-                <span className="text-stone-500">€/g Bruto Medio</span>
-                <p className="text-stone-800 font-mono font-medium">{formatNum(totales.precioMedioBruto)} €</p>
+                <span className="text-[var(--text-tertiary)]">€/g Bruto Medio</span>
+                <p className="text-[var(--text-primary)] font-mono font-medium">{formatNum(totales.precioMedioBruto)} €</p>
               </div>
             </div>
           </Card>
@@ -1917,16 +1918,16 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               const barPct = (pct / maxPct) * 100;
               const markPct = over ? (100 / pct) * 100 : null;
               return (
-                <div className="bg-white rounded-xl p-3 border border-stone-200">
+                <div className="bg-white rounded-[var(--radius-lg)] p-3 border border-black/[0.06]">
                   <div className="flex justify-between items-center text-xs mb-1">
-                    <span className="text-stone-500">Seguro</span>
-                    <span className="text-stone-600 font-mono">{formatNum(totales.totalFraJofisa)} / {formatNum(exp.seguro)} €</span>
+                    <span className="text-[var(--text-tertiary)]">Seguro</span>
+                    <span className="text-[var(--text-secondary)] font-mono">{formatNum(totales.totalFraJofisa)} / {formatNum(exp.seguro)} €</span>
                   </div>
                   <div className="relative w-full h-5">
-                    <div className="absolute top-1 w-full bg-stone-200 rounded-full h-3 overflow-hidden">
+                    <div className="absolute top-1 w-full bg-black/[0.06] rounded-full h-3 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
+                          pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-[var(--accent)]' : 'bg-green-500'
                         }`}
                         style={{ width: `${Math.min(100, barPct)}%` }}
                       />
@@ -1935,15 +1936,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       <div className="absolute top-0 w-0.5 h-full bg-stone-800 rounded" style={{ left: `${markPct}%` }} title="Límite seguro" />
                     )}
                   </div>
-                  <p className="text-right text-xs text-stone-400 mt-1">{formatNum(pct, 1)}%</p>
+                  <p className="text-right text-xs text-[var(--text-tertiary)] mt-1">{formatNum(pct, 1)}%</p>
                 </div>
               );
             })()}
 
           {/* Resumen por categoría - solo visible en vista por categoría */}
           {ordenVista === 'categoria' && Object.keys(totales.porCategoria).length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-              <h4 className="text-amber-700 font-semibold text-sm mb-2">📊 Resumen por Categoría</h4>
+            <div className="bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-lg)] p-3">
+              <h4 className="text-[var(--accent-text)] font-semibold text-sm mb-2">📊 Resumen por Categoría</h4>
               <div className="space-y-1.5">
                 {Object.entries(totales.porCategoria)
                   .sort((a, b) => b[1].bruto - a[1].bruto)
@@ -1952,14 +1953,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     return (
                       <div key={catNombre} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="text-stone-700">{catNombre}</span>
+                          <span className="text-[var(--text-primary)]">{catNombre}</span>
                           {cat?.esFino && (
-                            <span className="bg-amber-200 text-amber-800 text-xs px-1.5 py-0.5 rounded font-medium">FINO</span>
+                            <span className="bg-[var(--accent-border)] text-[var(--accent-text)] text-xs px-1.5 py-0.5 rounded font-medium">FINO</span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 font-mono text-xs">
-                          <span className="text-stone-600">{formatNum(vals.bruto)}g</span>
-                          <span className="text-amber-600 font-semibold">{formatNum(vals.precioMedioBruto)} €/g</span>
+                          <span className="text-[var(--text-secondary)]">{formatNum(vals.bruto)}g</span>
+                          <span className="text-[var(--accent)] font-semibold">{formatNum(vals.precioMedioBruto)} €/g</span>
                         </div>
                       </div>
                     );
@@ -1969,27 +1970,27 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           )}
 
           <div className="flex justify-between items-center">
-            <h3 className="text-amber-600 font-semibold">📦 Paquetes ({expedicionPaquetes.length})</h3>
+            <h3 className="text-[var(--accent)] font-semibold">📦 Paquetes ({expedicionPaquetes.length})</h3>
             <Button size="sm" onClick={() => openModal('paquete', null)}>+ Nuevo</Button>
           </div>
           
           {/* Marcar paquetes como — solo visible en vista por estado */}
           {ordenVista === 'estado' && (
-          <div className="flex items-center gap-2 bg-stone-100 rounded-lg p-2">
-            <span className="text-stone-600 text-sm">Marcar</span>
+          <div className="flex items-center gap-2 bg-black/[0.04] rounded-[var(--radius-md)] p-2">
+            <span className="text-[var(--text-secondary)] text-sm">Marcar</span>
             <button
               onClick={() => setMarcarTodosModal(prev => ({
                 ...prev,
                 open: true,
                 selectedPaquetes: prev.selectedPaquetes.length > 0 ? prev.selectedPaquetes : expedicionPaquetes.map(p => p.id)
               }))}
-              className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 border border-amber-300"
+              className="px-2 py-1 bg-[var(--accent-soft)] text-[var(--accent-text)] rounded-[var(--radius-md)] text-sm font-medium hover:bg-[var(--accent-border)] border border-[var(--accent-border)]"
             >
               {marcarTodosModal.selectedPaquetes.length > 0
                 ? `${marcarTodosModal.selectedPaquetes.length} seleccionados`
                 : 'todos'}
             </button>
-            <span className="text-stone-600 text-sm">como:</span>
+            <span className="text-[var(--text-secondary)] text-sm">como:</span>
             <select
               value=""
               onChange={(e) => {
@@ -2000,7 +2001,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   setMarcarTodosModal({ open: true, estadoId: e.target.value, selectedPaquetes: paquetesAMarcar });
                 }
               }}
-              className="flex-1 bg-white border border-stone-300 rounded-lg px-2 py-1 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+              className="flex-1 bg-white border border-black/[0.08] rounded-[var(--radius-md)] px-2 py-1 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
             >
               <option value="">Seleccionar estado...</option>
               {estadosPaquete.map(estado => (
@@ -2012,14 +2013,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           
           {/* Modal de selección de paquetes */}
           {marcarTodosModal.open && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setMarcarTodosModal({ open: false, estadoId: null, selectedPaquetes: [] })}>
-              <div className="bg-white rounded-2xl p-4 w-full max-w-sm shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-stone-800 mb-3">
+            <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setMarcarTodosModal({ open: false, estadoId: null, selectedPaquetes: [] })}>
+              <div className="bg-white rounded-[var(--radius-xl)] p-4 w-full max-w-sm shadow-xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3">
                   {marcarTodosModal.estadoId ? '⚠️ Confirmar cambio' : '📦 Seleccionar paquetes'}
                 </h3>
 
                 {/* Lista de paquetes */}
-                <div className="flex-1 overflow-y-auto mb-3 border border-stone-200 rounded-lg">
+                <div className="flex-1 overflow-y-auto mb-3 border border-black/[0.06] rounded-[var(--radius-md)]">
                   {expedicionPaquetes.map(paq => {
                     const estadoActual = estadosPaquete.find(e => e.id === paq.estado);
                     const cliente = getCliente(paq.clienteId);
@@ -2034,14 +2035,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           setMarcarTodosModal(prev => ({ ...prev, selectedPaquetes: newSelected }));
                         }}
                         className={`flex items-center gap-2 p-2 cursor-pointer border-b border-stone-100 last:border-b-0 ${
-                          isSelected ? 'bg-amber-50' : 'hover:bg-stone-50'
+                          isSelected ? 'bg-[var(--accent-soft)]' : 'hover:bg-black/[0.02]'
                         }`}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="w-4 h-4 accent-amber-500"
+                          className="w-4 h-4 accent-[var(--accent)]"
                         />
                         <span className="text-lg">{estadoActual?.icon || '📦'}</span>
                         {cliente?.abreviacion && (
@@ -2050,7 +2051,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                             style={{ backgroundColor: (cliente?.color || '#f59e0b') + '20', color: cliente?.color || '#f59e0b' }}
                           >{cliente.abreviacion}</span>
                         )}
-                        <span className="text-sm text-stone-700 flex-1">{paq.nombre}</span>
+                        <span className="text-sm text-[var(--text-primary)] flex-1">{paq.nombre}</span>
                       </div>
                     );
                   })}
@@ -2060,17 +2061,17 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <div className="flex gap-2 mb-3">
                   <button
                     onClick={() => setMarcarTodosModal(prev => ({ ...prev, selectedPaquetes: expedicionPaquetes.map(p => p.id) }))}
-                    className="flex-1 text-xs text-amber-600 hover:text-amber-800"
+                    className="flex-1 text-xs text-[var(--accent)] hover:text-[var(--accent-text)]"
                   >Seleccionar todos</button>
                   <button
                     onClick={() => setMarcarTodosModal(prev => ({ ...prev, selectedPaquetes: [] }))}
-                    className="flex-1 text-xs text-stone-500 hover:text-stone-700"
+                    className="flex-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                   >Ninguno</button>
                 </div>
 
                 {/* Info del nuevo estado si ya está seleccionado */}
                 {marcarTodosModal.estadoId && (
-                  <p className="text-stone-600 text-sm mb-3">
+                  <p className="text-[var(--text-secondary)] text-sm mb-3">
                     Cambiar <strong>{marcarTodosModal.selectedPaquetes.length} paquetes</strong> a <strong>"{estadosPaquete.find(e => e.id === marcarTodosModal.estadoId)?.icon} {estadosPaquete.find(e => e.id === marcarTodosModal.estadoId)?.nombre}"</strong>
                   </p>
                 )}
@@ -2271,7 +2272,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: cliente?.color || '#f59e0b' }}
                         />
-                        <span className="font-bold text-stone-700 flex-1">{cliente?.nombre}</span>
+                        <span className="font-bold text-[var(--text-primary)] flex-1">{cliente?.nombre}</span>
                         {cliente?.abreviacion && (
                           <span 
                             className="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
@@ -2290,20 +2291,20 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         style={{ borderColor: estadoPaq?.color || '#9ca3af' }}
                       >
                         <span className="text-lg">{estadoPaq?.icon || '❓'}</span>
-                        <span className="font-bold text-stone-700 flex-1">{estadoPaq?.nombre || 'Sin estado'}</span>
+                        <span className="font-bold text-[var(--text-primary)] flex-1">{estadoPaq?.nombre || 'Sin estado'}</span>
                         <span className="text-sm font-mono font-bold" style={{ color: estadoPaq?.color || '#9ca3af' }}>{formatNum(brutoPorEstado[paq.estado] || 0)}g</span>
                       </div>
                     )}
                     {showCategoriaHeader && (
                       <div
-                        className="flex items-center gap-2 pt-3 pb-1 mt-2 border-t-2 border-amber-400"
+                        className="flex items-center gap-2 pt-3 pb-1 mt-2 border-t-2 border-[var(--accent)]"
                       >
                         <span className="text-lg">🏷️</span>
-                        <span className="font-bold text-stone-700 flex-1">{categoria?.nombre || 'Sin categoría'}</span>
+                        <span className="font-bold text-[var(--text-primary)] flex-1">{categoria?.nombre || 'Sin categoría'}</span>
                         {categoria?.esFino && (
-                          <span className="bg-amber-200 text-amber-800 text-xs px-2 py-0.5 rounded font-medium">FINO</span>
+                          <span className="bg-[var(--accent-border)] text-[var(--accent-text)] text-xs px-2 py-0.5 rounded font-medium">FINO</span>
                         )}
-                        <span className="text-sm font-mono font-bold text-amber-600">{formatNum(categoriaBrutoTotal)}g</span>
+                        <span className="text-sm font-mono font-bold text-[var(--accent)]">{formatNum(categoriaBrutoTotal)}g</span>
                       </div>
                     )}
                     {showEstadoPagoHeader && (
@@ -2347,7 +2348,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           ) : validado ? (
                             <span className="text-green-500 text-lg leading-none flex-shrink-0">✓</span>
                           ) : (
-                            <span className="w-3 h-3 rounded-full bg-amber-300 inline-block mt-1 flex-shrink-0" title="Pendiente verificar" />
+                            <span className="w-3 h-3 rounded-full bg-[var(--accent)] inline-block mt-1 flex-shrink-0" title="Pendiente verificar" />
                           )}
                           <div>
                             <div className="flex items-center gap-2">
@@ -2357,7 +2358,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                                   style={{ backgroundColor: cliente.color + '20', color: cliente.color }}
                                 >{cliente.abreviacion}</span>
                               )}
-                              <p className="text-stone-800 font-semibold">{paq.nombre}</p>
+                              <p className="text-[var(--text-primary)] font-semibold">{paq.nombre}</p>
                               {estadoPaq && (
                                 <span 
                                   className="text-xs px-2 py-0.5 rounded-full font-medium"
@@ -2367,19 +2368,19 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                                 </span>
                               )}
                             </div>
-                            <p className="text-stone-500 text-xs">{cliente?.nombre} • {categoria?.nombre}</p>
+                            <p className="text-[var(--text-tertiary)] text-xs">{cliente?.nombre} • {categoria?.nombre}</p>
                             {ultimaMod && (
-                              <p className="text-stone-400 text-xs mt-1">
-                                <span className="text-stone-600">{usuarioMod?.nombre}</span> • {tiempoRelativo(ultimaMod.fecha)}
+                              <p className="text-[var(--text-tertiary)] text-xs mt-1">
+                                <span className="text-[var(--text-secondary)]">{usuarioMod?.nombre}</span> • {tiempoRelativo(ultimaMod.fecha)}
                               </p>
                             )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className={`font-mono text-sm font-medium ${paqTotales.esEstimado ? 'text-stone-400 italic' : 'text-amber-700'}`}>
+                          <p className={`font-mono text-sm font-medium ${paqTotales.esEstimado ? 'text-[var(--text-tertiary)] italic' : 'text-[var(--accent-text)]'}`}>
                             {paqTotales.esEstimado ? '~' : ''}{formatNum(paqTotales.totalFra)} €
                           </p>
-                          <p className="text-stone-500 text-xs">{formatNum(paqTotales.brutoTotal)}g bruto</p>
+                          <p className="text-[var(--text-tertiary)] text-xs">{formatNum(paqTotales.brutoTotal)}g bruto</p>
                           <p className={`text-xs mt-0.5 ${paq.estadoPago === 'pagado' ? 'text-green-600' : 'text-red-500'}`}>
                             {paq.estadoPago === 'pagado' ? '💰 Pagado' : '⏳ Por pagar'}
                           </p>
@@ -2391,7 +2392,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               });
             })()}
             {expedicionPaquetes.length === 0 && (
-              <p className="text-stone-400 text-center py-8">No hay paquetes. Crea uno nuevo.</p>
+              <p className="text-[var(--text-tertiary)] text-center py-8">No hay paquetes. Crea uno nuevo.</p>
             )}
           </div>
         </div>
@@ -2401,7 +2402,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-amber-800">Expediciones</h2>
+          <h2 className="text-xl font-bold text-[var(--accent-text)]">Expediciones</h2>
           <Button onClick={() => openModal('expedicion')}>+ Nueva</Button>
         </div>
         
@@ -2423,12 +2424,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             // Check if logistics pending (has export date but missing fields)
             const logisticaPendiente = exp.fechaExportacion && (!exp.matriculaId || !exp.bultos || !exp.horaExportacion);
             return (
-              <Card key={exp.id} onClick={() => setSelectedExpedicion(exp.id)} className={esActual ? 'ring-2 ring-amber-400' : ''}>
+              <Card key={exp.id} onClick={() => setSelectedExpedicion(exp.id)} className={esActual ? 'ring-2 ring-[var(--accent)]' : ''}>
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-stone-800 font-bold text-lg">{exp.nombre} {esActual && <span className="text-amber-500">★</span>}</h3>
-                      {exp.ano && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{exp.ano}</span>}
+                      <h3 className="text-[var(--text-primary)] font-bold text-lg">{exp.nombre} {esActual && <span className="text-[var(--accent)]">★</span>}</h3>
+                      {exp.ano && <span className="text-xs bg-[var(--accent-soft)] text-[var(--accent-text)] px-2 py-0.5 rounded-full font-medium">{exp.ano}</span>}
                       <div className="flex gap-1">
                         {logisticaPendiente && (
                           <span className="bg-orange-500 text-white text-xs font-bold rounded-full px-1.5 h-5 flex items-center justify-center" title="Logística pendiente">🚗</span>
@@ -2440,21 +2441,21 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           <span className="bg-orange-400 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{sinFactura}</span>
                         )}
                         {sinVerificar > 0 && (
-                          <span className="bg-amber-300 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{sinVerificar}</span>
+                          <span className="bg-[var(--accent)] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{sinVerificar}</span>
                         )}
                       </div>
                     </div>
-                    <p className="text-stone-500 text-sm">
+                    <p className="text-[var(--text-tertiary)] text-sm">
                       {precioRef ? `Último precio: ${formatNum(precioRef)} €/g` : 'Sin precios aún'}
                     </p>
                     {exp.fechaExportacion && (
-                      <p className="text-stone-400 text-xs">📅 {new Date(exp.fechaExportacion).toLocaleDateString('es-ES')}</p>
+                      <p className="text-[var(--text-tertiary)] text-xs">📅 {new Date(exp.fechaExportacion).toLocaleDateString('es-ES')}</p>
                     )}
-                    <p className="text-stone-400 text-xs mt-1">{totales.numPaquetes} paquetes</p>
+                    <p className="text-[var(--text-tertiary)] text-xs mt-1">{totales.numPaquetes} paquetes</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-amber-600 font-mono font-bold">{formatNum(totales.totalFra)} €</p>
-                    <p className="text-stone-500 text-xs">{formatNum(totales.sumaFino)}g fino</p>
+                    <p className="text-[var(--accent)] font-mono font-bold">{formatNum(totales.totalFra)} €</p>
+                    <p className="text-[var(--text-tertiary)] text-xs">{formatNum(totales.sumaFino)}g fino</p>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
@@ -2467,16 +2468,16 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   const barPct = over ? 100 : pct;
                   const markPct = over ? (100 / pct) * 100 : null;
                   return (
-                    <div className="mt-3 pt-2 border-t border-stone-200">
+                    <div className="mt-3 pt-2 border-t border-black/[0.06]">
                       <div className="flex justify-between items-center text-xs mb-1">
-                        <span className="text-stone-400">Seguro</span>
-                        <span className="text-stone-500 font-mono">{formatNum(pct, 1)}%</span>
+                        <span className="text-[var(--text-tertiary)]">Seguro</span>
+                        <span className="text-[var(--text-tertiary)] font-mono">{formatNum(pct, 1)}%</span>
                       </div>
                       <div className="relative w-full h-4">
-                        <div className="absolute top-1 w-full bg-stone-200 rounded-full h-2 overflow-hidden">
+                        <div className="absolute top-1 w-full bg-black/[0.06] rounded-full h-2 overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all ${
-                              pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-green-500'
+                              pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-[var(--accent)]' : 'bg-green-500'
                             }`}
                             style={{ width: `${barPct}%` }}
                           />
@@ -2492,7 +2493,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             );
           })}
           {expediciones.length === 0 && (
-            <p className="text-stone-400 text-center py-8">No hay expediciones. Crea una nueva.</p>
+            <p className="text-[var(--text-tertiary)] text-center py-8">No hay expediciones. Crea una nueva.</p>
           )}
         </div>
       </div>
@@ -2611,24 +2612,24 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-amber-800">Clientes</h2>
+          <h2 className="text-xl font-bold text-[var(--accent-text)]">Clientes</h2>
           <Button onClick={() => openModal('cliente')}>+ Nuevo</Button>
         </div>
 
         {/* Resumen de Exposición por Cliente */}
         {clientesConExposicion.length > 0 && (
-          <Card className="bg-stone-50 border-stone-200">
+          <Card className="bg-black/[0.02] border-black/[0.06]">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold text-stone-700">📊 Exposición por Cliente</h3>
+              <h3 className="font-semibold text-[var(--text-primary)]">📊 Exposición por Cliente</h3>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-stone-500">€/g:</span>
+                <span className="text-xs text-[var(--text-tertiary)]">€/g:</span>
                 <input
                   type="number"
                   inputMode="decimal"
                   value={precioExposicion ?? ''}
                   placeholder={ultimoPrecioCierre.toFixed(2)}
                   onChange={(e) => setPrecioExposicion(e.target.value ? parseFloat(e.target.value) : null)}
-                  className="w-20 bg-white border border-stone-300 rounded px-2 py-1 text-sm text-stone-800 text-right"
+                  className="w-20 bg-white border border-black/[0.08] rounded px-2 py-1 text-sm text-[var(--text-primary)] text-right"
                 />
               </div>
             </div>
@@ -2650,21 +2651,21 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         className="w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: cliente.color || '#f59e0b' }}
                       />
-                      <span className="font-medium text-sm text-stone-700">{cliente.abreviacion || cliente.nombre}</span>
-                      <span className={`text-xs font-mono ml-auto ${excedido ? 'text-red-600 font-bold' : 'text-stone-600'}`}>
+                      <span className="font-medium text-sm text-[var(--text-primary)]">{cliente.abreviacion || cliente.nombre}</span>
+                      <span className={`text-xs font-mono ml-auto ${excedido ? 'text-red-600 font-bold' : 'text-[var(--text-secondary)]'}`}>
                         {formatNum(totalExposicion)} € {excedido && <span className="text-red-500">(+{formatNum(exceso)} €)</span>}
                       </span>
                     </div>
 
                     {/* Barra de progreso */}
                     <div
-                      className="relative h-4 bg-stone-200 rounded-full overflow-hidden cursor-pointer"
+                      className="relative h-4 bg-black/[0.06] rounded-full overflow-hidden cursor-pointer"
                       onMouseEnter={() => setHoveredExposicion(cliente.id)}
                       onMouseLeave={() => setHoveredExposicion(null)}
                     >
                       {/* Segmento amarillo - Paquetes */}
                       <div
-                        className="absolute top-0 left-0 h-full bg-amber-400 transition-all"
+                        className="absolute top-0 left-0 h-full bg-[var(--accent)] transition-all"
                         style={{ width: `${pctPaquetes}%` }}
                         title={`Paquetes: ${formatNum(valorPaquetes)} € (${formatNum(finoPaquetes, 2)}g fino)`}
                       />
@@ -2685,9 +2686,9 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     </div>
 
                     {/* Leyenda debajo de la barra */}
-                    <div className="flex justify-between text-xs text-stone-500 mt-0.5">
+                    <div className="flex justify-between text-xs text-[var(--text-tertiary)] mt-0.5">
                       <span>
-                        <span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>
+                        <span className="inline-block w-2 h-2 rounded-full bg-[var(--accent)] mr-1"></span>
                         {formatNum(finoPaquetes, 1)}g paq
                         <span className="inline-block w-2 h-2 rounded-full bg-orange-500 ml-2 mr-1"></span>
                         {formatNum(pesoLingotes, 1)}g ling
@@ -2697,12 +2698,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
                     {/* Tooltip con detalle de paquetes */}
                     {hoveredExposicion === cliente.id && detallePaquetes.length > 0 && (
-                      <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-stone-300 rounded-lg shadow-lg p-2 text-xs max-w-xs">
-                        <p className="font-medium text-stone-700 mb-1">Paquetes por recoger:</p>
+                      <div className="absolute z-20 top-full left-0 mt-1 bg-white border border-black/[0.08] rounded-[var(--radius-md)] shadow-lg p-2 text-xs max-w-xs">
+                        <p className="font-medium text-[var(--text-primary)] mb-1">Paquetes por recoger:</p>
                         {detallePaquetes.map((p, i) => (
                           <div key={i} className="flex justify-between gap-4">
-                            <span className="text-stone-600">{p.nombre}</span>
-                            <span className="text-stone-800 font-mono">{formatNum(p.fino, 2)}g</span>
+                            <span className="text-[var(--text-secondary)]">{p.nombre}</span>
+                            <span className="text-[var(--text-primary)] font-mono">{formatNum(p.fino, 2)}g</span>
                           </div>
                         ))}
                       </div>
@@ -2729,7 +2730,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     className="w-4 h-4 rounded-full flex-shrink-0"
                     style={{ backgroundColor: cliente.color || '#f59e0b' }}
                   />
-                  <h3 className="text-stone-800 font-bold">{cliente.nombre}</h3>
+                  <h3 className="text-[var(--text-primary)] font-bold">{cliente.nombre}</h3>
                   {cliente.abreviacion && (
                     <span 
                       className="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
@@ -2744,15 +2745,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               </div>
               
               <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                <div><span className="text-stone-500">Dto. Estándar:</span> <span className="text-stone-800 font-medium">{cliente.descuentoEstandar}%</span></div>
-                <div><span className="text-stone-500">Dto. Fino:</span> <span className="text-stone-800 font-medium">{cliente.descuentoFino}%</span></div>
+                <div><span className="text-[var(--text-tertiary)]">Dto. Estándar:</span> <span className="text-[var(--text-primary)] font-medium">{cliente.descuentoEstandar}%</span></div>
+                <div><span className="text-[var(--text-tertiary)]">Dto. Fino:</span> <span className="text-[var(--text-primary)] font-medium">{cliente.descuentoFino}%</span></div>
               </div>
               {cliente.lineasNegativasNoCuentanPeso && (
-                <p className="text-xs text-amber-600 mb-3">⚠️ Líneas negativas no cuentan en peso</p>
+                <p className="text-xs text-[var(--accent)] mb-3">⚠️ Líneas negativas no cuentan en peso</p>
               )}
               
               <div 
-                className="rounded-lg p-3"
+                className="rounded-[var(--radius-md)] p-3"
                 style={{ backgroundColor: (cliente.color || '#f59e0b') + '10', border: `1px solid ${(cliente.color || '#f59e0b')}30` }}
               >
                 <div className="flex justify-between items-center mb-2">
@@ -2787,7 +2788,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       placeholder="Nombre (14kt)"
                       value={newKilataje.nombre}
                       onChange={(e) => setNewKilataje({ ...newKilataje, nombre: e.target.value })}
-                      className="flex-1 bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      className="flex-1 bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                     />
                     <input
@@ -2796,7 +2797,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       placeholder="Ley"
                       value={newKilataje.ley}
                       onChange={(e) => setNewKilataje({ ...newKilataje, ley: e.target.value })}
-                      className="w-20 bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      className="w-20 bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                     />
                     <Button size="sm" onClick={() => {
@@ -2811,7 +2812,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
               {/* Datos Fiscales */}
               <div
-                className="rounded-lg p-3 mt-3"
+                className="rounded-[var(--radius-md)] p-3 mt-3"
                 style={{ backgroundColor: (cliente.color || '#f59e0b') + '10', border: `1px solid ${(cliente.color || '#f59e0b')}30` }}
               >
                 <div className="flex justify-between items-center mb-2">
@@ -2828,7 +2829,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       placeholder="Razón Social"
                       value={datosFiscalesForm.razonSocial}
                       onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, razonSocial: e.target.value })}
-                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                     />
                     <input
@@ -2836,7 +2837,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       placeholder="Dirección"
                       value={datosFiscalesForm.direccion}
                       onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, direccion: e.target.value })}
-                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                     />
                     <div className="flex gap-2">
@@ -2845,7 +2846,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         placeholder="CP"
                         value={datosFiscalesForm.codigoPostal}
                         onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, codigoPostal: e.target.value })}
-                        className="w-24 bg-white rounded px-2 py-1 text-sm text-stone-800"
+                        className="w-24 bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                         style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                       />
                       <input
@@ -2853,7 +2854,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         placeholder="Ciudad"
                         value={datosFiscalesForm.ciudad}
                         onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, ciudad: e.target.value })}
-                        className="flex-1 bg-white rounded px-2 py-1 text-sm text-stone-800"
+                        className="flex-1 bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                         style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                       />
                     </div>
@@ -2862,7 +2863,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       placeholder="País"
                       value={datosFiscalesForm.pais}
                       onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, pais: e.target.value })}
-                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                     />
                     <input
@@ -2870,13 +2871,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       placeholder="NRT / CIF"
                       value={datosFiscalesForm.nrt}
                       onChange={(e) => setDatosFiscalesForm({ ...datosFiscalesForm, nrt: e.target.value })}
-                      className="w-full bg-white rounded px-2 py-1 text-sm text-stone-800"
+                      className="w-full bg-white rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       style={{ border: `1px solid ${(cliente.color || '#f59e0b')}40` }}
                     />
                     <Button size="sm" className="w-full" onClick={() => saveDatosFiscales(cliente.id)}>Guardar</Button>
                   </div>
                 ) : cliente.nrt ? (
-                  <div className="text-xs text-stone-600 space-y-0.5">
+                  <div className="text-xs text-[var(--text-secondary)] space-y-0.5">
                     {cliente.razonSocial && <div className="font-medium">{cliente.razonSocial}</div>}
                     {cliente.direccion && <div>{cliente.direccion}</div>}
                     {(cliente.codigoPostal || cliente.ciudad) && <div>{[cliente.codigoPostal, cliente.ciudad].filter(Boolean).join(' ')}</div>}
@@ -2884,13 +2885,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                     {cliente.nrt && <div className="font-mono mt-1">NRT: {cliente.nrt}</div>}
                   </div>
                 ) : (
-                  <p className="text-xs text-stone-400">Sin datos fiscales</p>
+                  <p className="text-xs text-[var(--text-tertiary)]">Sin datos fiscales</p>
                 )}
               </div>
             </Card>
           ))}
           {clientes.length === 0 && (
-            <p className="text-stone-400 text-center py-8">No hay clientes. Crea uno nuevo.</p>
+            <p className="text-[var(--text-tertiary)] text-center py-8">No hay clientes. Crea uno nuevo.</p>
           )}
         </div>
       </div>
@@ -2919,13 +2920,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
     return (
       <div>
-        <h2 className="text-xl font-bold text-amber-800 mb-4">🚗 Matrículas</h2>
+        <h2 className="text-xl font-bold text-[var(--accent-text)] mb-4">🚗 Matrículas</h2>
 
         <div className="space-y-2">
           {matriculas.map(m => (
             <Card key={m.id}>
               <div className="flex items-center justify-between">
-                <span className="text-stone-800 font-mono font-medium">{m.matricula}</span>
+                <span className="text-[var(--text-primary)] font-mono font-medium">{m.matricula}</span>
                 <button
                   onClick={() => eliminarMatricula(m.id)}
                   className="text-red-400 hover:text-red-600 px-1 text-sm"
@@ -2934,7 +2935,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             </Card>
           ))}
           {matriculas.length === 0 && (
-            <p className="text-stone-400 text-center py-4 text-sm">No hay matrículas registradas.</p>
+            <p className="text-[var(--text-tertiary)] text-center py-4 text-sm">No hay matrículas registradas.</p>
           )}
         </div>
 
@@ -2945,7 +2946,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             value={nuevaMatricula}
             onChange={(e) => setNuevaMatricula(e.target.value.toUpperCase())}
             onKeyDown={(e) => e.key === 'Enter' && nuevaMatricula.trim() && agregarMatricula()}
-            className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 font-mono placeholder-stone-400 focus:outline-none focus:border-amber-500"
+            className="flex-1 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] font-mono placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
           />
           <Button
             onClick={agregarMatricula}
@@ -3058,15 +3059,15 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         {/* Sección Usuarios - solo visible para alex */}
         {esAlex && (
         <div>
-          <h2 className="text-xl font-bold text-amber-800 mb-4">👥 Editar Usuarios</h2>
+          <h2 className="text-xl font-bold text-[var(--accent-text)] mb-4">👥 Editar Usuarios</h2>
 
-          <p className="text-stone-500 text-sm mb-4">
+          <p className="text-[var(--text-tertiary)] text-sm mb-4">
             Cada usuario tiene un código único de acceso. Comparte la URL con el código para dar acceso.
           </p>
 
           <div className="space-y-2">
             {usuarios.map(u => (
-              <Card key={u.id} className={u.id === usuarioActivo ? 'ring-2 ring-amber-400' : ''}>
+              <Card key={u.id} className={u.id === usuarioActivo ? 'ring-2 ring-[var(--accent)]' : ''}>
                 <div className="flex items-center gap-2">
                   {editandoUsuarioId === u.id ? (
                     <input
@@ -3074,26 +3075,26 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       value={nombreUsuarioEditado}
                       onChange={(e) => setNombreUsuarioEditado(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && guardarEdicionUsuario(u.id)}
-                      className="flex-1 bg-white border border-amber-300 rounded px-2 py-1 text-sm text-stone-800"
+                      className="flex-1 bg-white border border-[var(--accent-border)] rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       autoFocus
                     />
                   ) : (
                     <div className="flex-1">
-                      <span className="text-stone-800 font-medium">{u.nombre}</span>
-                      {u.id === 'alex' && <span className="text-amber-500 text-xs ml-2">(admin)</span>}
+                      <span className="text-[var(--text-primary)] font-medium">{u.nombre}</span>
+                      {u.id === 'alex' && <span className="text-[var(--accent)] text-xs ml-2">(admin)</span>}
                       <div className="flex items-center gap-2 mt-1">
-                        <code className="text-xs bg-stone-100 px-2 py-0.5 rounded text-stone-600 font-mono">?{u.codigo}</code>
+                        <code className="text-xs bg-black/[0.04] px-2 py-0.5 rounded text-[var(--text-secondary)] font-mono">?{u.codigo}</code>
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?${u.codigo}`);
                             alert('URL copiada al portapapeles');
                           }}
-                          className="text-xs text-amber-600 hover:text-amber-800"
+                          className="text-xs text-[var(--accent)] hover:text-[var(--accent-text)]"
                         >copiar URL</button>
                       </div>
                     </div>
                   )}
-                  {u.id === usuarioActivo && <span className="text-amber-500 text-xs">✓ Tú</span>}
+                  {u.id === usuarioActivo && <span className="text-[var(--accent)] text-xs">✓ Tú</span>}
                   <div className="flex gap-1">
                     {editandoUsuarioId === u.id ? (
                       <button onClick={() => guardarEdicionUsuario(u.id)} className="text-green-600 px-2">✓</button>
@@ -3104,7 +3105,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                           className="text-blue-600 hover:text-blue-800 px-1 text-sm"
                           title="Regenerar código"
                         >🔄</button>
-                        <button onClick={() => { setEditandoUsuarioId(u.id); setNombreUsuarioEditado(u.nombre); }} className="text-amber-600 hover:text-amber-800 px-1 text-sm">✏️</button>
+                        <button onClick={() => { setEditandoUsuarioId(u.id); setNombreUsuarioEditado(u.nombre); }} className="text-[var(--accent)] hover:text-[var(--accent-text)] px-1 text-sm">✏️</button>
                         {u.id !== 'alex' && (
                           <button onClick={() => eliminarUsuario(u.id)} className="text-red-400 hover:text-red-600 px-1 text-sm">🗑️</button>
                         )}
@@ -3114,18 +3115,18 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 </div>
                 {/* Permisos del usuario (no mostrar para alex que tiene todos) */}
                 {u.id !== 'alex' && (
-                  <div className="mt-3 pt-3 border-t border-amber-100">
-                    <span className="text-xs text-stone-500 font-medium">Permisos:</span>
+                  <div className="mt-3 pt-3 border-t border-[var(--accent-soft)]">
+                    <span className="text-xs text-[var(--text-tertiary)] font-medium">Permisos:</span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {PERMISOS_DISPONIBLES.map(permiso => {
                         const tieneEstePermiso = (u.permisos || []).includes(permiso.id);
                         return (
                           <label
                             key={permiso.id}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors ${
+                            className={`flex items-center gap-1 px-2 py-1 rounded-[var(--radius-md)] text-xs cursor-pointer transition-colors ${
                               tieneEstePermiso
                                 ? 'bg-green-100 text-green-700 border border-green-300'
-                                : 'bg-stone-100 text-stone-500 border border-stone-200 hover:bg-stone-200'
+                                : 'bg-black/[0.04] text-[var(--text-tertiary)] border border-black/[0.06] hover:bg-black/[0.06]'
                             }`}
                             title={permiso.descripcion}
                           >
@@ -3160,7 +3161,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               value={nuevoNombreUsuario}
               onChange={(e) => setNuevoNombreUsuario(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && nuevoNombreUsuario.trim() && agregarUsuario()}
-              className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
+              className="flex-1 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
             />
             <Button
               onClick={agregarUsuario}
@@ -3172,11 +3173,11 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         )}
         
         {/* Separador */}
-        <hr className="border-amber-200" />
+        <hr className="border-[var(--accent-border)]" />
         
         {/* Sección Estados */}
         <div>
-          <h2 className="text-xl font-bold text-amber-800 mb-4">📍 Estados de Paquete</h2>
+          <h2 className="text-xl font-bold text-[var(--accent-text)] mb-4">📍 Estados de Paquete</h2>
           
           <div className="space-y-2">
             {estadosPaquete.map(estado => (
@@ -3189,18 +3190,18 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         value={estadoEditado.icon}
                         onChange={(e) => setEstadoEditado({ ...estadoEditado, icon: e.target.value })}
                         placeholder="Emoji"
-                        className="w-16 bg-white border border-amber-300 rounded px-2 py-1 text-center text-lg"
+                        className="w-16 bg-white border border-[var(--accent-border)] rounded px-2 py-1 text-center text-lg"
                       />
                       <input
                         type="text"
                         value={estadoEditado.nombre}
                         onChange={(e) => setEstadoEditado({ ...estadoEditado, nombre: e.target.value })}
                         placeholder="Nombre"
-                        className="flex-1 bg-white border border-amber-300 rounded px-2 py-1 text-sm text-stone-800"
+                        className="flex-1 bg-white border border-[var(--accent-border)] rounded px-2 py-1 text-sm text-[var(--text-primary)]"
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-stone-500 text-xs">Color:</span>
+                      <span className="text-[var(--text-tertiary)] text-xs">Color:</span>
                       <div className="flex gap-1 flex-wrap flex-1">
                         {COLORES_USUARIO.map(color => (
                           <button
@@ -3213,13 +3214,13 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         ))}
                       </div>
                       <button onClick={() => guardarEdicionEstado(estado.id)} className="text-green-600 px-2 font-bold">✓</button>
-                      <button onClick={() => setEditandoEstadoId(null)} className="text-stone-400 px-2">✕</button>
+                      <button onClick={() => setEditandoEstadoId(null)} className="text-[var(--text-tertiary)] px-2">✕</button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{estado.icon}</span>
-                    <span className="flex-1 text-stone-800 font-medium">{estado.nombre}</span>
+                    <span className="flex-1 text-[var(--text-primary)] font-medium">{estado.nombre}</span>
                     <div 
                       className="w-4 h-4 rounded-full"
                       style={{ backgroundColor: estado.color }}
@@ -3229,7 +3230,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                         setEditandoEstadoId(estado.id); 
                         setEstadoEditado({ nombre: estado.nombre, icon: estado.icon, color: estado.color }); 
                       }} 
-                      className="text-amber-600 hover:text-amber-800 px-1 text-sm"
+                      className="text-[var(--accent)] hover:text-[var(--accent-text)] px-1 text-sm"
                     >✏️</button>
                     <button onClick={() => eliminarEstado(estado.id)} className="text-red-400 hover:text-red-600 px-1 text-sm">🗑️</button>
                   </div>
@@ -3239,26 +3240,26 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           </div>
           
           {/* Añadir nuevo estado */}
-          <Card className="mt-3 bg-amber-50">
-            <p className="text-amber-700 text-sm font-medium mb-2">Añadir nuevo estado</p>
+          <Card className="mt-3 bg-[var(--accent-soft)]">
+            <p className="text-[var(--accent-text)] text-sm font-medium mb-2">Añadir nuevo estado</p>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
                 value={nuevoEstado.icon}
                 onChange={(e) => setNuevoEstado({ ...nuevoEstado, icon: e.target.value })}
                 placeholder="📌"
-                className="w-16 bg-white border border-amber-300 rounded px-2 py-1 text-center text-lg"
+                className="w-16 bg-white border border-[var(--accent-border)] rounded px-2 py-1 text-center text-lg"
               />
               <input
                 type="text"
                 value={nuevoEstado.nombre}
                 onChange={(e) => setNuevoEstado({ ...nuevoEstado, nombre: e.target.value })}
                 placeholder="Nombre del estado"
-                className="flex-1 bg-white border border-amber-300 rounded px-2 py-1 text-sm text-stone-800"
+                className="flex-1 bg-white border border-[var(--accent-border)] rounded px-2 py-1 text-sm text-[var(--text-primary)]"
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-stone-500 text-xs">Color:</span>
+              <span className="text-[var(--text-tertiary)] text-xs">Color:</span>
               <div className="flex gap-1 flex-wrap flex-1">
                 {COLORES_USUARIO.map(color => (
                   <button
@@ -3281,71 +3282,71 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         </div>
         
         {/* Separador */}
-        <hr className="border-amber-200" />
+        <hr className="border-[var(--accent-border)]" />
 
         {/* Sección Matrículas */}
         <MatriculasSection />
 
         {/* Separador */}
-        <hr className="border-amber-200" />
+        <hr className="border-[var(--accent-border)]" />
 
         {/* Sección Seguros y Configuración */}
         <div>
-          <h2 className="text-xl font-bold text-amber-800 mb-4">🛡️ Seguros</h2>
+          <h2 className="text-xl font-bold text-[var(--accent-text)] mb-4">🛡️ Seguros</h2>
 
           <Card className="mb-4">
             <div className="space-y-4">
               {/* Seguro Exportación */}
               <div>
-                <h3 className="font-semibold text-stone-700 mb-2">📦 Seguro Exportación</h3>
-                <label className="block text-sm text-stone-600 mb-1">Seguro por defecto expedición (€)</label>
-                <p className="text-xs text-stone-400 mb-2">Valor del seguro que se asigna automáticamente al crear una nueva expedición</p>
+                <h3 className="font-semibold text-[var(--text-primary)] mb-2">📦 Seguro Exportación</h3>
+                <label className="block text-sm text-[var(--text-secondary)] mb-1">Seguro por defecto expedición (€)</label>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">Valor del seguro que se asigna automáticamente al crear una nueva expedición</p>
                 <input
                   type="number"
                   inputMode="numeric"
                   value={seguroExpedicionLocal}
                   onChange={(e) => setSeguroExpedicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
-                  className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                   placeholder="600000"
                 />
               </div>
 
-              <hr className="border-stone-200" />
+              <hr className="border-black/[0.06]" />
 
               {/* Exposición */}
               <div>
-                <h3 className="font-semibold text-stone-700 mb-2">📊 Exposición</h3>
-                <label className="block text-sm text-stone-600 mb-1">Límite exposición por cliente (€)</label>
-                <p className="text-xs text-stone-400 mb-2">Valor máximo de la barra de exposición por cliente</p>
+                <h3 className="font-semibold text-[var(--text-primary)] mb-2">📊 Exposición</h3>
+                <label className="block text-sm text-[var(--text-secondary)] mb-1">Límite exposición por cliente (€)</label>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">Valor máximo de la barra de exposición por cliente</p>
                 <input
                   type="number"
                   inputMode="numeric"
                   value={limiteExposicionLocal}
                   onChange={(e) => setLimiteExposicionLocal(e.target.value ? parseFloat(e.target.value) : 0)}
-                  className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                   placeholder="100000"
                 />
               </div>
 
-              <hr className="border-stone-200" />
+              <hr className="border-black/[0.06]" />
 
               {/* Alerta */}
               <div>
-                <h3 className="font-semibold text-stone-700 mb-2">🔔 Alerta Exposición</h3>
-                <label className="block text-sm text-stone-600 mb-1">Umbral de alerta (€)</label>
-                <p className="text-xs text-stone-400 mb-2">Cuando un cliente supere este valor, se mostrará un aviso al entrar en la app</p>
+                <h3 className="font-semibold text-[var(--text-primary)] mb-2">🔔 Alerta Exposición</h3>
+                <label className="block text-sm text-[var(--text-secondary)] mb-1">Umbral de alerta (€)</label>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">Cuando un cliente supere este valor, se mostrará un aviso al entrar en la app</p>
                 <input
                   type="number"
                   inputMode="numeric"
                   value={alertaUmbralLocal}
                   onChange={(e) => setAlertaUmbralLocal(e.target.value ? parseFloat(e.target.value) : 0)}
-                  className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                   placeholder="80000"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-stone-600 mb-2">Usuarios que reciben la alerta</label>
+                <label className="block text-sm text-[var(--text-secondary)] mb-2">Usuarios que reciben la alerta</label>
                 <div className="flex flex-wrap gap-2">
                   {usuarios.map(u => {
                     const seleccionado = alertaUsuariosLocal.includes(u.id);
@@ -3353,10 +3354,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       <button
                         key={u.id}
                         onClick={() => toggleAlertaUsuario(u.id)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        className={`px-3 py-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
                           seleccionado
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                            ? 'bg-[var(--accent)] text-white'
+                            : 'bg-black/[0.04] text-[var(--text-secondary)] hover:bg-black/[0.06]'
                         }`}
                       >
                         {seleccionado && '✓ '}{u.nombre}
@@ -3365,14 +3366,14 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   })}
                 </div>
                 {alertaUsuariosLocal.length === 0 && (
-                  <p className="text-xs text-stone-400 mt-2">⚠️ Sin usuarios seleccionados, nadie recibirá alertas</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-2">⚠️ Sin usuarios seleccionados, nadie recibirá alertas</p>
                 )}
               </div>
             </div>
 
             {/* Botón guardar si hay cambios */}
             {hayConfigCambios && (
-              <div className="mt-4 pt-4 border-t border-stone-200">
+              <div className="mt-4 pt-4 border-t border-black/[0.06]">
                 <Button onClick={guardarConfigGeneral} className="w-full">💾 Guardar cambios</Button>
               </div>
             )}
@@ -3380,12 +3381,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         </div>
 
         {/* Separador */}
-        <hr className="border-amber-200" />
+        <hr className="border-[var(--accent-border)]" />
 
         {/* Sección Categorías */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-amber-800">🏷️ Categorías</h2>
+            <h2 className="text-xl font-bold text-[var(--accent-text)]">🏷️ Categorías</h2>
             <Button onClick={() => openModal('categoria')}>+ Nueva</Button>
           </div>
           
@@ -3394,21 +3395,21 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               <Card key={cat.id}>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <span className="text-stone-800 font-medium">{cat.nombre}</span>
-                    {cat.esFino && <span className="bg-amber-200 text-amber-800 text-xs px-2 py-1 rounded font-medium">FINO</span>}
+                    <span className="text-[var(--text-primary)] font-medium">{cat.nombre}</span>
+                    {cat.esFino && <span className="bg-[var(--accent-border)] text-[var(--accent-text)] text-xs px-2 py-1 rounded font-medium">FINO</span>}
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="secondary" onClick={() => openModal('categoria', cat)}>Editar</Button>
                     <Button size="sm" variant="danger" onClick={() => handleDeleteCategoria(cat.id)}>×</Button>
                   </div>
                 </div>
-                <p className="text-stone-500 text-xs mt-2">
+                <p className="text-[var(--text-tertiary)] text-xs mt-2">
                   IGI por defecto: {cat.esFino ? '0%' : '4.5%'} • Descuento: {cat.esFino ? 'Fino' : 'Estándar'}
                 </p>
               </Card>
             ))}
             {categorias.length === 0 && (
-              <p className="text-stone-400 text-center py-8">No hay categorías. Crea una nueva.</p>
+              <p className="text-[var(--text-tertiary)] text-center py-8">No hay categorías. Crea una nueva.</p>
             )}
           </div>
         </div>
@@ -3464,36 +3465,36 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-amber-800">Estadísticas</h2>
+        <h2 className="text-xl font-bold text-[var(--accent-text)]">Estadísticas</h2>
 
         {/* Filtros */}
         <Card>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-amber-600 font-semibold text-sm">Filtros</h3>
+            <h3 className="text-[var(--accent)] font-semibold text-sm">Filtros</h3>
             {(statsExpDesde || statsExpHasta || statsClienteId) && (
               <button
                 onClick={() => { setStatsExpDesde(null); setStatsExpHasta(null); setStatsClienteId(null); }}
-                className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+                className="text-xs text-[var(--text-tertiary)] hover:text-red-500 transition-colors"
               >Limpiar filtros</button>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-stone-600 text-sm min-w-[3rem]">Desde</label>
+            <label className="text-[var(--text-secondary)] text-sm min-w-[3rem]">Desde</label>
             <select
               value={statsExpDesde || ''}
               onChange={(e) => setStatsExpDesde(e.target.value || null)}
-              className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+              className="flex-1 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
             >
               <option value="">Inicio</option>
               {sortedExpediciones.map(exp => (
                 <option key={exp.id} value={exp.id}>{exp.nombre}</option>
               ))}
             </select>
-            <label className="text-stone-600 text-sm min-w-[3rem]">Hasta</label>
+            <label className="text-[var(--text-secondary)] text-sm min-w-[3rem]">Hasta</label>
             <select
               value={statsExpHasta || ''}
               onChange={(e) => setStatsExpHasta(e.target.value || null)}
-              className="flex-1 bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+              className="flex-1 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
             >
               <option value="">Final</option>
               {sortedExpediciones.map(exp => (
@@ -3504,12 +3505,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
           {statsClienteId && (() => {
             const cliente = clientes.find(c => c.id === statsClienteId);
             return (
-              <div className="flex items-center gap-2 mt-2 bg-amber-50 rounded-lg px-3 py-1.5">
+              <div className="flex items-center gap-2 mt-2 bg-[var(--accent-soft)] rounded-[var(--radius-md)] px-3 py-1.5">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cliente?.color || '#999' }} />
-                <span className="text-stone-700 text-sm">Filtrando por: <strong>{cliente?.nombre}</strong></span>
+                <span className="text-[var(--text-primary)] text-sm">Filtrando por: <strong>{cliente?.nombre}</strong></span>
                 <button
                   onClick={() => setStatsClienteId(null)}
-                  className="ml-auto text-stone-400 hover:text-red-500 text-lg leading-none"
+                  className="ml-auto text-[var(--text-tertiary)] hover:text-red-500 text-lg leading-none"
                 >&times;</button>
               </div>
             );
@@ -3517,7 +3518,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
         </Card>
 
         <Card>
-          <h3 className="text-amber-600 font-semibold mb-4">Volumen Bruto por Expedición y Cliente</h3>
+          <h3 className="text-[var(--accent)] font-semibold mb-4">Volumen Bruto por Expedición y Cliente</h3>
           <div className="w-full h-80 -ml-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
@@ -3544,7 +3545,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
         {/* Tabla resumen — click para filtrar por cliente */}
         <Card>
-          <h3 className="text-amber-600 font-semibold mb-3">Resumen por Cliente</h3>
+          <h3 className="text-[var(--accent)] font-semibold mb-3">Resumen por Cliente</h3>
           <div className="space-y-1">
             {clientes.map((cliente) => {
               const totalBruto = paquetes
@@ -3560,12 +3561,12 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                 <div
                   key={cliente.id}
                   onClick={() => setStatsClienteId(isActive ? null : cliente.id)}
-                  className={`flex justify-between items-center py-2 px-2 rounded-lg cursor-pointer transition-all ${
+                  className={`flex justify-between items-center py-2 px-2 rounded-[var(--radius-md)] cursor-pointer transition-all ${
                     isActive
-                      ? 'bg-amber-100 ring-1 ring-amber-400'
+                      ? 'bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]'
                       : statsClienteId
                         ? 'opacity-40 hover:opacity-70'
-                        : 'hover:bg-amber-50'
+                        : 'hover:bg-[var(--accent-soft)]'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -3573,10 +3574,10 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: cliente.color || '#999999' }}
                     />
-                    <span className="text-stone-800 font-medium">{cliente.nombre}</span>
-                    <span className="text-stone-400 text-xs">({numPaquetes} paq.)</span>
+                    <span className="text-[var(--text-primary)] font-medium">{cliente.nombre}</span>
+                    <span className="text-[var(--text-tertiary)] text-xs">({numPaquetes} paq.)</span>
                   </div>
-                  <span className="text-stone-800 font-mono">{formatNum(totalBruto)} g</span>
+                  <span className="text-[var(--text-primary)] font-mono">{formatNum(totalBruto)} g</span>
                 </div>
               );
             })}
@@ -3585,7 +3586,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
         {/* Chart por Año y Cliente */}
         <Card>
-          <h3 className="text-amber-600 font-semibold mb-4">Volumen Bruto por Año y Cliente</h3>
+          <h3 className="text-[var(--accent)] font-semibold mb-4">Volumen Bruto por Año y Cliente</h3>
           {(() => {
             // Agrupar paquetes por año de expedición y cliente
             const dataByYear = {};
@@ -3610,7 +3611,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
               .sort((a, b) => (a.ano || '').localeCompare(b.ano || ''));
 
             if (chartDataByYear.length === 0) {
-              return <p className="text-stone-400 text-center py-4">No hay datos para mostrar</p>;
+              return <p className="text-[var(--text-tertiary)] text-center py-4">No hay datos para mostrar</p>;
             }
 
             return (
@@ -3642,7 +3643,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
         {/* Listado IGI por Mes */}
         <Card>
-          <h3 className="text-amber-600 font-semibold mb-4">💰 IGI por Mes (según Fecha Factura)</h3>
+          <h3 className="text-[var(--accent)] font-semibold mb-4">💰 IGI por Mes (según Fecha Factura)</h3>
           {(() => {
             // Agrupar paquetes por mes de fechaFactura
             const igiPorMes = {};
@@ -3677,7 +3678,7 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
 
             if (mesesOrdenados.length === 0) {
               return (
-                <p className="text-stone-400 text-center py-4">
+                <p className="text-[var(--text-tertiary)] text-center py-4">
                   No hay paquetes con fecha de factura e IGI calculado
                 </p>
               );
@@ -3688,27 +3689,27 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
             return (
               <div className="space-y-3">
                 {/* Total general */}
-                <div className="bg-amber-50 rounded-lg p-3 flex justify-between items-center">
-                  <span className="text-amber-800 font-semibold">Total IGI pendiente</span>
-                  <span className="text-amber-800 font-bold text-lg">{formatEur(totalIGI)}</span>
+                <div className="bg-[var(--accent-soft)] rounded-[var(--radius-md)] p-3 flex justify-between items-center">
+                  <span className="text-[var(--accent-text)] font-semibold">Total IGI pendiente</span>
+                  <span className="text-[var(--accent-text)] font-bold text-lg">{formatEur(totalIGI)}</span>
                 </div>
 
                 {/* Por mes */}
                 {mesesOrdenados.map(([mesKey, data]) => (
-                  <details key={mesKey} className="border border-stone-200 rounded-lg overflow-hidden">
-                    <summary className="bg-stone-50 px-3 py-2 cursor-pointer hover:bg-stone-100 flex justify-between items-center">
-                      <span className="text-stone-700 font-medium capitalize">{data.label}</span>
-                      <span className="text-amber-600 font-bold">{formatEur(data.total)}</span>
+                  <details key={mesKey} className="border border-black/[0.06] rounded-[var(--radius-md)] overflow-hidden">
+                    <summary className="bg-black/[0.02] px-3 py-2 cursor-pointer hover:bg-black/[0.04] flex justify-between items-center">
+                      <span className="text-[var(--text-primary)] font-medium capitalize">{data.label}</span>
+                      <span className="text-[var(--accent)] font-bold">{formatEur(data.total)}</span>
                     </summary>
                     <div className="p-2 space-y-1 bg-white">
                       {data.paquetes.map((p, i) => (
-                        <div key={i} className="flex justify-between items-center text-sm py-1 px-2 hover:bg-stone-50 rounded">
+                        <div key={i} className="flex justify-between items-center text-sm py-1 px-2 hover:bg-black/[0.02] rounded">
                           <div className="flex items-center gap-2">
-                            <span className="text-stone-500 text-xs">📅{new Date(p.fecha).getDate()}</span>
-                            <span className="text-stone-800 font-mono">{p.nombre}</span>
-                            <span className="text-stone-400 text-xs">({p.cliente})</span>
+                            <span className="text-[var(--text-tertiary)] text-xs">📅{new Date(p.fecha).getDate()}</span>
+                            <span className="text-[var(--text-primary)] font-mono">{p.nombre}</span>
+                            <span className="text-[var(--text-tertiary)] text-xs">({p.cliente})</span>
                           </div>
-                          <span className="text-stone-600">{formatEur(p.igi)}</span>
+                          <span className="text-[var(--text-secondary)]">{formatEur(p.igi)}</span>
                         </div>
                       ))}
                     </div>
@@ -3914,11 +3915,11 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-        <div className="bg-white border border-amber-300 rounded-2xl w-full max-w-md shadow-xl flex flex-col my-auto" style={{ maxHeight: 'calc(100vh - 32px)' }}>
-          <div className="p-4 border-b border-amber-200 flex-shrink-0">
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] w-full max-w-md shadow-2xl flex flex-col my-auto" style={{ maxHeight: 'calc(100vh - 32px)' }}>
+          <div className="p-5 border-b border-black/[0.06] flex-shrink-0">
             <div className="flex justify-between items-center gap-2">
-              <h3 className="text-xl font-bold text-amber-800 truncate min-w-0">
+              <h3 className="text-xl font-semibold text-[var(--text-primary)] truncate min-w-0">
                 {modalType === 'paquete'
                   ? `Paquete ${getPaqueteTitulo()}`
                   : `${editingItem ? 'Editar' : 'Nueva'} ${modalType}`
@@ -3937,7 +3938,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     type="button"
                     disabled={leyendoFactura}
                     onClick={() => document.getElementById('leer-factura-input').click()}
-                    className="flex-shrink-0 text-sm bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg hover:bg-amber-200 border border-amber-300 disabled:opacity-50"
+                    className="flex-shrink-0 text-sm bg-[var(--accent-soft)] text-[var(--accent-text)] px-3 py-1.5 rounded-[var(--radius-lg)] hover:bg-[var(--accent-border)] border border-[var(--accent-border)] disabled:opacity-40 transition-colors btn-press"
                   >
                     {leyendoFactura ? '⏳ Leyendo...' : '🤖 Leer factura'}
                   </button>
@@ -3945,8 +3946,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               )}
             </div>
           </div>
-          
-          <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+
+          <div className="flex-1 overflow-y-auto px-5 py-4 min-h-0">
           {modalType === 'categoria' && (
             <>
               <Input 
@@ -3973,25 +3974,25 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               />
               <div className="flex gap-3 mb-3">
                 <div className="flex-1">
-                  <label className="block text-amber-800 text-sm mb-1 font-medium">Abreviación</label>
+                  <label className="block text-[var(--text-secondary)] text-[13px] mb-1.5 font-medium">Abreviación</label>
                   <input 
                     type="text"
                     maxLength={4}
                     value={formData.abreviacion || ''} 
                     onChange={(e) => setFormData({ ...formData, abreviacion: e.target.value.toUpperCase() })}
                     placeholder="GEM"
-                    className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500 font-mono"
+                    className="input-glass font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-amber-800 text-sm mb-1 font-medium">Color</label>
+                  <label className="block text-[var(--text-secondary)] text-[13px] mb-1.5 font-medium">Color</label>
                   <div className="flex gap-1 flex-wrap">
                     {COLORES_USUARIO.map(color => (
                       <button
                         key={color}
                         type="button"
                         onClick={() => setFormData({ ...formData, color })}
-                        className={`w-8 h-8 rounded-lg border-2 transition-all ${formData.color === color ? 'border-stone-800 scale-110' : 'border-transparent'}`}
+                        className={`w-8 h-8 rounded-[var(--radius-md)] border-2 transition-all ${formData.color === color ? 'border-stone-800 scale-110' : 'border-transparent'}`}
                         style={{ backgroundColor: color }}
                       />
                     ))}
@@ -4032,11 +4033,11 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   />
                 </div>
                 <div className="w-24">
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Año</label>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Año</label>
                   <select
                     value={formData.ano || new Date().getFullYear().toString()}
                     onChange={(e) => setFormData({ ...formData, ano: e.target.value })}
-                    className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   >
                     {['2022', '2023', '2024', '2025', '2026', '2027', '2028'].map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
@@ -4081,13 +4082,13 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 const faltaHora = tieneExportacion && !formData.horaExportacion;
 
                 return (
-                  <div className={`rounded-xl p-3 space-y-3 border ${tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) ? 'bg-red-50 border-red-200' : 'bg-stone-50 border-stone-200'}`}>
-                    <p className={`text-xs font-medium uppercase tracking-wide ${tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) ? 'text-red-500' : 'text-stone-500'}`}>
+                  <div className={`rounded-[var(--radius-lg)] p-3 space-y-3 border ${tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) ? 'bg-red-50 border-red-200' : 'bg-black/[0.02] border-black/[0.06]'}`}>
+                    <p className={`text-xs font-medium uppercase tracking-wide ${tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) ? 'text-red-500' : 'text-[var(--text-tertiary)]'}`}>
                       Logística {tieneExportacion && (faltaMatricula || faltaBultos || faltaHora) && '⚠️'}
                     </p>
 
                     {/* Matrícula */}
-                    <div className={faltaMatricula ? 'bg-red-100 rounded-lg p-2 -mx-1' : ''}>
+                    <div className={faltaMatricula ? 'bg-red-100 rounded-[var(--radius-md)] p-2 -mx-1' : ''}>
                       <Select
                         label={<span className={faltaMatricula ? 'text-red-700' : ''}>Matrícula del coche {faltaMatricula && <span className="text-red-500">*</span>}</span>}
                         value={formData.matriculaId || ''}
@@ -4108,7 +4109,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                         <p className="text-red-600 text-xs mt-1">⚠️ Campo requerido</p>
                       )}
                       {formData.matriculaId && formData.matriculaLog && (
-                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-[var(--radius-md)]">
                           <p className="text-green-700 text-xs font-medium">
                             ✅ {formData.matriculaLog.usuario} • {new Date(formData.matriculaLog.fecha).toLocaleDateString('es-ES')} {new Date(formData.matriculaLog.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -4117,8 +4118,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     </div>
 
                     {/* Bultos */}
-                    <div className={faltaBultos ? 'bg-red-100 rounded-lg p-2 -mx-1' : ''}>
-                      <label className={`block text-sm mb-1 font-medium ${faltaBultos ? 'text-red-700' : 'text-amber-800'}`}>
+                    <div className={faltaBultos ? 'bg-red-100 rounded-[var(--radius-md)] p-2 -mx-1' : ''}>
+                      <label className={`block text-sm mb-1 font-medium ${faltaBultos ? 'text-red-700' : 'text-[var(--accent-text)]'}`}>
                         Bultos {faltaBultos && <span className="text-red-500">*</span>}
                       </label>
                       <div className="flex gap-2">
@@ -4131,12 +4132,12 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                               bultos: n,
                               bultosLog: { usuario: usuarioActivo, fecha: new Date().toISOString() }
                             })}
-                            className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${
+                            className={`flex-1 py-2 rounded-[var(--radius-lg)] border-2 font-semibold transition-colors ${
                               formData.bultos === n
-                                ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-text)]'
                                 : faltaBultos
                                   ? 'border-red-300 text-red-600 hover:border-red-400'
-                                  : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                                  : 'border-black/[0.06] text-[var(--text-secondary)] hover:border-black/[0.08]'
                             }`}
                           >
                             {n}
@@ -4147,7 +4148,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                         <p className="text-red-600 text-xs mt-1">⚠️ Campo requerido</p>
                       )}
                       {formData.bultos && formData.bultosLog && (
-                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-[var(--radius-md)]">
                           <p className="text-green-700 text-xs font-medium">
                             ✅ {formData.bultosLog.usuario} • {new Date(formData.bultosLog.fecha).toLocaleDateString('es-ES')} {new Date(formData.bultosLog.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -4156,7 +4157,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     </div>
 
                     {/* Hora exportación */}
-                    <div className={faltaHora ? 'bg-red-100 rounded-lg p-2 -mx-1' : ''}>
+                    <div className={faltaHora ? 'bg-red-100 rounded-[var(--radius-md)] p-2 -mx-1' : ''}>
                       <Input
                         label={<span className={faltaHora ? 'text-red-700' : ''}>Hora de exportación {faltaHora && <span className="text-red-500">*</span>}</span>}
                         type="time"
@@ -4174,7 +4175,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                         <p className="text-red-600 text-xs mt-1">⚠️ Campo requerido</p>
                       )}
                       {formData.horaExportacion && formData.horaLog && (
-                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="mt-1 px-2 py-1 bg-green-50 border border-green-200 rounded-[var(--radius-md)]">
                           <p className="text-green-700 text-xs font-medium">
                             ✅ {formData.horaLog.usuario} • {new Date(formData.horaLog.fecha).toLocaleDateString('es-ES')} {new Date(formData.horaLog.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -4191,7 +4192,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
             <>
               <div className="flex gap-2 mb-3">
                 <div className="flex-1">
-                  <label className="block text-amber-800 text-sm mb-1 font-medium">Expedición</label>
+                  <label className="block text-[var(--text-secondary)] text-[13px] mb-1.5 font-medium">Expedición</label>
                   <select 
                     value={formData.expedicionId}
                     onChange={(e) => {
@@ -4199,7 +4200,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       const newNum = getNextPaqueteNumber(newExpId);
                       setFormData({ ...formData, expedicionId: newExpId, numero: newNum });
                     }}
-                    className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                    className="w-full bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-ring)]"
                   >
                     {[...expediciones].sort(sortExpDescending).map(e => (
                       <option key={e.id} value={e.id}>{e.nombre}</option>
@@ -4207,13 +4208,13 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   </select>
                 </div>
                 <div className="w-20">
-                  <label className="block text-amber-800 text-sm mb-1 font-medium">Nº</label>
+                  <label className="block text-[var(--text-secondary)] text-[13px] mb-1.5 font-medium">Nº</label>
                   <input
                     type="number"
                     inputMode="numeric"
                     value={formData.numero || ''}
                     onChange={(e) => setFormData({ ...formData, numero: parseInt(e.target.value) || '' })}
-                    className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                    className="w-full bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-ring)]"
                   />
                 </div>
               </div>
@@ -4229,8 +4230,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 onChange={(e) => handleCategoriaChange(e.target.value)}
                 options={categorias.map(c => ({ value: c.id, label: `${c.nombre}${c.esFino ? ' (Fino)' : ''}` }))}
               />
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
-                <p className="text-amber-700 text-xs">
+              <div className="bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-md)] p-3 mb-3">
+                <p className="text-[var(--accent-text)] text-xs">
                   {getCategoria(formData.categoriaId)?.esFino 
                     ? '✨ Categoría FINO: IGI 0%, Dto. Fino del cliente' 
                     : '📦 Categoría normal: IGI 4.5%, Dto. Estándar del cliente'}
@@ -4252,8 +4253,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               />
               
               {/* Líneas de oro */}
-              <div className="border-t border-amber-200 pt-3 mt-3">
-                <h4 className="text-amber-700 font-medium mb-2">📏 Líneas de Oro</h4>
+              <div className="border-t border-[var(--accent-border)] pt-3 mt-3">
+                <h4 className="text-[var(--accent-text)] font-medium mb-2">📏 Líneas de Oro</h4>
                 
                 {/* Lista de líneas añadidas */}
                 {formData.lineas && formData.lineas.length > 0 && (
@@ -4261,8 +4262,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     {formData.lineas.map((linea, idx) => {
                       const fino = calcularFinoLinea(linea.bruto, linea.ley);
                       return (
-                        <div key={linea.id || idx} className="flex justify-between items-center bg-amber-50 rounded p-2 text-sm">
-                          <span>{linea.bruto}g × {linea.ley} = <span className="text-amber-700 font-medium">{formatNum(fino, 2)}g fino</span></span>
+                        <div key={linea.id || idx} className="flex justify-between items-center bg-[var(--accent-soft)] rounded p-2 text-sm">
+                          <span>{linea.bruto}g × {linea.ley} = <span className="text-[var(--accent-text)] font-medium">{formatNum(fino, 2)}g fino</span></span>
                           <button 
                             type="button"
                             onClick={() => setFormData({
@@ -4284,14 +4285,14 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                     inputMode="decimal"
                     placeholder="Bruto (g)"
                     id="modal-bruto"
-                    className="flex-1 min-w-0 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
+                    className="flex-1 min-w-0 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
                   />
                   <input
                     type="number"
                     inputMode="decimal"
                     placeholder="Ley"
                     id="modal-ley"
-                    className="flex-1 min-w-0 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
+                    className="flex-1 min-w-0 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
                   />
                   <button
                     type="button"
@@ -4309,7 +4310,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                         leyInput.value = '';
                       }
                     }}
-                    className="bg-amber-500 text-white px-3 py-2 rounded-lg hover:bg-amber-600 flex-shrink-0"
+                    className="bg-[var(--accent)] text-white px-3 py-2 rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] flex-shrink-0"
                   >+</button>
                 </div>
                 
@@ -4326,7 +4327,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                             onClick={() => {
                               document.getElementById('modal-ley').value = k.ley;
                             }}
-                            className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200 border border-amber-300"
+                            className="text-xs bg-[var(--accent-soft)] text-[var(--accent-text)] px-2 py-1 rounded hover:bg-[var(--accent-border)] border border-[var(--accent-border)]"
                           >
                             {k.nombre}: {k.ley}
                           </button>
@@ -4339,11 +4340,11 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
                 {/* Total bruto y fino (solo si hay más de 1 línea) */}
                 {formData.lineas?.length > 1 && (
-                  <div className="mt-3 pt-2 border-t border-amber-200 text-right">
-                    <span className="text-amber-800 font-semibold">
+                  <div className="mt-3 pt-2 border-t border-[var(--accent-border)] text-right">
+                    <span className="text-[var(--accent-text)] font-semibold">
                       Total: {formatGr(formData.lineas.reduce((sum, l) => sum + (l.bruto || 0), 0))}
                     </span>
-                    <span className="text-amber-600 ml-2">
+                    <span className="text-[var(--accent)] ml-2">
                       ({formatGr(formData.lineas.reduce((sum, l) => sum + calcularFinoLinea(l.bruto, l.ley), 0))} fino)
                     </span>
                   </div>
@@ -4351,12 +4352,12 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               </div>
 
               {/* Cierre */}
-              <div className="border-t border-amber-200 pt-3 mt-3">
-                <h4 className="text-amber-700 font-medium mb-2">🔒 Cierre (opcional)</h4>
+              <div className="border-t border-[var(--accent-border)] pt-3 mt-3">
+                <h4 className="text-[var(--accent-text)] font-medium mb-2">🔒 Cierre (opcional)</h4>
 
                 {/* €/Onza + OK */}
                 <div className="mb-2">
-                  <label className="block text-amber-800 text-xs mb-1">€/Onza</label>
+                  <label className="block text-[var(--accent-text)] text-xs mb-1">€/Onza</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -4369,7 +4370,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                         euroOnza: e.target.value === '' ? null : parseFloat(e.target.value),
                         cierreConfirmado: false
                       })}
-                      className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-amber-500"
+                      className="flex-1 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
                     />
                     <button
                       type="button"
@@ -4396,12 +4397,12 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                         }
                       }}
                       disabled={!formData.euroOnza}
-                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                      className={`px-4 py-2 rounded-[var(--radius-md)] font-semibold text-sm transition-all ${
                         formData.cierreConfirmado
-                          ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                          ? 'bg-[var(--accent-soft)] text-[var(--accent)] hover:bg-[var(--accent-border)]'
                           : formData.euroOnza
-                            ? 'bg-amber-500 text-white hover:bg-amber-600'
-                            : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                            ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]'
+                            : 'bg-black/[0.06] text-[var(--text-tertiary)] cursor-not-allowed'
                       }`}
                     >
                       {formData.cierreConfirmado ? '↻' : 'OK'}
@@ -4413,16 +4414,16 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 {formData.cierreConfirmado && (
                   <>
                     {/* Base Real (solo lectura) */}
-                    <div className="bg-amber-50 rounded-lg p-2 mb-2">
+                    <div className="bg-[var(--accent-soft)] rounded-[var(--radius-md)] p-2 mb-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-amber-600">Base Real (€/Onza ÷ 31,10349):</span>
-                        <span className="font-mono font-semibold text-amber-800">{formData.baseReal?.toFixed(2)} €/g</span>
+                        <span className="text-[var(--accent)]">Base Real (€/Onza ÷ 31,10349):</span>
+                        <span className="font-mono font-semibold text-[var(--accent-text)]">{formData.baseReal?.toFixed(2)} €/g</span>
                       </div>
                     </div>
 
                     {/* Base Cliente + botones descuento */}
                     <div className="mb-2">
-                      <label className="block text-amber-800 text-xs mb-1">Base Cliente €/g</label>
+                      <label className="block text-[var(--accent-text)] text-xs mb-1">Base Cliente €/g</label>
                       <div className="flex gap-2">
                         <input
                           type="number"
@@ -4430,7 +4431,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                           step="0.01"
                           value={formData.precioFino ?? ''}
                           onChange={(e) => setFormData({ ...formData, precioFino: e.target.value === '' ? null : parseFloat(e.target.value) })}
-                          className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                          className="flex-1 bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                         />
                         {[-0.02, -0.05, -0.10].map(desc => (
                           <button
@@ -4442,7 +4443,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                                 setFormData({ ...formData, precioFino: nuevo });
                               }
                             }}
-                            className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded-lg border border-amber-300 hover:bg-amber-200"
+                            className="px-2 py-1 text-xs bg-[var(--accent-soft)] text-[var(--accent-text)] rounded-[var(--radius-md)] border border-[var(--accent-border)] hover:bg-[var(--accent-border)]"
                           >
                             {desc.toFixed(2).replace('.', ',')}
                           </button>
@@ -4451,7 +4452,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       {/* Diferencia */}
                       {formData.baseReal && formData.precioFino && formData.baseReal !== formData.precioFino && (
                         <p className="text-xs mt-1">
-                          <span className="text-stone-500">Diferencia: {((formData.precioFino - formData.baseReal)).toFixed(2).replace('.', ',')} €/g</span>
+                          <span className="text-[var(--text-tertiary)]">Diferencia: {((formData.precioFino - formData.baseReal)).toFixed(2).replace('.', ',')} €/g</span>
                           {formData.lineas?.length > 0 && (() => {
                             const finoTotal = formData.lineas.reduce((sum, l) => sum + calcularFinoLinea(l.bruto, l.ley), 0);
                             const diffTotal = (formData.baseReal - formData.precioFino) * finoTotal;
@@ -4467,25 +4468,25 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
                     {/* Precio Jofisa */}
                     <div className="mb-2">
-                      <label className="block text-amber-800 text-xs mb-1">Precio Jofisa €/g (Base Real - 0,25)</label>
+                      <label className="block text-[var(--accent-text)] text-xs mb-1">Precio Jofisa €/g (Base Real - 0,25)</label>
                       <input
                         type="number"
                         inputMode="decimal"
                         step="0.01"
                         value={formData.cierreJofisa ?? ''}
                         onChange={(e) => setFormData({ ...formData, cierreJofisa: e.target.value === '' ? null : parseFloat(e.target.value) })}
-                        className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                        className="w-full bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                       />
                     </div>
 
                     {/* Fecha Cierre */}
                     <div>
-                      <label className="block text-amber-800 text-xs mb-1">Fecha Cierre</label>
+                      <label className="block text-[var(--accent-text)] text-xs mb-1">Fecha Cierre</label>
                       <input
                         type="date"
                         value={formData.fechaCierre || new Date().toISOString().split('T')[0]}
                         onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })}
-                        className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-amber-500"
+                        className="w-full bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                       />
                     </div>
                   </>
@@ -4506,8 +4507,8 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           )}
 
           {showLineaPendiente && (
-            <div className="p-4 bg-amber-50 border-t border-amber-300">
-              <p className="text-amber-800 text-sm mb-3">⚠️ Tienes una línea de oro sin añadir. ¿Qué quieres hacer?</p>
+            <div className="p-4 bg-[var(--accent-soft)] border-t border-[var(--accent-border)]">
+              <p className="text-[var(--accent-text)] text-sm mb-3">⚠️ Tienes una línea de oro sin añadir. ¿Qué quieres hacer?</p>
               <div className="flex gap-2">
                 <Button variant="secondary" size="sm" className="flex-1" onClick={() => setShowLineaPendiente(false)}>Volver</Button>
                 <Button size="sm" className="flex-1" onClick={() => {
@@ -4536,7 +4537,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           )}
 
           {!showConfirmExit && !showLineaPendiente && (
-            <div className="p-4 border-t border-amber-200 flex-shrink-0">
+            <div className="p-4 border-t border-[var(--accent-border)] flex-shrink-0">
               <div className="flex gap-3">
                 <Button variant="secondary" className="flex-1" onClick={handleClose}>Cancelar</Button>
                 {(() => {
@@ -4591,13 +4592,13 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
   // Text Modal
   const TextModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border border-amber-300 rounded-2xl p-6 w-full max-w-lg shadow-xl">
-        <h3 className="text-xl font-bold text-amber-800 mb-4">📋 Texto Generado</h3>
+    <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4">
+      <div className="bg-white border border-[var(--accent-border)] rounded-[var(--radius-xl)] p-6 w-full max-w-lg shadow-xl">
+        <h3 className="text-xl font-bold text-[var(--accent-text)] mb-4">📋 Texto Generado</h3>
         <textarea 
           readOnly 
           value={textModalContent}
-          className="w-full h-48 bg-amber-50 border border-amber-200 rounded-lg p-3 text-stone-800 text-sm font-mono"
+          className="w-full h-48 bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-md)] p-3 text-[var(--text-primary)] text-sm font-mono"
         />
         <div className="flex gap-3 mt-4">
           <Button variant="secondary" className="flex-1" onClick={() => setShowTextModal(false)}>Cerrar</Button>
@@ -4620,23 +4621,23 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     const expInfo = expediciones.find(e => e.id === selectedExpedicion);
     
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowCategoriasModal(false)}>
-        <div className="bg-white border border-amber-300 rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-amber-800 mb-4">📊 {expInfo?.nombre} por Categoría</h3>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setShowCategoriasModal(false)}>
+        <div className="bg-white border border-[var(--accent-border)] rounded-[var(--radius-xl)] p-6 w-full max-w-lg shadow-xl" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-[var(--accent-text)] mb-4">📊 {expInfo?.nombre} por Categoría</h3>
           <div className="space-y-3">
             {Object.entries(totales.porCategoria).map(([catNombre, vals]) => {
               const cat = categorias.find(c => c.nombre === catNombre);
               return (
-                <div key={catNombre} className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div key={catNombre} className="bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-md)] p-3">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-stone-800 font-medium">{catNombre}</span>
-                    {cat?.esFino && <span className="bg-amber-200 text-amber-800 text-xs px-2 py-1 rounded">FINO</span>}
+                    <span className="text-[var(--text-primary)] font-medium">{catNombre}</span>
+                    {cat?.esFino && <span className="bg-[var(--accent-border)] text-[var(--accent-text)] text-xs px-2 py-1 rounded">FINO</span>}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-stone-500">Bruto:</span> <span className="text-stone-800">{formatNum(vals.bruto)}g</span></div>
-                    <div><span className="text-stone-500">Fino:</span> <span className="text-stone-800">{formatNum(vals.fino)}g</span></div>
-                    <div><span className="text-stone-500">Total Fra:</span> <span className="text-stone-800">{formatNum(vals.totalFra)}€</span></div>
-                    <div><span className="text-stone-500">€/g Bruto:</span> <span className="text-stone-800">{formatNum(vals.precioMedioBruto)}€</span></div>
+                    <div><span className="text-[var(--text-tertiary)]">Bruto:</span> <span className="text-[var(--text-primary)]">{formatNum(vals.bruto)}g</span></div>
+                    <div><span className="text-[var(--text-tertiary)]">Fino:</span> <span className="text-[var(--text-primary)]">{formatNum(vals.fino)}g</span></div>
+                    <div><span className="text-[var(--text-tertiary)]">Total Fra:</span> <span className="text-[var(--text-primary)]">{formatNum(vals.totalFra)}€</span></div>
+                    <div><span className="text-[var(--text-tertiary)]">€/g Bruto:</span> <span className="text-[var(--text-primary)]">{formatNum(vals.precioMedioBruto)}€</span></div>
                   </div>
                 </div>
               );
@@ -4726,11 +4727,11 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
     const totalEurGBruto = sumBruto > 0 ? sumMgTotal / sumBruto : 0;
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { saveToFirestore(); setShowResultadosModal(false); }}>
-        <div className="bg-white border border-amber-300 rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <div className="sticky top-0 bg-white border-b border-amber-200 px-5 py-3 rounded-t-2xl z-10 flex items-center gap-3">
-            <button onClick={() => { saveToFirestore(); setShowResultadosModal(false); }} className="text-amber-600 hover:text-amber-800 text-lg">←</button>
-            <h3 className="text-lg font-bold text-amber-800">📊 {expInfo?.nombre} — Resultados</h3>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => { saveToFirestore(); setShowResultadosModal(false); }}>
+        <div className="bg-white border border-[var(--accent-border)] rounded-[var(--radius-xl)] w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="sticky top-0 bg-white border-b border-[var(--accent-border)] px-5 py-3 rounded-t-2xl z-10 flex items-center gap-3">
+            <button onClick={() => { saveToFirestore(); setShowResultadosModal(false); }} className="text-[var(--accent)] hover:text-[var(--accent-text)] text-lg">←</button>
+            <h3 className="text-lg font-bold text-[var(--accent-text)]">📊 {expInfo?.nombre} — Resultados</h3>
           </div>
           <div className="p-5">
 
@@ -4741,23 +4742,23 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 const cliente = getCliente(clienteId);
                 const color = cliente?.color || '#f59e0b';
                 return (
-                  <div key={clienteId} className="rounded-lg p-3 border" style={{ backgroundColor: color + '10', borderColor: color + '40' }}>
+                  <div key={clienteId} className="rounded-[var(--radius-md)] p-3 border" style={{ backgroundColor: color + '10', borderColor: color + '40' }}>
                     {/* Fila 1: nombre | €/g Fras | Mg Fras */}
                     <div className="grid grid-cols-3 items-center text-xs">
                       <span className="font-medium text-sm" style={{ color }}>{cliente?.nombre || 'Sin cliente'}</span>
-                      <span className="font-mono text-stone-400 text-center">{formatNum(eurGFras)}</span>
+                      <span className="font-mono text-[var(--text-tertiary)] text-center">{formatNum(eurGFras)}</span>
                       <span className={`font-mono text-right ${vals.margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(vals.margen, 0)}€</span>
                     </div>
                     {/* Fila 2: grs extra | €/g Sobra | € Sobra */}
                     <div className="grid grid-cols-3 items-center text-xs mt-0.5">
-                      <span className="text-stone-400 font-mono">{formatNum(fsn)}g extra</span>
-                      <span className="font-mono text-stone-400 text-center">{formatNum(eurGSobra)}</span>
+                      <span className="text-[var(--text-tertiary)] font-mono">{formatNum(fsn)}g extra</span>
+                      <span className="font-mono text-[var(--text-tertiary)] text-center">{formatNum(eurGSobra)}</span>
                       <span className={`font-mono text-right ${euroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(euroSobra, 0)}€</span>
                     </div>
                     {/* Fila 3: grs bruto | €/g Total | Mg Total */}
                     <div className="grid grid-cols-3 items-center mt-1 pt-1" style={{ borderTop: `1px solid ${color}20` }}>
-                      <span className="text-stone-400 font-mono text-xs">{formatNum(vals.bruto)}g</span>
-                      <span className={`font-mono font-bold text-sm text-center ${eurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(eurGBruto)}</span>
+                      <span className="text-[var(--text-tertiary)] font-mono text-xs">{formatNum(vals.bruto)}g</span>
+                      <span className={`font-mono font-bold text-sm text-center ${eurGBruto >= 0 ? 'text-[var(--text-primary)]' : 'text-red-600'}`}>{formatNum(eurGBruto)}</span>
                       <span className={`font-mono font-bold text-sm text-right ${mgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(mgTotal, 0)}€</span>
                     </div>
                   </div>
@@ -4765,20 +4766,20 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               })}
             </div>
             {/* Totales */}
-            <div className="mt-2 border-t-2 border-amber-300 pt-2">
+            <div className="mt-2 border-t-2 border-[var(--accent-border)] pt-2">
               <div className="grid grid-cols-3 items-center text-xs">
-                <span className="font-semibold text-stone-600">Total</span>
-                <span className="font-mono text-stone-400 text-center">{formatNum(sumBruto > 0 ? sumMgFras / sumBruto : 0)}</span>
+                <span className="font-semibold text-[var(--text-secondary)]">Total</span>
+                <span className="font-mono text-[var(--text-tertiary)] text-center">{formatNum(sumBruto > 0 ? sumMgFras / sumBruto : 0)}</span>
                 <span className={`font-mono text-right ${sumMgFras >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumMgFras, 0)}€</span>
               </div>
               <div className="grid grid-cols-3 items-center text-xs mt-0.5">
-                <span className="text-stone-400 font-mono">{formatNum(finoSobraNeto)}g extra</span>
-                <span className="font-mono text-stone-400 text-center">{formatNum(sumBruto > 0 ? sumEuroSobra / sumBruto : 0)}</span>
+                <span className="text-[var(--text-tertiary)] font-mono">{formatNum(finoSobraNeto)}g extra</span>
+                <span className="font-mono text-[var(--text-tertiary)] text-center">{formatNum(sumBruto > 0 ? sumEuroSobra / sumBruto : 0)}</span>
                 <span className={`font-mono text-right ${sumEuroSobra >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatNum(sumEuroSobra, 0)}€</span>
               </div>
-              <div className="grid grid-cols-3 items-center mt-1 pt-1 border-t border-amber-200">
-                <span className="text-stone-400 font-mono text-xs">{formatNum(sumBruto)}g</span>
-                <span className={`font-mono font-bold text-sm text-center ${totalEurGBruto >= 0 ? 'text-stone-800' : 'text-red-600'}`}>{formatNum(totalEurGBruto)}</span>
+              <div className="grid grid-cols-3 items-center mt-1 pt-1 border-t border-[var(--accent-border)]">
+                <span className="text-[var(--text-tertiary)] font-mono text-xs">{formatNum(sumBruto)}g</span>
+                <span className={`font-mono font-bold text-sm text-center ${totalEurGBruto >= 0 ? 'text-[var(--text-primary)]' : 'text-red-600'}`}>{formatNum(totalEurGBruto)}</span>
                 <span className={`font-mono font-bold text-sm text-right ${sumMgTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatNum(sumMgTotal, 0)}€</span>
               </div>
             </div>
@@ -4786,7 +4787,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
           {/* Fino Sobra por Cliente */}
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-stone-600 mb-2">Fino Sobra por Cliente</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">Fino Sobra por Cliente</h4>
             <div className="space-y-2">
               {clienteEntries.map(([clienteId]) => {
                 const cliente = getCliente(clienteId);
@@ -4803,9 +4804,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       value={finoSobra}
                       onChange={e => handleClienteField(clienteId, 'finoSobra', e.target.value)}
                       onBlur={saveToFirestore}
-                      className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
+                      className="flex-1 border border-black/[0.08] rounded px-2 py-1 text-sm font-mono text-right"
                     />
-                    <span className="text-xs text-stone-400">g</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">g</span>
                   </div>
                 );
               })}
@@ -4813,10 +4814,10 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           </div>
 
           {/* Valoración Fino Sobra */}
-          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <h4 className="text-sm font-semibold text-stone-600 mb-2">Valoración Fino Sobra</h4>
+          <div className="mb-4 bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-md)] p-3">
+            <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">Valoración Fino Sobra</h4>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-stone-500">Precio €/g:</span>
+              <span className="text-sm text-[var(--text-tertiary)]">Precio €/g:</span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -4825,18 +4826,18 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 value={precioFinoSobra}
                 onChange={e => handlePrecioChange(e.target.value)}
                 onBlur={saveToFirestore}
-                className="w-28 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
+                className="w-28 border border-black/[0.08] rounded px-2 py-1 text-sm font-mono text-right"
               />
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div><span className="text-stone-500">Total sobra:</span> <span className="text-stone-800 font-mono">{formatNum(totalFinoSobra)} g</span></div>
-              <div><span className="text-stone-500">Neto:</span> <span className="text-stone-800 font-mono">{formatNum(finoSobraNeto)} g</span></div>
+              <div><span className="text-[var(--text-tertiary)]">Total sobra:</span> <span className="text-[var(--text-primary)] font-mono">{formatNum(totalFinoSobra)} g</span></div>
+              <div><span className="text-[var(--text-tertiary)]">Neto:</span> <span className="text-[var(--text-primary)] font-mono">{formatNum(finoSobraNeto)} g</span></div>
             </div>
           </div>
 
           {/* Gramos Devueltos */}
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-stone-600 mb-2">Gramos Devueltos</h4>
+            <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">Gramos Devueltos</h4>
             <div className="space-y-2">
               {clienteEntries.map(([clienteId]) => {
                 const cliente = getCliente(clienteId);
@@ -4853,9 +4854,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                       value={gramosDevueltos}
                       onChange={e => handleClienteField(clienteId, 'gramosDevueltos', e.target.value)}
                       onBlur={saveToFirestore}
-                      className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm font-mono text-right"
+                      className="flex-1 border border-black/[0.08] rounded px-2 py-1 text-sm font-mono text-right"
                     />
-                    <span className="text-xs text-stone-400">g</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">g</span>
                   </div>
                 );
               })}
@@ -4871,10 +4872,10 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen page-bg flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">✋</div>
-          <p className="text-amber-800 font-medium">Cargando Ma d'Or...</p>
+          <p className="text-[var(--accent-text)] font-medium">Cargando Ma d'Or...</p>
         </div>
       </div>
     );
@@ -4883,16 +4884,16 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
   // Gate: require valid code in URL
   if (codigoInvalido) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4">
-        <div className="bg-white border border-amber-300 rounded-2xl p-8 shadow-xl max-w-sm w-full text-center">
+      <div className="min-h-screen page-bg flex items-center justify-center p-4">
+        <div className="bg-white border border-[var(--accent-border)] rounded-[var(--radius-xl)] p-8 shadow-xl max-w-sm w-full text-center">
           <div className="text-4xl mb-4">🔐</div>
-          <h1 className="text-xl font-bold text-amber-800 mb-2">Ma d'Or Tracker</h1>
+          <h1 className="text-xl font-bold text-[var(--accent-text)] mb-2">Ma d'Or Tracker</h1>
           {!codigoUrl ? (
-            <p className="text-stone-600 mb-4">Necesitas un código de acceso para entrar.</p>
+            <p className="text-[var(--text-secondary)] mb-4">Necesitas un código de acceso para entrar.</p>
           ) : (
             <p className="text-red-600 mb-4">Código de acceso inválido.</p>
           )}
-          <p className="text-stone-500 text-sm">Contacta con el administrador para obtener tu código de acceso.</p>
+          <p className="text-[var(--text-tertiary)] text-sm">Contacta con el administrador para obtener tu código de acceso.</p>
         </div>
       </div>
     );
@@ -4945,21 +4946,21 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 text-stone-800">
+    <div className="page-bg text-[var(--text-primary)]">
       {/* Header + Nav sticky */}
       <div className="sticky top-0 z-40">
-        <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowLingotes(true)}>
+        <header className="glass-dark p-3">
+          <div className="flex items-center justify-between max-w-3xl mx-auto">
+            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setShowLingotes(true)}>
               <span className="text-2xl">✋</span>
-              <h1 className="text-xl font-bold text-white drop-shadow-sm">Ma d'Or</h1>
-              <span className="text-xs text-white/50 font-mono">v1.0</span>
+              <h1 className="text-xl font-semibold text-white tracking-tight">Ma d'Or</h1>
+              <span className="text-[10px] text-white/30 font-mono">v1.0</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Indicador de logística pendiente */}
               {logisticaPendienteCount > 0 && (
                 <div
-                  className="flex items-center gap-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full cursor-pointer animate-pulse"
+                  className="flex items-center gap-1 bg-[var(--warning)] text-white text-xs px-2.5 py-1 rounded-full cursor-pointer animate-pulse"
                   onClick={() => {
                     const expPendiente = expedicionesLogisticaPendiente[0];
                     if (expPendiente) {
@@ -4973,29 +4974,29 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                 </div>
               )}
               {/* Indicador usuario activo */}
-              <span className="text-white/80 text-sm">{getUsuario(usuarioActivo)?.nombre}</span>
+              <span className="text-white/60 text-sm">{getUsuario(usuarioActivo)?.nombre}</span>
               <Button
                 onClick={() => openModal('paquete')}
-                className="bg-white text-blue-600 hover:bg-blue-50 text-sm px-3 py-1"
+                className="!bg-white/90 !text-[var(--text-primary)] hover:!bg-white text-sm !px-3 !py-1.5 !rounded-full"
               >
                 + Paquete
               </Button>
             </div>
           </div>
         </header>
-        
-        {/* Navigation */}
-        <nav className="bg-white border-b border-amber-200 flex shadow-sm">
+
+        {/* Navigation — pill style */}
+        <nav className="glass border-b border-white/10 flex px-2 py-1">
           <TabButton id="expediciones" label="Expediciones" icon="📦" badge={totalPendientes} />
           <TabButton id="clientes" label="Clientes" icon="👥" badge={clientesEnAlerta.length} />
           {tienePermiso('ver_estadisticas') && <TabButton id="estadisticas" label="Stats" icon="📊" />}
           <TabButton id="parametros" label="Parámetros" icon="⚙️" />
         </nav>
-        
+
         {/* Subnavegación contextual */}
         {activeTab === 'expediciones' && (selectedExpedicion || selectedPaquete) && (
-          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
-            <div className="flex items-center gap-2 max-w-2xl mx-auto">
+          <div className="glass border-b border-white/10 px-4 py-2">
+            <div className="flex items-center gap-2 max-w-3xl mx-auto">
               {selectedPaquete ? (
                 (() => {
                   const paq = paquetes.find(p => p.id === selectedPaquete);
@@ -5005,21 +5006,21 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   return (
                     <>
                       <Button variant="ghost" size="sm" onClick={() => setSelectedPaquete(null)}>← Volver</Button>
-                      <h2 className="text-lg font-bold text-amber-800">{paq?.nombre}</h2>
+                      <h2 className="text-lg font-semibold text-[var(--text-primary)]">{paq?.nombre}</h2>
                       {cliente && (
-                        <span 
-                          className="text-xs px-2 py-1 rounded font-bold"
-                          style={{ backgroundColor: (cliente.color || '#f59e0b') + '20', color: cliente.color || '#f59e0b' }}
+                        <span
+                          className="text-xs px-2.5 py-1 rounded-full font-bold"
+                          style={{ backgroundColor: (cliente.color || '#C8956C') + '18', color: cliente.color || '#C8956C' }}
                         >{cliente.abreviacion || cliente.nombre}</span>
                       )}
                       {totales && totales.totalFra > 0 && (
-                        <span 
+                        <span
                           className="text-sm font-mono font-bold ml-auto"
-                          style={{ color: cliente?.color || '#f59e0b' }}
+                          style={{ color: cliente?.color || '#C8956C' }}
                         >{formatNum(totales.totalFra)}€</span>
                       )}
                       {categoria?.esFino && (
-                        <span className="bg-amber-200 text-amber-800 text-xs px-2 py-1 rounded font-medium">FINO</span>
+                        <span className="bg-[var(--accent-soft)] text-[var(--accent-text)] text-xs px-2.5 py-1 rounded-full font-medium">FINO</span>
                       )}
                     </>
                   );
@@ -5027,11 +5028,11 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               ) : selectedExpedicion ? (
                 <>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedExpedicion(null)}>← Volver</Button>
-                  <h2 className="text-lg font-bold text-amber-800 flex-1">Expedición {expediciones.find(e => e.id === selectedExpedicion)?.nombre}</h2>
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)] flex-1">Expedición {expediciones.find(e => e.id === selectedExpedicion)?.nombre}</h2>
                   <select
                     value={ordenVista}
                     onChange={(e) => setOrdenVista(e.target.value)}
-                    className="bg-amber-100 border border-amber-300 rounded-lg px-2 py-1 text-sm text-amber-800 font-medium focus:outline-none focus:border-amber-500"
+                    className="input-glass !py-1.5 !px-3 !text-sm !w-auto"
                   >
                     <option value="normal">📋 Normal</option>
                     <option value="pendientes">⚠️ Pendientes</option>
@@ -5046,9 +5047,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
           </div>
         )}
       </div>
-      
+
       {/* Content */}
-      <main className="p-4 pb-20 max-w-2xl mx-auto">
+      <main className="p-5 pb-20 max-w-3xl mx-auto">
         {activeTab === 'expediciones' && <ExpedicionesTab />}
         {activeTab === 'clientes' && <ClientesTab />}
         {activeTab === 'parametros' && <ParametrosTab />}
@@ -5063,22 +5064,22 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
       {/* Modal Alerta de Exposición */}
       {showAlertaExposicion && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-red-500 px-6 py-4">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+        <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4">
+          <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="bg-[var(--danger)] px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 ⚠️ Alerta de Exposición
               </h2>
             </div>
             <div className="p-6">
-              <p className="text-stone-600 mb-4">
+              <p className="text-[var(--text-secondary)] mb-4">
                 Los siguientes clientes superan el umbral de <strong>{formatNum(configGeneral.alertaExposicionUmbral || 80000)} €</strong>:
               </p>
               <div className="space-y-2 mb-6">
                 {clientesEnAlerta.map(({ cliente, totalExposicion, exceso }) => (
                   <div
                     key={cliente.id}
-                    className="flex justify-between items-center p-3 rounded-lg"
+                    className="flex justify-between items-center p-3 rounded-[var(--radius-md)]"
                     style={{ backgroundColor: (cliente.color || '#f59e0b') + '15' }}
                   >
                     <div className="flex items-center gap-2">
@@ -5086,19 +5087,19 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: cliente.color || '#f59e0b' }}
                       />
-                      <span className="font-medium text-stone-800">
+                      <span className="font-medium text-[var(--text-primary)]">
                         {cliente.abreviacion || cliente.nombre}
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="font-mono font-bold text-stone-800">{formatNum(totalExposicion)} €</span>
+                      <span className="font-mono font-bold text-[var(--text-primary)]">{formatNum(totalExposicion)} €</span>
                       <span className="text-red-500 text-sm ml-2">(+{formatNum(exceso)} €)</span>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="space-y-2">
-                <p className="text-xs text-stone-500 mb-2">Posponer alerta:</p>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">Posponer alerta:</p>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="secondary" size="sm" onClick={() => posponerAlerta(1)}>1 día</Button>
                   <Button variant="secondary" size="sm" onClick={() => posponerAlerta(3)}>3 días</Button>
@@ -5115,16 +5116,16 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
 
       {/* Modal Ver Factura de Expedición */}
       {viewingExpedicionFactura && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewingExpedicionFactura(null)}>
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4 border-b border-stone-200">
+        <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setViewingExpedicionFactura(null)}>
+          <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-black/[0.06]">
               <div>
-                <h3 className="font-bold text-stone-800">{viewingExpedicionFactura.factura.nombre}</h3>
-                <p className="text-xs text-stone-500">Expedición: {viewingExpedicionFactura.expedicion.nombre}</p>
+                <h3 className="font-semibold text-[var(--text-primary)]">{viewingExpedicionFactura.factura.nombre}</h3>
+                <p className="text-xs text-[var(--text-tertiary)]">Expedición: {viewingExpedicionFactura.expedicion.nombre}</p>
               </div>
               <button
                 onClick={() => setViewingExpedicionFactura(null)}
-                className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+                className="w-8 h-8 rounded-full bg-black/[0.04] hover:bg-black/[0.08] flex items-center justify-center transition-colors"
               >
                 ✕
               </button>
@@ -5133,22 +5134,22 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
               {viewingExpedicionFactura.factura.tipo?.includes('pdf') ? (
                 <iframe
                   src={viewingExpedicionFactura.factura.data}
-                  className="w-full h-[70vh] rounded-xl"
+                  className="w-full h-[70vh] rounded-[var(--radius-lg)]"
                   title={viewingExpedicionFactura.factura.nombre}
                 />
               ) : (
                 <img
                   src={viewingExpedicionFactura.factura.data}
                   alt={viewingExpedicionFactura.factura.nombre}
-                  className="max-w-full h-auto rounded-xl mx-auto"
+                  className="max-w-full h-auto rounded-[var(--radius-lg)] mx-auto"
                 />
               )}
             </div>
-            <div className="p-4 border-t border-stone-200 flex gap-3">
+            <div className="p-4 border-t border-black/[0.06] flex gap-3">
               <a
                 href={viewingExpedicionFactura.factura.data}
                 download={viewingExpedicionFactura.factura.nombre}
-                className="flex-1 py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-center font-medium"
+                className="flex-1 py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-[var(--radius-lg)] text-center font-medium"
               >
                 📥 Descargar
               </a>

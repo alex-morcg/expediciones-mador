@@ -1,1 +1,249 @@
 @import "tailwindcss";
+
+/* ═══════════════════════════════════════════════
+   LIQUID GLASS DESIGN SYSTEM — "Oro Líquido"
+   Inspired by Apple iOS 26
+   ═══════════════════════════════════════════════ */
+
+/* Design Tokens */
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-hover: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-blur: 20px;
+  --glass-modal-bg: rgba(255, 255, 255, 0.88);
+  --glass-modal-blur: 40px;
+  --glass-dark-bg: rgba(30, 30, 30, 0.65);
+  --glass-dark-border: rgba(255, 255, 255, 0.08);
+
+  --surface: #FAFAF8;
+  --surface-warm: #F5F0EB;
+  --surface-subtle: rgba(0, 0, 0, 0.03);
+  --surface-muted: rgba(0, 0, 0, 0.05);
+
+  --accent: #C8956C;
+  --accent-hover: #B8855C;
+  --accent-soft: rgba(200, 149, 108, 0.10);
+  --accent-border: rgba(200, 149, 108, 0.20);
+  --accent-ring: rgba(200, 149, 108, 0.12);
+  --accent-text: #A67548;
+
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B6B6B;
+  --text-tertiary: #A0A0A0;
+
+  --success: #34A853;
+  --success-soft: rgba(52, 168, 83, 0.10);
+  --warning: #E8A23A;
+  --warning-soft: rgba(232, 162, 58, 0.10);
+  --danger: #D94F4F;
+  --danger-soft: rgba(217, 79, 79, 0.10);
+  --danger-border: rgba(217, 79, 79, 0.15);
+  --info: #4A90D9;
+  --info-soft: rgba(74, 144, 217, 0.10);
+
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-full: 100px;
+}
+
+/* Base */
+body {
+  font-family: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+/* Glass Material */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-dark {
+  background: var(--glass-dark-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border-bottom: 1px solid var(--glass-dark-border);
+}
+
+.glass-modal {
+  background: var(--glass-modal-bg);
+  backdrop-filter: blur(var(--glass-modal-blur)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--glass-modal-blur)) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.glass-overlay {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Glass Card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.glass-card-interactive:hover {
+  background: var(--glass-bg-hover);
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
+}
+
+.glass-card-interactive:active {
+  transform: scale(0.985);
+}
+
+/* Page background */
+.page-bg {
+  background: linear-gradient(135deg, #F5F0EB 0%, #FAFAF8 40%, #F0EDE8 100%);
+  min-height: 100vh;
+}
+
+/* Tab pill indicator */
+.tab-pill-active {
+  background: linear-gradient(135deg, var(--accent) 0%, #D4A574 100%);
+  color: white;
+  border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px rgba(200, 149, 108, 0.3);
+}
+
+/* Status pills */
+.pill {
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Inputs — Liquid Glass style */
+.input-glass {
+  background: var(--surface-subtle);
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  outline: none;
+  width: 100%;
+}
+
+.input-glass::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input-glass:focus {
+  background: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* Button press effect */
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Smooth modal entrance */
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes overlay-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-animate {
+  animation: modal-enter 0.3s ease-out;
+}
+
+.overlay-animate {
+  animation: overlay-enter 0.2s ease-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Focus visible only for keyboard */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(200, 149, 108, 0.4), 0 0 0 4px rgba(200, 149, 108, 0.15);
+  border-radius: inherit;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.1s !important;
+  }
+  .btn-press:active,
+  .glass-card-interactive:active {
+    transform: none !important;
+  }
+}
+
+/* Fallback for no backdrop-filter */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass, .glass-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  .glass-dark {
+    background: rgba(30, 30, 30, 0.92);
+  }
+  .glass-modal {
+    background: rgba(255, 255, 255, 0.97);
+  }
+  .glass-overlay {
+    background: rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Monospace for numbers */
+.font-mono {
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}

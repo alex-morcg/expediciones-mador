@@ -774,14 +774,14 @@ export default function LingotesTracker({
   const getStockColor = (stock) => {
     if (stock < umbralStock.rojo) return { bg: 'from-red-600 via-red-500 to-red-600', text: 'text-red-100', accent: 'text-white' };
     if (stock < umbralStock.naranja) return { bg: 'from-orange-600 via-orange-500 to-orange-600', text: 'text-orange-100', accent: 'text-white' };
-    if (stock < umbralStock.amarillo) return { bg: 'from-amber-500 via-yellow-500 to-amber-500', text: 'text-amber-100', accent: 'text-white' };
+    if (stock < umbralStock.amarillo) return { bg: 'from-[var(--warning)] via-yellow-500 to-[var(--warning)]', text: 'text-white/70', accent: 'text-white' };
     return { bg: 'from-emerald-600 via-green-500 to-emerald-600', text: 'text-emerald-100', accent: 'text-white' };
   };
 
   const Card = ({ children, className = '', onClick }) => (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl p-5 shadow-sm border border-stone-200 transition-all duration-200 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-amber-300' : ''} ${className}`}
+      className={`glass-card p-5 ${onClick ? 'cursor-pointer glass-card-interactive' : ''} ${className}`}
     >
       {children}
     </div>
@@ -789,15 +789,15 @@ export default function LingotesTracker({
 
   const Button = ({ children, onClick, variant = 'primary', size = 'md', className = '', disabled }) => {
     const variants = {
-      primary: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600 shadow-sm',
-      secondary: 'bg-stone-100 text-stone-700 hover:bg-stone-200 border border-stone-200',
-      success: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600',
-      danger: 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200',
-      ghost: 'text-stone-600 hover:bg-stone-100',
+      primary: 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
+      secondary: 'bg-[var(--accent-soft)] text-[var(--accent-text)] border border-[var(--accent-border)] hover:bg-[var(--accent-border)]',
+      success: 'bg-[var(--success)] text-white hover:opacity-90 shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
+      danger: 'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger-border)] hover:bg-[var(--danger)] hover:text-white',
+      ghost: 'text-[var(--text-secondary)] hover:bg-black/[0.04]',
     };
     const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-sm', lg: 'px-6 py-3 text-base' };
     return (
-      <button onClick={onClick} disabled={disabled} className={`${variants[variant]} ${sizes[size]} rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 ${className}`}>
+      <button onClick={onClick} disabled={disabled} className={`${variants[variant]} ${sizes[size]} rounded-[var(--radius-lg)] font-semibold transition-all duration-200 btn-press disabled:opacity-40 ${className}`}>
         {children}
       </button>
     );
@@ -819,7 +819,7 @@ export default function LingotesTracker({
         <div className="grid grid-cols-2 gap-3">
           {/* Stock Ma d'Or - clickable para desplegar composición */}
           <div
-            className={`bg-gradient-to-br ${stockColor.bg} rounded-2xl p-4 text-white shadow-lg cursor-pointer transition-transform active:scale-95`}
+            className={`bg-gradient-to-br ${stockColor.bg} rounded-[var(--radius-xl)] p-4 text-white shadow-lg cursor-pointer transition-transform active:scale-95`}
             onClick={() => stockGlobal.length > 0 && setShowComposicion(!showComposicion)}
           >
             <div className="text-center">
@@ -835,30 +835,30 @@ export default function LingotesTracker({
           </div>
 
           {/* En Clientes */}
-          <div className="bg-gradient-to-br from-stone-700 via-stone-600 to-stone-700 rounded-2xl p-4 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-stone-700 via-stone-600 to-stone-700 rounded-[var(--radius-xl)] p-4 text-white shadow-lg">
             <div className="text-center">
               <div className="text-2xl mb-1">👥</div>
-              <div className="text-4xl font-black text-amber-400">{formatNum(stockTotal.stockClientes, 0)}</div>
-              <p className="text-xs text-stone-400 mt-1">En Clientes</p>
+              <div className="text-4xl font-black text-[var(--accent)]">{formatNum(stockTotal.stockClientes, 0)}</div>
+              <p className="text-xs text-[var(--text-tertiary)] mt-1">En Clientes</p>
             </div>
           </div>
         </div>
 
         {/* Desglose de stock por tipo con exportaciones - desplegable */}
         {showComposicion && stockGlobal.length > 0 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-200 animate-in slide-in-from-top-2">
-            <p className="text-xs text-stone-500 mb-3 font-medium">📦 Composición del stock</p>
+          <div className="bg-white rounded-[var(--radius-xl)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-black/[0.06] animate-in slide-in-from-top-2">
+            <p className="text-xs text-[var(--text-tertiary)] mb-3 font-medium">📦 Composición del stock</p>
             <div className="space-y-2">
               {stockGlobal.map((s, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-stone-50 rounded-xl px-3 py-2">
+                <div key={idx} className="flex items-center justify-between bg-black/[0.02] rounded-[var(--radius-lg)] px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-amber-600 text-lg">{s.cantidad}</span>
-                    <span className="text-stone-500">×</span>
-                    <span className="font-semibold text-stone-700">{s.peso}g</span>
+                    <span className="font-bold text-[var(--accent)] text-lg">{s.cantidad}</span>
+                    <span className="text-[var(--text-tertiary)]">×</span>
+                    <span className="font-semibold text-[var(--text-primary)]">{s.peso}g</span>
                   </div>
                   <div className="flex gap-1 flex-wrap justify-end">
                     {s.exportaciones.map((exp, i) => (
-                      <span key={i} className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-medium">
+                      <span key={i} className="bg-[var(--accent-soft)] text-[var(--accent-text)] px-2 py-0.5 rounded text-xs font-medium">
                         {exp.nombre} ({exp.cantidad})
                       </span>
                     ))}
@@ -870,14 +870,14 @@ export default function LingotesTracker({
         )}
 
         {stockGlobal.length === 0 && (
-          <div className="bg-stone-100 rounded-2xl p-4 text-center">
-            <p className="text-stone-500 text-sm">Sin stock. Crea una exportación.</p>
+          <div className="bg-black/[0.04] rounded-[var(--radius-xl)] p-4 text-center">
+            <p className="text-[var(--text-tertiary)] text-sm">Sin stock. Crea una exportación.</p>
           </div>
         )}
 
         {/* FUTURA si existe */}
         {stockTotal.totalFutura > 0 && (
-          <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-700 rounded-2xl p-4 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-red-700 via-red-600 to-red-700 rounded-[var(--radius-xl)] p-4 text-white shadow-lg">
             <div className="text-center">
               <div className="text-2xl mb-1">⚠️</div>
               <div className="text-3xl font-black text-white">-{formatNum(stockTotal.totalFutura, 0)}g</div>
@@ -891,15 +891,15 @@ export default function LingotesTracker({
             <Card key={cliente.id} onClick={() => setSelectedCliente(cliente.id)} className="relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full" style={{ backgroundColor: cliente.color }} />
               <div className="pl-3">
-                <h3 className="font-bold text-stone-800 mb-2">{cliente.nombre}</h3>
+                <h3 className="font-bold text-[var(--text-primary)] mb-2">{cliente.nombre}</h3>
                 <div className="flex items-end justify-between">
                   <div>
                     <div className="text-3xl font-black" style={{ color: cliente.color }}>
                       {formatNum(cliente.enCursoPendiente, 0)}
-                      <span className="text-lg font-normal text-stone-400 ml-1">g</span>
+                      <span className="text-lg font-normal text-[var(--text-tertiary)] ml-1">g</span>
                     </div>
                   </div>
-                  <div className="text-right text-xs text-stone-500">
+                  <div className="text-right text-xs text-[var(--text-tertiary)]">
                     <div>📦 {formatNum(cliente.enCursoEntregado, 0)}g</div>
                     {cliente.enCursoCerrado > 0 && <div>✅ {formatNum(cliente.enCursoCerrado, 0)}g</div>}
                     {cliente.enCursoDevuelto > 0 && <div>↩️ {formatNum(cliente.enCursoDevuelto, 0)}g</div>}
@@ -916,7 +916,7 @@ export default function LingotesTracker({
 
         {statsClientes.length === 0 && (
           <Card>
-            <p className="text-stone-400 text-center py-6">No hay entregas registradas.</p>
+            <p className="text-[var(--text-tertiary)] text-center py-6">No hay entregas registradas.</p>
           </Card>
         )}
 
@@ -995,10 +995,10 @@ export default function LingotesTracker({
     const FilterBtn = ({ id, label, count }) => (
       <button
         onClick={() => setEntregaFilter(id)}
-        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+        className={`px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold transition-colors ${
           entregaFilter === id
-            ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-sm'
-            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+            ? 'tab-pill-active'
+            : 'bg-black/[0.04] text-[var(--text-secondary)] hover:bg-black/[0.06]'
         }`}
       >
         {label} {count > 0 ? `(${count})` : ''}
@@ -1201,8 +1201,8 @@ export default function LingotesTracker({
 
     return (
       <div className="space-y-5" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <div className="rounded-2xl p-5 text-white shadow-lg relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${cliente.color}, ${cliente.color}dd)` }}>
-          <button onClick={() => setSelectedCliente(null)} className="absolute top-3 left-3 text-white/80 hover:text-white text-sm flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
+        <div className="rounded-[var(--radius-xl)] p-5 text-white shadow-lg relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${cliente.color}, ${cliente.color}dd)` }}>
+          <button onClick={() => setSelectedCliente(null)} className="absolute top-3 left-3 text-white/80 hover:text-white text-sm flex items-center gap-1 bg-white/20 rounded-[var(--radius-md)] px-2 py-1">
             ← Volver
           </button>
           <div className="text-center pt-6">
@@ -1236,22 +1236,22 @@ export default function LingotesTracker({
                       {todosNombres || '-'}
                     </span>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                  <div className="bg-white/20 rounded-[var(--radius-lg)] p-2 text-center">
                     <div className="text-lg">📦</div>
                     <div className="text-lg font-bold">{formatNum(totalEntregado, 0)}</div>
                     <div className="text-xs text-white/70">Entregado</div>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                  <div className="bg-white/20 rounded-[var(--radius-lg)] p-2 text-center">
                     <div className="text-lg">✅</div>
                     <div className="text-lg font-bold">{formatNum(totalCerrado, 0)}</div>
                     <div className="text-xs text-white/70">Cerrado</div>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                  <div className="bg-white/20 rounded-[var(--radius-lg)] p-2 text-center">
                     <div className="text-lg">↩️</div>
                     <div className="text-lg font-bold">{formatNum(enCursoDevuelto, 0)}</div>
                     <div className="text-xs text-white/70">Devuelto</div>
                   </div>
-                  <div className="bg-white/20 rounded-xl p-2 text-center">
+                  <div className="bg-white/20 rounded-[var(--radius-lg)] p-2 text-center">
                     <div className="text-lg">⏳</div>
                     <div className="text-lg font-bold">{formatNum(totalPendiente, 0)}</div>
                     <div className="text-xs text-white/70">Pendiente</div>
@@ -1280,7 +1280,7 @@ export default function LingotesTracker({
                       const exportacion = getExportacion(entrega.exportacionId);
                       const nombreEntrega = `${exportacion?.nombre || ''} ${formatEntregaShort(entrega.fechaEntrega)}`.trim();
                       return (
-                        <div key={entrega.id} className="grid grid-cols-5 gap-2 bg-white/10 rounded-lg px-2 py-2 items-center">
+                        <div key={entrega.id} className="grid grid-cols-5 gap-2 bg-white/10 rounded-[var(--radius-md)] px-2 py-2 items-center">
                           <div className="flex items-center gap-1">
                             <span className="text-green-300 text-[10px]">✓</span>
                             <span
@@ -1310,7 +1310,7 @@ export default function LingotesTracker({
           <div className="flex-1" />
           <button
             onClick={exportarClientePDF}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-stone-700 text-white hover:bg-stone-800 flex items-center gap-1"
+            className="px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold bg-stone-700 text-white hover:bg-stone-800 flex items-center gap-1"
           >
             🪪 Resum Cli.
           </button>
@@ -1324,20 +1324,20 @@ export default function LingotesTracker({
           if (futuraCerrados.length === 0 || stockRealTotal === 0) return null;
 
           return (
-            <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4">
+            <div className="bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-xl)] p-4">
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">📦</span>
-                  <h3 className="font-bold text-amber-800">FUTURA pendientes de asignar</h3>
+                  <h3 className="font-bold text-[var(--accent-text)]">FUTURA pendientes de asignar</h3>
                 </div>
-                <div className="text-sm text-amber-600 font-semibold">
+                <div className="text-sm text-[var(--accent)] font-semibold">
                   {futuraCerrados.length} lingotes &bull; {formatNum(futuraCerradosWeight, 0)}g
                 </div>
               </div>
-              <p className="text-xs text-amber-700 mb-3">Hay stock disponible. Asigna estos lingotes FUTURA a una entrega física.</p>
+              <p className="text-xs text-[var(--accent-text)] mb-3">Hay stock disponible. Asigna estos lingotes FUTURA a una entrega física.</p>
 
               {/* Mostrar FUTURA cerrados */}
-              <div className="mb-3 p-2 bg-emerald-50/50 rounded-lg border border-emerald-200">
+              <div className="mb-3 p-2 bg-emerald-50/50 rounded-[var(--radius-md)] border border-emerald-200">
                 <div className="text-xs font-semibold text-emerald-700 mb-1">
                   Cerrados ({futuraCerrados.length})
                 </div>
@@ -1368,9 +1368,9 @@ export default function LingotesTracker({
           return (
           <Card>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-stone-800">En Curso</h3>
+              <h3 className="font-bold text-[var(--text-primary)]">En Curso</h3>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-stone-500">
+                <span className="text-sm text-[var(--text-tertiary)]">
                   {totalLingotesEnCurso} lingotes
                 </span>
                 {entregasConEnCurso.length > 1 && (
@@ -1405,18 +1405,18 @@ export default function LingotesTracker({
                 const grupos = Object.values(porPeso);
 
                 return (
-                  <div key={entrega.id} className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <div key={entrega.id} className="p-3 rounded-[var(--radius-lg)] bg-[var(--accent-soft)] border border-[var(--accent-border)]">
                     {/* Header: Fecha grande a la izquierda, summary + X a la derecha */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span
-                          className="px-2 py-1 rounded-lg font-bold text-base"
+                          className="px-2 py-1 rounded-[var(--radius-md)] font-bold text-base"
                           style={{ backgroundColor: getEntregaColor(entrega.fechaEntrega) + '20', color: getEntregaColor(entrega.fechaEntrega) }}
                         >{formatEntregaShort(entrega.fechaEntrega)}</span>
-                        {exportacion && <span className="text-sm text-stone-500">• Exp: {exportacion.nombre}</span>}
+                        {exportacion && <span className="text-sm text-[var(--text-tertiary)]">• Exp: {exportacion.nombre}</span>}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm text-stone-600">{enCursoList.length} x {enCursoList[0]?.peso || '?'}g = {totalPeso}g</span>
+                        <span className="font-mono text-sm text-[var(--text-secondary)]">{enCursoList.length} x {enCursoList[0]?.peso || '?'}g = {totalPeso}g</span>
                         {!hasCerrados && (
                           <Button size="sm" variant="danger" onClick={() => deleteEntrega(entrega.id)}>x</Button>
                         )}
@@ -1425,7 +1425,7 @@ export default function LingotesTracker({
 
                     {/* Sección CERRAR */}
                     <div className="mb-2">
-                      <div className="text-xs font-semibold text-stone-500 mb-1">Cerrar</div>
+                      <div className="text-xs font-semibold text-[var(--text-tertiary)] mb-1">Cerrar</div>
                       {grupos.map(grupo => {
                         const key = `${entrega.id}_${grupo.peso}`;
                         const cantidad = cierreCantidad[key] || 1;
@@ -1441,18 +1441,18 @@ export default function LingotesTracker({
                         };
 
                         return (
-                          <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-lg p-2 mb-1">
-                            <span className="font-mono font-semibold text-stone-700">{maxCantidad} x {grupo.peso}g</span>
+                          <div key={grupo.peso} className="flex items-center justify-between bg-white/60 rounded-[var(--radius-md)] p-2 mb-1">
+                            <span className="font-mono font-semibold text-[var(--text-primary)]">{maxCantidad} x {grupo.peso}g</span>
                             <div className="flex items-center gap-2">
                               <div className="flex items-center gap-1">
                                 {quickOptions.map(n => (
                                   <button
                                     key={n}
                                     onClick={() => setCierreCantidad({ ...cierreCantidad, [key]: n })}
-                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                    className={`w-7 h-7 rounded-[var(--radius-md)] text-xs font-bold transition-colors ${
                                       cantidad === n
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                        ? 'bg-[var(--accent)] text-white'
+                                        : 'bg-black/[0.04] text-[var(--text-secondary)] hover:bg-black/[0.06]'
                                     }`}
                                   >
                                     {n}
@@ -1466,15 +1466,15 @@ export default function LingotesTracker({
                                     max={maxCantidad}
                                     value={cantidad}
                                     onChange={(e) => setCierreCantidad({ ...cierreCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                                      !quickOptions.includes(cantidad) ? 'border-amber-400 bg-amber-50' : 'border-stone-300'
+                                    className={`w-12 h-7 rounded-[var(--radius-md)] border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
+                                      !quickOptions.includes(cantidad) ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-black/[0.08]'
                                     }`}
                                   />
                                 )}
                               </div>
                               <button
                                 onClick={handleCerrar}
-                                className="px-3 py-1.5 text-xs rounded-xl font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                                className="px-3 py-1.5 text-xs rounded-[var(--radius-lg)] font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
                               >
                                 Cerrar {cantidad > 1 ? `(${cantidad})` : ''}
                               </button>
@@ -1486,7 +1486,7 @@ export default function LingotesTracker({
 
                     {/* Sección DEVOLVER */}
                     <div>
-                      <div className="text-xs font-semibold text-stone-500 mb-1">Devolver</div>
+                      <div className="text-xs font-semibold text-[var(--text-tertiary)] mb-1">Devolver</div>
                       {grupos.map(grupo => {
                         const key = `${entrega.id}_${grupo.peso}_dev`;
                         const cantidad = devolucionCantidad[key] || 1;
@@ -1501,18 +1501,18 @@ export default function LingotesTracker({
                         };
 
                         return (
-                          <div key={grupo.peso} className="flex items-center justify-between bg-red-50/50 rounded-lg p-2 mb-1">
-                            <span className="font-mono font-semibold text-stone-700">{maxCantidad} x {grupo.peso}g</span>
+                          <div key={grupo.peso} className="flex items-center justify-between bg-red-50/50 rounded-[var(--radius-md)] p-2 mb-1">
+                            <span className="font-mono font-semibold text-[var(--text-primary)]">{maxCantidad} x {grupo.peso}g</span>
                             <div className="flex items-center gap-2">
                               <div className="flex items-center gap-1">
                                 {quickOptions.map(n => (
                                   <button
                                     key={n}
                                     onClick={() => setDevolucionCantidad({ ...devolucionCantidad, [key]: n })}
-                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                    className={`w-7 h-7 rounded-[var(--radius-md)] text-xs font-bold transition-colors ${
                                       cantidad === n
                                         ? 'bg-red-500 text-white'
-                                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                        : 'bg-black/[0.04] text-[var(--text-secondary)] hover:bg-black/[0.06]'
                                     }`}
                                   >
                                     {n}
@@ -1526,15 +1526,15 @@ export default function LingotesTracker({
                                     max={maxCantidad}
                                     value={cantidad}
                                     onChange={(e) => setDevolucionCantidad({ ...devolucionCantidad, [key]: Math.min(maxCantidad, Math.max(1, parseInt(e.target.value) || 1)) })}
-                                    className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                                      !quickOptions.includes(cantidad) ? 'border-red-400 bg-red-50' : 'border-stone-300'
+                                    className={`w-12 h-7 rounded-[var(--radius-md)] border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                                      !quickOptions.includes(cantidad) ? 'border-red-400 bg-red-50' : 'border-black/[0.08]'
                                     }`}
                                   />
                                 )}
                               </div>
                               <button
                                 onClick={handleDevolver}
-                                className="px-3 py-1.5 text-xs rounded-xl font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors"
+                                className="px-3 py-1.5 text-xs rounded-[var(--radius-lg)] font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors"
                               >
                                 Devolver {cantidad > 1 ? `(${cantidad})` : ''}
                               </button>
@@ -1549,8 +1549,8 @@ export default function LingotesTracker({
                       const devueltos = lingotesDevueltos(entrega);
                       if (devueltos.length === 0) return null;
                       return (
-                        <div className="mt-3 pt-3 border-t border-amber-200">
-                          <div className="text-xs font-semibold text-stone-500 mb-2">Devueltos ({devueltos.length})</div>
+                        <div className="mt-3 pt-3 border-t border-[var(--accent-border)]">
+                          <div className="text-xs font-semibold text-[var(--text-tertiary)] mb-2">Devueltos ({devueltos.length})</div>
                           <div className="space-y-1">
                             {entrega.lingotes.map((l, idx) => {
                               if (l.estado !== 'devuelto') return null;
@@ -1559,10 +1559,10 @@ export default function LingotesTracker({
                                 log.descripcion.includes(`${l.peso}g`)
                               );
                               return (
-                                <div key={idx} className="flex items-center justify-between bg-red-50 rounded-lg p-2 text-xs">
+                                <div key={idx} className="flex items-center justify-between bg-red-50 rounded-[var(--radius-md)] p-2 text-xs">
                                   <div>
                                     <span className="font-mono font-semibold text-red-700">{l.peso}g</span>
-                                    <span className="text-stone-400 ml-2">
+                                    <span className="text-[var(--text-tertiary)] ml-2">
                                       {l.fechaDevolucion || '-'}
                                       {log && ` • ${log.usuario}`}
                                     </span>
@@ -1591,27 +1591,27 @@ export default function LingotesTracker({
 
             {/* FUTURA dentro de En Curso - solo cuando no hay stock */}
             {stockRealTotal === 0 && (
-              <div className="p-3 rounded-xl bg-red-50 border-2 border-red-300 mt-3">
+              <div className="p-3 rounded-[var(--radius-lg)] bg-red-50 border-2 border-red-300 mt-3">
                 {/* Header: Etiqueta FUTURA */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 rounded-lg font-bold text-base bg-red-100 text-red-700">FUTURA</span>
+                    <span className="px-2 py-1 rounded-[var(--radius-md)] font-bold text-base bg-red-100 text-red-700">FUTURA</span>
                     <span className="text-xs text-red-600">Sin stock físico</span>
                   </div>
                 </div>
 
                 {/* Selector directo: cantidad + peso + Cerrar */}
-                <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                <div className="flex items-center justify-between bg-white/60 rounded-[var(--radius-md)] p-2">
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1">
                       {[1, 2, 4].map(n => (
                         <button
                           key={n}
                           onClick={() => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`new_${cliente.id}`]: n })}
-                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                          className={`w-7 h-7 rounded-[var(--radius-md)] text-xs font-bold transition-colors ${
                             (futuraCierreCantidad[`new_${cliente.id}`] || 1) === n
                               ? 'bg-red-500 text-white'
-                              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                              : 'bg-black/[0.04] text-[var(--text-secondary)] hover:bg-black/[0.06]'
                           }`}
                         >
                           {n}
@@ -1624,16 +1624,16 @@ export default function LingotesTracker({
                         max={99}
                         value={futuraCierreCantidad[`new_${cliente.id}`] || 1}
                         onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`new_${cliente.id}`]: Math.min(99, Math.max(1, parseInt(e.target.value) || 1)) })}
-                        className={`w-12 h-7 rounded-lg border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                          ![1, 2, 4].includes(futuraCierreCantidad[`new_${cliente.id}`] || 1) ? 'border-red-400 bg-red-50' : 'border-stone-300'
+                        className={`w-12 h-7 rounded-[var(--radius-md)] border text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                          ![1, 2, 4].includes(futuraCierreCantidad[`new_${cliente.id}`] || 1) ? 'border-red-400 bg-red-50' : 'border-black/[0.08]'
                         }`}
                       />
                     </div>
-                    <span className="text-xs text-stone-500">x</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">x</span>
                     <select
                       value={futuraCierreCantidad[`newPeso_${cliente.id}`] || 50}
                       onChange={(e) => setFuturaCierreCantidad({ ...futuraCierreCantidad, [`newPeso_${cliente.id}`]: parseInt(e.target.value) })}
-                      className="h-7 rounded-lg border border-stone-300 text-xs font-bold px-2 focus:outline-none focus:ring-2 focus:ring-red-400"
+                      className="h-7 rounded-[var(--radius-md)] border border-black/[0.08] text-xs font-bold px-2 focus:outline-none focus:ring-2 focus:ring-red-400"
                     >
                       <option value={50}>50g</option>
                       <option value={100}>100g</option>
@@ -1665,7 +1665,7 @@ export default function LingotesTracker({
         {allLingotesCerrados.length > 0 && (
           <Card>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-stone-800">Cerrados ({allLingotesCerrados.length})</h3>
+              <h3 className="font-bold text-[var(--text-primary)]">Cerrados ({allLingotesCerrados.length})</h3>
               <div className="flex items-center gap-3">
                 {allLingotesCerrados.filter(l => !l.nFactura).length > 0 && (
                   <Button
@@ -1679,7 +1679,7 @@ export default function LingotesTracker({
                     + Subir factura
                   </Button>
                 )}
-                <div className="text-sm text-stone-500">
+                <div className="text-sm text-[var(--text-tertiary)]">
                   Importe: <span className="font-semibold text-emerald-600">{formatEur(allLingotesCerrados.reduce((s, l) => s + (l.importe || 0), 0))}</span>
                 </div>
               </div>
@@ -1702,19 +1702,19 @@ export default function LingotesTracker({
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-stone-200">
-                        <th className="text-left py-1.5 px-1 text-stone-500 font-medium text-xs">Cierre</th>
-                        <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Peso</th>
-                        <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">€/g</th>
-                        <th className="text-right py-1.5 px-1 text-stone-500 font-medium text-xs">Importe</th>
-                        <th className="text-center py-1.5 px-1 text-stone-500 font-medium text-xs w-10">Pag</th>
-                        <th className="text-left py-1.5 px-1 text-stone-500 font-medium text-xs">Fra</th>
+                      <tr className="border-b border-black/[0.06]">
+                        <th className="text-left py-1.5 px-1 text-[var(--text-tertiary)] font-medium text-xs">Cierre</th>
+                        <th className="text-right py-1.5 px-1 text-[var(--text-tertiary)] font-medium text-xs">Peso</th>
+                        <th className="text-right py-1.5 px-1 text-[var(--text-tertiary)] font-medium text-xs">€/g</th>
+                        <th className="text-right py-1.5 px-1 text-[var(--text-tertiary)] font-medium text-xs">Importe</th>
+                        <th className="text-center py-1.5 px-1 text-[var(--text-tertiary)] font-medium text-xs w-10">Pag</th>
+                        <th className="text-left py-1.5 px-1 text-[var(--text-tertiary)] font-medium text-xs">Fra</th>
                       </tr>
                     </thead>
                     <tbody>
                       {lingotes.map((l, i) => (
-                        <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-amber-50/50' : 'hover:bg-stone-50'}`}>
-                          <td className="py-1.5 px-1 text-[10px] text-stone-500">{formatFechaCierre(l.fechaCierre)}</td>
+                        <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-[var(--accent-soft)]/50' : 'hover:bg-black/[0.02]'}`}>
+                          <td className="py-1.5 px-1 text-[10px] text-[var(--text-tertiary)]">{formatFechaCierre(l.fechaCierre)}</td>
                           <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
                           <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
                           <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
@@ -1722,7 +1722,7 @@ export default function LingotesTracker({
                             <button
                               onClick={() => isFutura ? marcarPagadoFutura(l.futuraId) : marcarPagado(l.entregaId, l.lingoteIdx)}
                               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
-                                l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-400'
+                                l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-black/[0.08] hover:border-emerald-400'
                               }`}
                             >
                               {l.pagado && '✓'}
@@ -1776,10 +1776,10 @@ export default function LingotesTracker({
                     <div key={entregaId} className="mb-4 last:mb-0">
                       <div className="flex items-center gap-2 mb-2">
                         <span
-                          className="px-2 py-1 rounded-lg font-bold text-sm"
+                          className="px-2 py-1 rounded-[var(--radius-md)] font-bold text-sm"
                           style={{ backgroundColor: getEntregaColor(grupo.fechaEntrega) + '20', color: getEntregaColor(grupo.fechaEntrega) }}
                         >{formatEntregaShort(grupo.fechaEntrega)}</span>
-                        <span className="text-xs text-stone-400">{grupo.lingotes.length} lingotes</span>
+                        <span className="text-xs text-[var(--text-tertiary)]">{grupo.lingotes.length} lingotes</span>
                       </div>
                       {renderTabla(grupo.lingotes, false)}
                     </div>
@@ -1789,10 +1789,10 @@ export default function LingotesTracker({
                   {lingotesFutura.length > 0 && (
                     <div className="mb-4 last:mb-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-1 rounded-lg font-bold text-sm bg-red-100 text-red-700">
+                        <span className="px-2 py-1 rounded-[var(--radius-md)] font-bold text-sm bg-red-100 text-red-700">
                           FUTURA
                         </span>
-                        <span className="text-xs text-stone-400">{lingotesFutura.length} lingotes</span>
+                        <span className="text-xs text-[var(--text-tertiary)]">{lingotesFutura.length} lingotes</span>
                       </div>
                       {renderTabla(lingotesFutura, true)}
                     </div>
@@ -1805,7 +1805,7 @@ export default function LingotesTracker({
 
         {entregasFiltered.length === 0 && clienteFutura.length === 0 && (
           <Card>
-            <p className="text-stone-400 text-center py-6 text-sm">
+            <p className="text-[var(--text-tertiary)] text-center py-6 text-sm">
               {entregaFilter === 'en_curso' ? 'No hay entregas en curso' : entregaFilter === 'finalizada' ? 'No hay entregas finalizadas' : 'No hay entregas'}
             </p>
           </Card>
@@ -1856,7 +1856,7 @@ export default function LingotesTracker({
               case 'devolucion': return 'bg-red-50 border-red-200';
               case 'cancelar_devolucion': return 'bg-orange-50 border-orange-200';
               case 'pago': return 'bg-green-50 border-green-200';
-              default: return 'bg-stone-50 border-stone-200';
+              default: return 'bg-black/[0.02] border-black/[0.06]';
             }
           };
 
@@ -1867,20 +1867,20 @@ export default function LingotesTracker({
                 onClick={() => setShowHistorial(!showHistorial)}
                 className="w-full flex items-center justify-between"
               >
-                <h3 className="font-bold text-stone-800">Historial ({allLogs.length})</h3>
-                <span className="text-stone-400 text-sm">{showHistorial ? '▲' : '▼'}</span>
+                <h3 className="font-bold text-[var(--text-primary)]">Historial ({allLogs.length})</h3>
+                <span className="text-[var(--text-tertiary)] text-sm">{showHistorial ? '▲' : '▼'}</span>
               </button>
               {showHistorial && (
                 <div className="space-y-2 max-h-64 overflow-y-auto mt-3">
                   {allLogs.map((log, i) => (
-                    <div key={log.id || i} className={`flex items-start gap-2 p-2 rounded-lg border ${getLogColor(log.tipo)}`}>
+                    <div key={log.id || i} className={`flex items-start gap-2 p-2 rounded-[var(--radius-md)] border ${getLogColor(log.tipo)}`}>
                       <span className="text-sm">{getLogIcon(log.tipo)}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-stone-800">{log.descripcion}</div>
-                        <div className="text-[10px] text-stone-400 flex items-center gap-2 flex-wrap">
+                        <div className="text-xs text-[var(--text-primary)]">{log.descripcion}</div>
+                        <div className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-2 flex-wrap">
                           <span>{formatLogTime(log.timestamp)}</span>
                           <span>•</span>
-                          <span className="font-semibold text-stone-600">{log.usuario}</span>
+                          <span className="font-semibold text-[var(--text-secondary)]">{log.usuario}</span>
                           {log.fechaEntrega && (
                             <>
                               <span>•</span>
@@ -2140,36 +2140,36 @@ export default function LingotesTracker({
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-stone-800">Importaciones</h2>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Importaciones</h2>
           <Button size="sm" onClick={openNew}>+ Nueva</Button>
         </div>
 
         {showNew && !editingExp && (
-          <Card className="border-amber-400 bg-amber-50">
-            <h3 className="font-bold text-stone-800 mb-4">Nueva Importación</h3>
+          <Card className="border-[var(--accent)] bg-[var(--accent-soft)]">
+            <h3 className="font-bold text-[var(--text-primary)] mb-4">Nueva Importación</h3>
             <div className="space-y-4">
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
-                  <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Nombre</label>
+                  <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                 </div>
                 <div className="w-24">
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Año</label>
-                  <select value={formData.ano} onChange={(e) => setFormData({ ...formData, ano: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Año</label>
+                  <select value={formData.ano} onChange={(e) => setFormData({ ...formData, ano: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
                     {anosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div className="w-36">
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Fecha</label>
-                  <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Fecha</label>
+                  <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                 </div>
               </div>
 
               {/* Lingotes breakdown */}
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">Lingotes comprados</label>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Lingotes comprados</label>
                 {editingExpHasBeenUsed && (
-                  <div className="bg-orange-100 border border-orange-300 rounded-xl p-2 mb-2 text-xs text-orange-700">
+                  <div className="bg-orange-100 border border-orange-300 rounded-[var(--radius-lg)] p-2 mb-2 text-xs text-orange-700">
                     ⚠️ No se pueden modificar los lingotes porque ya se han usado de esta exportación.
                   </div>
                 )}
@@ -2181,11 +2181,11 @@ export default function LingotesTracker({
                         inputMode="numeric"
                         value={l.cantidad}
                         onChange={(e) => updateLingoteTipo(idx, 'cantidad', parseInt(e.target.value) || 0)}
-                        className="w-16 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        className="w-16 border border-black/[0.08] rounded-[var(--radius-lg)] px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                         min="1"
                         disabled={editingExpHasBeenUsed}
                       />
-                      <span className="text-stone-500">×</span>
+                      <span className="text-[var(--text-tertiary)]">×</span>
                       <div className="flex gap-1 items-center">
                         {[50, 100].map(peso => (
                           <button
@@ -2193,10 +2193,10 @@ export default function LingotesTracker({
                             type="button"
                             onClick={() => updateLingoteTipo(idx, 'peso', peso)}
                             disabled={editingExpHasBeenUsed}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            className={`px-3 py-1 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
                               l.peso === peso
-                                ? 'bg-amber-500 text-white'
-                                : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
+                                ? 'bg-[var(--accent)] text-white'
+                                : 'bg-black/[0.06] text-[var(--text-secondary)] hover:bg-stone-300'
                             }`}
                           >
                             {peso}g
@@ -2209,17 +2209,17 @@ export default function LingotesTracker({
                             value={l.peso !== 50 && l.peso !== 100 ? l.peso : ''}
                             onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
                             disabled={editingExpHasBeenUsed}
-                            className={`w-16 border rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                            className={`w-16 border rounded-[var(--radius-md)] px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
                               l.peso !== 50 && l.peso !== 100 && l.peso > 0
-                                ? 'border-amber-500 bg-amber-50'
-                                : 'border-stone-300'
+                                ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
+                                : 'border-black/[0.08]'
                             }`}
                             placeholder="otro"
                           />
-                          <span className="text-stone-400 text-sm">g</span>
+                          <span className="text-[var(--text-tertiary)] text-sm">g</span>
                         </div>
                       </div>
-                      <span className="text-stone-600 font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
+                      <span className="text-[var(--text-secondary)] font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
                       {formData.lingotes.length > 1 && !editingExpHasBeenUsed && (
                         <button
                           type="button"
@@ -2236,7 +2236,7 @@ export default function LingotesTracker({
                   <button
                     type="button"
                     onClick={addLingoteTipo}
-                    className="mt-2 text-amber-600 hover:text-amber-700 text-sm font-medium"
+                    className="mt-2 text-[var(--accent)] hover:text-[var(--accent-text)] text-sm font-medium"
                   >
                     + Añadir tipo
                   </button>
@@ -2245,7 +2245,7 @@ export default function LingotesTracker({
 
               {/* Precio por gramo */}
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Precio por gramo (€/g)</label>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Precio por gramo (€/g)</label>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -2253,20 +2253,20 @@ export default function LingotesTracker({
                   value={formData.precioGramo}
                   onChange={(e) => setFormData({ ...formData, precioGramo: e.target.value })}
                   placeholder="Ej: 95.50"
-                  className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
               </div>
 
               {/* Total summary */}
-              <div className="bg-amber-100 rounded-xl p-3">
+              <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-3">
                 <div className="text-center">
-                  <span className="text-amber-700 font-bold text-lg">
+                  <span className="text-[var(--accent-text)] font-bold text-lg">
                     {formTotalLingotes} lingotes = {formatNum(formTotalGramos, 0)}g
                   </span>
                 </div>
                 {formData.precioGramo && (
-                  <div className="text-center mt-1 pt-1 border-t border-amber-200">
-                    <span className="text-amber-800 font-bold">
+                  <div className="text-center mt-1 pt-1 border-t border-[var(--accent-border)]">
+                    <span className="text-[var(--accent-text)] font-bold">
                       Total factura: {formatEur(formTotalFactura)}
                     </span>
                   </div>
@@ -2287,31 +2287,31 @@ export default function LingotesTracker({
           {exportacionesStats.map(exp => (
             editingExp?.id === exp.id ? (
               /* Formulario de edición inline */
-              <Card key={exp.id} className="border-amber-400 bg-amber-50">
-                <h3 className="font-bold text-stone-800 mb-4">Editar: {exp.nombre}</h3>
+              <Card key={exp.id} className="border-[var(--accent)] bg-[var(--accent-soft)]">
+                <h3 className="font-bold text-[var(--text-primary)] mb-4">Editar: {exp.nombre}</h3>
                 <div className="space-y-4">
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
-                      <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Nombre</label>
+                      <input type="text" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} placeholder="Ej: 28-1" className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                     </div>
                     <div className="w-24">
-                      <label className="block text-sm font-medium text-stone-700 mb-1">Año</label>
-                      <select value={formData.ano} onChange={(e) => setFormData({ ...formData, ano: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Año</label>
+                      <select value={formData.ano} onChange={(e) => setFormData({ ...formData, ano: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
                         {anosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                     </div>
                     <div className="w-36">
-                      <label className="block text-sm font-medium text-stone-700 mb-1">Fecha</label>
-                      <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-stone-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                      <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Fecha</label>
+                      <input type="date" value={formData.fecha} onChange={(e) => setFormData({ ...formData, fecha: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                     </div>
                   </div>
 
                   {/* Lingotes breakdown */}
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-2">Lingotes comprados</label>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Lingotes comprados</label>
                     {editingExpHasBeenUsed && (
-                      <div className="bg-orange-100 border border-orange-300 rounded-xl p-2 mb-2 text-xs text-orange-700">
+                      <div className="bg-orange-100 border border-orange-300 rounded-[var(--radius-lg)] p-2 mb-2 text-xs text-orange-700">
                         ⚠️ No se pueden modificar los lingotes porque ya se han usado de esta exportación.
                       </div>
                     )}
@@ -2323,11 +2323,11 @@ export default function LingotesTracker({
                             inputMode="numeric"
                             value={l.cantidad}
                             onChange={(e) => updateLingoteTipo(idx, 'cantidad', parseInt(e.target.value) || 0)}
-                            className="w-16 border border-stone-300 rounded-xl px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            className="w-16 border border-black/[0.08] rounded-[var(--radius-lg)] px-2 py-2 text-center focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                             min="1"
                             disabled={editingExpHasBeenUsed}
                           />
-                          <span className="text-stone-500">×</span>
+                          <span className="text-[var(--text-tertiary)]">×</span>
                           <div className="flex gap-1 items-center">
                             {[50, 100].map(peso => (
                               <button
@@ -2335,10 +2335,10 @@ export default function LingotesTracker({
                                 type="button"
                                 onClick={() => updateLingoteTipo(idx, 'peso', peso)}
                                 disabled={editingExpHasBeenUsed}
-                                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                className={`px-3 py-1 rounded-[var(--radius-md)] text-sm font-medium transition-colors ${
                                   l.peso === peso
-                                    ? 'bg-amber-500 text-white'
-                                    : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
+                                    ? 'bg-[var(--accent)] text-white'
+                                    : 'bg-black/[0.06] text-[var(--text-secondary)] hover:bg-stone-300'
                                 }`}
                               >
                                 {peso}g
@@ -2351,17 +2351,17 @@ export default function LingotesTracker({
                                 value={l.peso !== 50 && l.peso !== 100 ? l.peso : ''}
                                 onChange={(e) => updateLingoteTipo(idx, 'peso', parseFloat(e.target.value) || 0)}
                                 disabled={editingExpHasBeenUsed}
-                                className={`w-16 border rounded-lg px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                                className={`w-16 border rounded-[var(--radius-md)] px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
                                   l.peso !== 50 && l.peso !== 100 && l.peso > 0
-                                    ? 'border-amber-500 bg-amber-50'
-                                    : 'border-stone-300'
+                                    ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
+                                    : 'border-black/[0.08]'
                                 }`}
                                 placeholder="otro"
                               />
-                              <span className="text-stone-400 text-sm">g</span>
+                              <span className="text-[var(--text-tertiary)] text-sm">g</span>
                             </div>
                           </div>
-                          <span className="text-stone-600 font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
+                          <span className="text-[var(--text-secondary)] font-medium">= {(l.cantidad || 0) * (l.peso || 0)}g</span>
                           {formData.lingotes.length > 1 && !editingExpHasBeenUsed && (
                             <button
                               type="button"
@@ -2378,7 +2378,7 @@ export default function LingotesTracker({
                       <button
                         type="button"
                         onClick={addLingoteTipo}
-                        className="mt-2 text-amber-600 hover:text-amber-700 text-sm font-medium"
+                        className="mt-2 text-[var(--accent)] hover:text-[var(--accent-text)] text-sm font-medium"
                       >
                         + Añadir tipo
                       </button>
@@ -2387,7 +2387,7 @@ export default function LingotesTracker({
 
                   {/* Precio por gramo */}
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Precio por gramo (€/g)</label>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Precio por gramo (€/g)</label>
                     <input
                       type="number"
                       inputMode="decimal"
@@ -2395,20 +2395,20 @@ export default function LingotesTracker({
                       value={formData.precioGramo}
                       onChange={(e) => setFormData({ ...formData, precioGramo: e.target.value })}
                       placeholder="Ej: 95.50"
-                      className="w-full border border-stone-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     />
                   </div>
 
                   {/* Total summary */}
-                  <div className="bg-amber-100 rounded-xl p-3">
+                  <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-3">
                     <div className="text-center">
-                      <span className="text-amber-700 font-bold text-lg">
+                      <span className="text-[var(--accent-text)] font-bold text-lg">
                         {formTotalLingotes} lingotes = {formatNum(formTotalGramos, 0)}g
                       </span>
                     </div>
                     {formData.precioGramo && (
-                      <div className="text-center mt-1 pt-1 border-t border-amber-200">
-                        <span className="text-amber-800 font-bold">
+                      <div className="text-center mt-1 pt-1 border-t border-[var(--accent-border)]">
+                        <span className="text-[var(--accent-text)] font-bold">
                           Total factura: {formatEur(formTotalFactura)}
                         </span>
                       </div>
@@ -2442,16 +2442,16 @@ export default function LingotesTracker({
                   )}
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-bold text-stone-800">{exp.nombre}</h3>
-                      {exp.ano && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{exp.ano}</span>}
+                      <h3 className="text-lg font-bold text-[var(--text-primary)]">{exp.nombre}</h3>
+                      {exp.ano && <span className="text-xs bg-[var(--accent-soft)] text-[var(--accent-text)] px-2 py-0.5 rounded-full font-medium">{exp.ano}</span>}
                     </div>
-                    <p className="text-xs text-stone-500">{exp.fecha || 'Sin fecha'}</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">{exp.fecha || 'Sin fecha'}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => openEdit(exp.id)}
-                    className="text-amber-600 hover:text-amber-700 text-sm font-medium"
+                    className="text-[var(--accent)] hover:text-[var(--accent-text)] text-sm font-medium"
                   >
                     ✏️ Editar
                   </button>
@@ -2476,21 +2476,21 @@ export default function LingotesTracker({
               </div>
 
               {/* Factura info */}
-              <div className="bg-stone-50 rounded-xl p-3 mb-4 space-y-2">
+              <div className="bg-black/[0.02] rounded-[var(--radius-lg)] p-3 mb-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-stone-600">Precio:</span>
-                  <span className="font-mono font-bold text-stone-800">
+                  <span className="text-sm text-[var(--text-secondary)]">Precio:</span>
+                  <span className="font-mono font-bold text-[var(--text-primary)]">
                     {exp.precioGramo ? `${formatNum(exp.precioGramo)} €/g` : '— sin definir'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-stone-600">Total compra:</span>
+                  <span className="text-sm text-[var(--text-secondary)]">Total compra:</span>
                   <span className="font-mono font-bold text-emerald-600">
                     {exp.facturaTotal > 0 ? formatEur(exp.facturaTotal) : '—'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-stone-200">
-                  <span className="text-sm text-stone-600">Factura PDF:</span>
+                <div className="flex justify-between items-center pt-2 border-t border-black/[0.06]">
+                  <span className="text-sm text-[var(--text-secondary)]">Factura PDF:</span>
                   {exp.factura ? (
                     <div className="flex items-center gap-2">
                       <button
@@ -2507,7 +2507,7 @@ export default function LingotesTracker({
                       </button>
                     </div>
                   ) : (
-                    <label className="cursor-pointer text-amber-600 hover:text-amber-700 text-sm font-medium">
+                    <label className="cursor-pointer text-[var(--accent)] hover:text-[var(--accent-text)] text-sm font-medium">
                       {uploadingFactura === exp.id ? '⏳ Subiendo...' : '📤 Subir PDF'}
                       <input
                         type="file"
@@ -2522,11 +2522,11 @@ export default function LingotesTracker({
               </div>
 
               {/* Resumen exportación: original vs disponible */}
-              <div className="bg-amber-50 rounded-xl p-3 mb-4">
+              <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-3 mb-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <p className="text-xs text-amber-600 font-medium">📦 Importación</p>
-                    <p className="text-amber-800 font-bold">{formatNum(exp.grExport || 0, 0)}g</p>
+                    <p className="text-xs text-[var(--accent)] font-medium">📦 Importación</p>
+                    <p className="text-[var(--accent-text)] font-bold">{formatNum(exp.grExport || 0, 0)}g</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-emerald-600 font-medium">✓ Disponible</p>
@@ -2534,12 +2534,12 @@ export default function LingotesTracker({
                   </div>
                 </div>
                 {exp.lingotes && exp.lingotes.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-amber-200">
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-[var(--accent-border)]">
                     {exp.lingotes.map((l, idx) => (
-                      <div key={idx} className="bg-white border border-amber-200 rounded-lg px-2 py-1 text-sm">
-                        <span className="font-bold text-amber-700">{l.cantidad}</span>
-                        <span className="text-stone-500"> × </span>
-                        <span className="text-stone-700">{l.peso}g</span>
+                      <div key={idx} className="bg-white border border-[var(--accent-border)] rounded-[var(--radius-md)] px-2 py-1 text-sm">
+                        <span className="font-bold text-[var(--accent-text)]">{l.cantidad}</span>
+                        <span className="text-[var(--text-tertiary)]"> × </span>
+                        <span className="text-[var(--text-primary)]">{l.peso}g</span>
                       </div>
                     ))}
                   </div>
@@ -2550,7 +2550,7 @@ export default function LingotesTracker({
               {exp.grExport > 0 && (
                 <div className="mb-4">
                   {/* Barra: clientes (entregados) + stock (gris) */}
-                  <div className="relative h-8 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
+                  <div className="relative h-8 bg-black/[0.04] rounded-full overflow-hidden border border-black/[0.06]">
                     {/* Segmentos por cliente (entregados) */}
                     {exp.porCliente.map((c, idx) => {
                       const prevEntregado = exp.porCliente.slice(0, idx).reduce((sum, pc) => sum + pc.entregado, 0);
@@ -2568,7 +2568,7 @@ export default function LingotesTracker({
                           }}
                         >
                           {widthPercent > 12 && (
-                            <span className="text-white text-xs font-bold drop-shadow-sm whitespace-nowrap">
+                            <span className="text-white text-xs font-bold drop-shadow-[0_1px_3px_rgba(0,0,0,0.04)] whitespace-nowrap">
                               {formatNum(c.cerrado, 0)}/{formatNum(c.entregado, 0)}g
                             </span>
                           )}
@@ -2584,7 +2584,7 @@ export default function LingotesTracker({
                           right: 0,
                         }}
                       >
-                        <span className="text-stone-600 text-xs font-medium whitespace-nowrap">
+                        <span className="text-[var(--text-secondary)] text-xs font-medium whitespace-nowrap">
                           Stock: {formatNum(exp.stockTotal, 0)}g
                         </span>
                       </div>
@@ -2595,14 +2595,14 @@ export default function LingotesTracker({
                     {exp.porCliente.map(c => (
                       <div key={c.id} className="flex items-center gap-1 text-xs">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
-                        <span className="text-stone-600">{c.nombre}</span>
-                        <span className="text-stone-400">({formatNum(c.cerrado, 0)}/{formatNum(c.entregado, 0)}g)</span>
+                        <span className="text-[var(--text-secondary)]">{c.nombre}</span>
+                        <span className="text-[var(--text-tertiary)]">({formatNum(c.cerrado, 0)}/{formatNum(c.entregado, 0)}g)</span>
                       </div>
                     ))}
                     {exp.stockTotal > 0 && (
                       <div className="flex items-center gap-1 text-xs">
                         <div className="w-2 h-2 rounded-full bg-stone-300" />
-                        <span className="text-stone-400">Stock: {formatNum(exp.stockTotal, 0)}g</span>
+                        <span className="text-[var(--text-tertiary)]">Stock: {formatNum(exp.stockTotal, 0)}g</span>
                       </div>
                     )}
                   </div>
@@ -2612,7 +2612,7 @@ export default function LingotesTracker({
             )
           ))}
           {exportaciones.length === 0 && (
-            <Card><p className="text-stone-400 text-center py-6">No hay exportaciones. Crea una para empezar.</p></Card>
+            <Card><p className="text-[var(--text-tertiary)] text-center py-6">No hay exportaciones. Crea una para empezar.</p></Card>
           )}
         </div>
       </div>
@@ -3066,7 +3066,7 @@ export default function LingotesTracker({
         {/* Gráfico Mensual Stacked */}
         {canViewStats && statsPorMes.chartData.length > 0 && (
           <Card>
-            <h2 className="text-lg font-bold text-stone-800 mb-4">📈 Volumen Vendido por Mes</h2>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">📈 Volumen Vendido por Mes</h2>
             <div ref={chartScrollRef} className="overflow-x-auto pb-2">
               <div style={{ width: chartWidth, minWidth: '100%', height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -3138,9 +3138,9 @@ export default function LingotesTracker({
               </div>
             </div>
             <div className="flex justify-between items-center mt-1">
-              <p className="text-[10px] text-stone-400">Gramos vendidos (cerrados) por mes, agrupados por cliente</p>
+              <p className="text-[10px] text-[var(--text-tertiary)]">Gramos vendidos (cerrados) por mes, agrupados por cliente</p>
               {hoveredBarTotal !== null && (
-                <p className="text-sm font-semibold text-amber-600">Total: {formatNum(hoveredBarTotal, 0)}g</p>
+                <p className="text-sm font-semibold text-[var(--accent)]">Total: {formatNum(hoveredBarTotal, 0)}g</p>
               )}
             </div>
           </Card>
@@ -3149,7 +3149,7 @@ export default function LingotesTracker({
         {/* Gráfico Volumen Anual + €/g */}
         {canViewStats && statsVolumenAnual.chartData.length > 0 && (
           <Card>
-            <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Volumen Anual y €/gramo</h2>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">📊 Volumen Anual y €/gramo</h2>
             <div style={{ width: '100%', height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
@@ -3182,8 +3182,8 @@ export default function LingotesTracker({
                       if (!data) return null;
 
                       return (
-                        <div className="bg-white border border-stone-200 rounded-lg shadow-lg p-3 text-xs">
-                          <p className="font-bold text-stone-800 mb-2 text-sm">{label}</p>
+                        <div className="bg-white border border-black/[0.06] rounded-[var(--radius-md)] shadow-lg p-3 text-xs">
+                          <p className="font-bold text-[var(--text-primary)] mb-2 text-sm">{label}</p>
                           <div className="space-y-1">
                             {statsVolumenAnual.clientesConDatos.map(c => {
                               const shortName = c.nombre.substring(0, 6);
@@ -3192,19 +3192,19 @@ export default function LingotesTracker({
                               return (
                                 <div key={c.id} className="flex items-center gap-2">
                                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
-                                  <span className="text-stone-600">{c.nombre}:</span>
-                                  <span className="font-mono font-semibold text-stone-800">{formatNum(peso, 0)}g</span>
+                                  <span className="text-[var(--text-secondary)]">{c.nombre}:</span>
+                                  <span className="font-mono font-semibold text-[var(--text-primary)]">{formatNum(peso, 0)}g</span>
                                 </div>
                               );
                             })}
                           </div>
-                          <div className="border-t border-stone-200 mt-2 pt-2 space-y-1">
+                          <div className="border-t border-black/[0.06] mt-2 pt-2 space-y-1">
                             <div className="flex justify-between">
-                              <span className="text-stone-600">Total:</span>
-                              <span className="font-mono font-bold text-stone-800">{formatNum(data.totalPeso, 0)}g</span>
+                              <span className="text-[var(--text-secondary)]">Total:</span>
+                              <span className="font-mono font-bold text-[var(--text-primary)]">{formatNum(data.totalPeso, 0)}g</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-stone-600">Margen:</span>
+                              <span className="text-[var(--text-secondary)]">Margen:</span>
                               <span className="font-mono font-semibold text-emerald-700">{formatNum(data.totalMgn, 0)}€</span>
                             </div>
                             <div className="flex justify-between">
@@ -3249,40 +3249,40 @@ export default function LingotesTracker({
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-            <p className="text-[10px] text-stone-400 mt-1">Volumen total vendido por año (barras) y precio medio €/gramo (línea)</p>
+            <p className="text-[10px] text-[var(--text-tertiary)] mt-1">Volumen total vendido por año (barras) y precio medio €/gramo (línea)</p>
           </Card>
         )}
 
         {/* Stats por Año */}
         {canViewStats && (
         <Card>
-          <h2 className="text-lg font-bold text-stone-800 mb-4">📊 Entregas por Año</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)] mb-4">📊 Entregas por Año</h2>
 
           {statsPorAnyo.sortedYears.length === 0 ? (
-            <p className="text-stone-400 text-center py-6">No hay datos todavía.</p>
+            <p className="text-[var(--text-tertiary)] text-center py-6">No hay datos todavía.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="border-b-2 border-stone-300">
-                    <th rowSpan={2} className="text-left py-2 px-2 font-semibold text-stone-600 sticky left-0 bg-white border-r border-stone-200 min-w-[90px] z-10">Cliente</th>
+                  <tr className="border-b-2 border-black/[0.08]">
+                    <th rowSpan={2} className="text-left py-2 px-2 font-semibold text-[var(--text-secondary)] sticky left-0 bg-white border-r border-black/[0.06] min-w-[90px] z-10">Cliente</th>
                     {statsPorAnyo.sortedYears.map(year => (
-                      <th key={year} colSpan={3} className="text-center py-1 px-1 font-bold text-stone-700 border-r border-stone-200 bg-stone-50">{year}</th>
+                      <th key={year} colSpan={3} className="text-center py-1 px-1 font-bold text-[var(--text-primary)] border-r border-black/[0.06] bg-black/[0.02]">{year}</th>
                     ))}
-                    <th colSpan={3} className="text-center py-1 px-1 font-bold text-stone-800 bg-amber-50 border-l-2 border-amber-300">Suma total</th>
+                    <th colSpan={3} className="text-center py-1 px-1 font-bold text-[var(--text-primary)] bg-[var(--accent-soft)] border-l-2 border-[var(--accent-border)]">Suma total</th>
                   </tr>
-                  <tr className="border-b border-stone-200 text-[10px]">
+                  <tr className="border-b border-black/[0.06] text-[10px]">
                     <th className="sticky left-0 bg-white z-10"></th>
                     {statsPorAnyo.sortedYears.map(year => (
                       <React.Fragment key={year}>
-                        <th className="py-1 px-1 text-stone-500 font-medium">Peso</th>
-                        <th className="py-1 px-1 text-stone-500 font-medium">MGN</th>
-                        <th className="py-1 px-1 text-stone-500 font-medium border-r border-stone-200">%</th>
+                        <th className="py-1 px-1 text-[var(--text-tertiary)] font-medium">Peso</th>
+                        <th className="py-1 px-1 text-[var(--text-tertiary)] font-medium">MGN</th>
+                        <th className="py-1 px-1 text-[var(--text-tertiary)] font-medium border-r border-black/[0.06]">%</th>
                       </React.Fragment>
                     ))}
-                    <th className="py-1 px-1 text-amber-700 font-semibold">Peso</th>
-                    <th className="py-1 px-1 text-amber-700 font-semibold">MGN</th>
-                    <th className="py-1 px-1 text-amber-700 font-semibold">%</th>
+                    <th className="py-1 px-1 text-[var(--accent-text)] font-semibold">Peso</th>
+                    <th className="py-1 px-1 text-[var(--accent-text)] font-semibold">MGN</th>
+                    <th className="py-1 px-1 text-[var(--accent-text)] font-semibold">%</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3300,10 +3300,10 @@ export default function LingotesTracker({
 
                     return (
                       <tr key={cliente.id} className="border-b border-stone-100" style={{ backgroundColor: rowBgColor }}>
-                        <td className="py-2 px-2 sticky left-0 border-r border-stone-200 min-w-[90px] z-10 bg-white">
+                        <td className="py-2 px-2 sticky left-0 border-r border-black/[0.06] min-w-[90px] z-10 bg-white">
                           <div className="flex items-center gap-1.5 -mx-2 -my-2 px-2 py-2" style={{ backgroundColor: cliente.color ? `${cliente.color}30` : 'transparent' }}>
                             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cliente.color }} />
-                            <span className="font-medium text-stone-800 whitespace-nowrap text-xs">{cliente.nombre}</span>
+                            <span className="font-medium text-[var(--text-primary)] whitespace-nowrap text-xs">{cliente.nombre}</span>
                           </div>
                         </td>
                         {statsPorAnyo.sortedYears.map(year => {
@@ -3312,25 +3312,25 @@ export default function LingotesTracker({
                           const pct = yearTotal.mgn > 0 ? ((data.mgn || 0) / yearTotal.mgn * 100) : 0;
                           return (
                             <React.Fragment key={year}>
-                              <td className="text-center py-2 px-1 font-mono text-stone-700">
+                              <td className="text-center py-2 px-1 font-mono text-[var(--text-primary)]">
                                 {data.peso > 0 ? formatNum(data.peso, 0) : <span className="text-stone-300">-</span>}
                               </td>
                               <td className="text-center py-2 px-1 font-mono text-emerald-700">
                                 {data.mgn > 0 ? formatNum(data.mgn, 0) : <span className="text-stone-300">-</span>}
                               </td>
-                              <td className="text-center py-2 px-1 font-mono text-stone-500 border-r border-stone-200">
+                              <td className="text-center py-2 px-1 font-mono text-[var(--text-tertiary)] border-r border-black/[0.06]">
                                 {data.mgn > 0 ? `${formatNum(pct, 0)}%` : <span className="text-stone-300">-</span>}
                               </td>
                             </React.Fragment>
                           );
                         })}
-                        <td className="text-center py-2 px-1 font-mono font-semibold text-stone-800 bg-amber-50">
+                        <td className="text-center py-2 px-1 font-mono font-semibold text-[var(--text-primary)] bg-[var(--accent-soft)]">
                           {formatNum(clienteTotal.peso, 0)}
                         </td>
-                        <td className="text-center py-2 px-1 font-mono font-semibold text-emerald-700 bg-amber-50">
+                        <td className="text-center py-2 px-1 font-mono font-semibold text-emerald-700 bg-[var(--accent-soft)]">
                           {formatNum(clienteTotal.mgn, 0)}
                         </td>
-                        <td className="text-center py-2 px-1 font-mono font-semibold text-stone-600 bg-amber-50">
+                        <td className="text-center py-2 px-1 font-mono font-semibold text-[var(--text-secondary)] bg-[var(--accent-soft)]">
                           {grandTotalMgn > 0 ? `${formatNum(clienteTotal.mgn / grandTotalMgn * 100, 0)}%` : '-'}
                         </td>
                       </tr>
@@ -3338,15 +3338,15 @@ export default function LingotesTracker({
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-amber-100 font-bold border-t-2 border-amber-300">
-                    <td className="py-2 px-2 text-stone-800 sticky left-0 bg-amber-100 border-r border-stone-200">Suma total</td>
+                  <tr className="bg-[var(--accent-soft)] font-bold border-t-2 border-[var(--accent-border)]">
+                    <td className="py-2 px-2 text-[var(--text-primary)] sticky left-0 bg-[var(--accent-soft)] border-r border-black/[0.06]">Suma total</td>
                     {statsPorAnyo.sortedYears.map(year => {
                       const t = statsPorAnyo.totalesPorAnyo[year];
                       return (
                         <React.Fragment key={year}>
-                          <td className="text-center py-2 px-1 font-mono text-stone-800">{formatNum(t.peso, 0)}</td>
+                          <td className="text-center py-2 px-1 font-mono text-[var(--text-primary)]">{formatNum(t.peso, 0)}</td>
                           <td className="text-center py-2 px-1 font-mono text-emerald-800">{formatNum(t.mgn, 0)}</td>
-                          <td className="text-center py-2 px-1 font-mono text-stone-600 border-r border-stone-200">100%</td>
+                          <td className="text-center py-2 px-1 font-mono text-[var(--text-secondary)] border-r border-black/[0.06]">100%</td>
                         </React.Fragment>
                       );
                     })}
@@ -3357,16 +3357,16 @@ export default function LingotesTracker({
                       );
                       return (
                         <>
-                          <td className="text-center py-2 px-1 font-mono text-stone-900 bg-amber-200">{formatNum(grandTotal.peso, 0)}</td>
-                          <td className="text-center py-2 px-1 font-mono text-emerald-900 bg-amber-200">{formatNum(grandTotal.mgn, 0)}</td>
-                          <td className="text-center py-2 px-1 font-mono text-stone-700 bg-amber-200">100%</td>
+                          <td className="text-center py-2 px-1 font-mono text-stone-900 bg-[var(--accent-border)]">{formatNum(grandTotal.peso, 0)}</td>
+                          <td className="text-center py-2 px-1 font-mono text-emerald-900 bg-[var(--accent-border)]">{formatNum(grandTotal.mgn, 0)}</td>
+                          <td className="text-center py-2 px-1 font-mono text-[var(--text-primary)] bg-[var(--accent-border)]">100%</td>
                         </>
                       );
                     })()}
                   </tr>
                 </tfoot>
               </table>
-              <p className="text-[10px] text-stone-400 mt-2">Peso en gramos, MGN = Margen en €, % = Porcentaje sobre total del año</p>
+              <p className="text-[10px] text-[var(--text-tertiary)] mt-2">Peso en gramos, MGN = Margen en €, % = Porcentaje sobre total del año</p>
             </div>
           )}
         </Card>
@@ -3469,27 +3469,27 @@ export default function LingotesTracker({
         {showLogs && (
           <div className="space-y-4 max-h-[500px] overflow-y-auto">
             {logsAgrupados.length === 0 ? (
-              <p className="text-center text-stone-500 py-4">No hay logs registrados</p>
+              <p className="text-center text-[var(--text-tertiary)] py-4">No hay logs registrados</p>
             ) : (
               logsAgrupados.map(({ fecha, porUsuario }) => (
-                <div key={fecha} className="border border-stone-200 rounded-xl overflow-hidden">
-                  <div className="bg-stone-100 px-3 py-2 font-bold text-stone-700 text-sm">
+                <div key={fecha} className="border border-black/[0.06] rounded-[var(--radius-lg)] overflow-hidden">
+                  <div className="bg-black/[0.04] px-3 py-2 font-bold text-[var(--text-primary)] text-sm">
                     📅 {formatFecha(fecha)}
                   </div>
                   <div className="divide-y divide-stone-100">
                     {Object.entries(porUsuario).map(([usuario, logs]) => (
                       <div key={usuario} className="p-3">
-                        <div className="font-medium text-amber-700 text-sm mb-2">
+                        <div className="font-medium text-[var(--accent-text)] text-sm mb-2">
                           👤 {usuario}
                         </div>
                         <div className="space-y-1 pl-4">
                           {logs.map((log, idx) => (
                             <div key={log.id || idx} className="flex items-start gap-2 text-xs">
-                              <span className="text-stone-400 font-mono whitespace-nowrap">
+                              <span className="text-[var(--text-tertiary)] font-mono whitespace-nowrap">
                                 {formatHora(log.fecha)}
                               </span>
                               <span>{getAccionEmoji(log.accion)}</span>
-                              <span className="text-stone-600">{log.descripcion}</span>
+                              <span className="text-[var(--text-secondary)]">{log.descripcion}</span>
                             </div>
                           ))}
                         </div>
@@ -3529,42 +3529,42 @@ export default function LingotesTracker({
 
     return (
       <div className="space-y-6">
-        <h2 className="text-xl font-bold text-stone-800">Ajustes</h2>
+        <h2 className="text-xl font-bold text-[var(--text-primary)]">Ajustes</h2>
 
         <Card>
-          <h3 className="font-bold text-stone-800 mb-4">Umbrales de Color del Stock</h3>
+          <h3 className="font-bold text-[var(--text-primary)] mb-4">Umbrales de Color del Stock</h3>
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
+            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-red-50 border border-red-200">
               <div className="w-4 h-4 rounded-full bg-red-500"></div>
               <div className="flex-1">
                 <label className="text-sm font-medium text-red-800">Critico (Rojo)</label>
               </div>
-              <input type="text" inputMode="numeric" value={tempUmbrales.rojo} onChange={(e) => setTempUmbrales({ ...tempUmbrales, rojo: e.target.value })} className="w-24 border border-red-300 rounded-lg px-3 py-2 text-center font-mono focus:outline-none focus:ring-2 focus:ring-red-400" />
-              <span className="text-sm text-stone-500">g</span>
+              <input type="text" inputMode="numeric" value={tempUmbrales.rojo} onChange={(e) => setTempUmbrales({ ...tempUmbrales, rojo: e.target.value })} className="w-24 border border-red-300 rounded-[var(--radius-md)] px-3 py-2 text-center font-mono focus:outline-none focus:ring-2 focus:ring-red-400" />
+              <span className="text-sm text-[var(--text-tertiary)]">g</span>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-200">
+            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-orange-50 border border-orange-200">
               <div className="w-4 h-4 rounded-full bg-orange-500"></div>
               <div className="flex-1">
                 <label className="text-sm font-medium text-orange-800">Bajo (Naranja)</label>
               </div>
-              <input type="text" inputMode="numeric" value={tempUmbrales.naranja} onChange={(e) => setTempUmbrales({ ...tempUmbrales, naranja: e.target.value })} className="w-24 border border-orange-300 rounded-lg px-3 py-2 text-center font-mono focus:outline-none focus:ring-2 focus:ring-orange-400" />
-              <span className="text-sm text-stone-500">g</span>
+              <input type="text" inputMode="numeric" value={tempUmbrales.naranja} onChange={(e) => setTempUmbrales({ ...tempUmbrales, naranja: e.target.value })} className="w-24 border border-orange-300 rounded-[var(--radius-md)] px-3 py-2 text-center font-mono focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              <span className="text-sm text-[var(--text-tertiary)]">g</span>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
-              <div className="w-4 h-4 rounded-full bg-amber-500"></div>
+            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-[var(--accent-soft)] border border-[var(--accent-border)]">
+              <div className="w-4 h-4 rounded-full bg-[var(--accent)]"></div>
               <div className="flex-1">
-                <label className="text-sm font-medium text-amber-800">Medio (Amarillo)</label>
+                <label className="text-sm font-medium text-[var(--accent-text)]">Medio (Amarillo)</label>
               </div>
-              <input type="text" inputMode="numeric" value={tempUmbrales.amarillo} onChange={(e) => setTempUmbrales({ ...tempUmbrales, amarillo: e.target.value })} className="w-24 border border-amber-300 rounded-lg px-3 py-2 text-center font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
-              <span className="text-sm text-stone-500">g</span>
+              <input type="text" inputMode="numeric" value={tempUmbrales.amarillo} onChange={(e) => setTempUmbrales({ ...tempUmbrales, amarillo: e.target.value })} className="w-24 border border-[var(--accent-border)] rounded-[var(--radius-md)] px-3 py-2 text-center font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
+              <span className="text-sm text-[var(--text-tertiary)]">g</span>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+            <div className="flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-emerald-50 border border-emerald-200">
               <div className="w-4 h-4 rounded-full bg-emerald-500"></div>
               <div className="flex-1">
                 <label className="text-sm font-medium text-emerald-800">OK (Verde)</label>
               </div>
               <div className="w-24 text-center font-mono text-emerald-700">≥ {tempUmbrales.amarillo || '0'}</div>
-              <span className="text-sm text-stone-500">g</span>
+              <span className="text-sm text-[var(--text-tertiary)]">g</span>
             </div>
           </div>
           <div className="mt-4">
@@ -3577,17 +3577,17 @@ export default function LingotesTracker({
         {/* Importar datos TODOS CLIENTES - TEMPORAL */}
         <Card>
           <h3 className="font-bold text-blue-700 mb-4">📥 Importar Datos Históricos (Temporal)</h3>
-          <p className="text-sm text-stone-600 mb-4">
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
             Importar lingotes para: NJ (37+13 FUTURA), Milla (3), Orcash (12), Gaudia (25+30 FUTURA), Gemma (3)
           </p>
 
           {/* Selector de exportación */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-stone-700 mb-1">Asignar a Importación:</label>
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Asignar a Importación:</label>
             <select
               value={importExportacionId}
               onChange={(e) => setImportExportacionId(e.target.value)}
-              className="w-full p-2 border border-stone-300 rounded-lg"
+              className="w-full p-2 border border-black/[0.08] rounded-[var(--radius-md)]"
             >
               <option value="">-- Selecciona exportación --</option>
               {exportaciones.map(exp => (
@@ -3896,7 +3896,7 @@ export default function LingotesTracker({
         {/* Log General - Solo Alex */}
         {currentUser === 'Alex' && (
           <Card>
-            <h3 className="font-bold text-stone-800 mb-4">📋 Log General de Actividad</h3>
+            <h3 className="font-bold text-[var(--text-primary)] mb-4">📋 Log General de Actividad</h3>
             <LogGeneralSection logsGenerales={logsGenerales} loadLogsGenerales={loadLogsGenerales} />
           </Card>
         )}
@@ -3904,7 +3904,7 @@ export default function LingotesTracker({
         {/* Reset data */}
         <Card>
           <h3 className="font-bold text-red-700 mb-4">⚠️ Zona Peligrosa</h3>
-          <p className="text-sm text-stone-600 mb-4">
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
             Borrar todos los datos de lingotes: exportaciones ({exportaciones.length}), entregas ({entregas.length}) y FUTURA ({(futuraLingotes || []).length}).
           </p>
           <Button
@@ -4007,24 +4007,24 @@ export default function LingotesTracker({
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-stone-800 mb-4">Nueva Entrega</h3>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={handleClose}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4">Nueva Entrega</h3>
 
           {exportacionesConStock.length === 0 ? (
-            <div className="bg-amber-50 rounded-xl p-4 mb-4">
-              <p className="text-amber-600 text-sm text-center">No hay stock en ninguna exportación. Crea una exportación primero.</p>
+            <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-4 mb-4">
+              <p className="text-[var(--accent)] text-sm text-center">No hay stock en ninguna exportación. Crea una exportación primero.</p>
             </div>
           ) : (
             <>
               {/* Exportación, Cliente y Fecha */}
               <div className="space-y-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">📦 Importación</label>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">📦 Importación</label>
                   <select
                     value={formData.exportacionId}
                     onChange={(e) => handleExportacionChange(e.target.value)}
-                    className="w-full border border-amber-400 bg-amber-50 rounded-xl px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className="w-full border border-[var(--accent)] bg-[var(--accent-soft)] rounded-[var(--radius-lg)] px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   >
                     {exportacionesConStock.map(exp => {
                       const stockTotal = (exp.lingotes || []).reduce((sum, l) => sum + (l.cantidad * l.peso), 0);
@@ -4037,31 +4037,31 @@ export default function LingotesTracker({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Cliente</label>
-                  <select value={formData.clienteId} onChange={(e) => setFormData({ ...formData, clienteId: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Cliente</label>
+                  <select value={formData.clienteId} onChange={(e) => setFormData({ ...formData, clienteId: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
                     {clientes.map(c => (
                       <option key={c.id} value={c.id}>{c.nombre}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Entrega</label>
-                  <input type="date" value={formData.fechaEntrega} onChange={(e) => setFormData({ ...formData, fechaEntrega: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Fecha Entrega</label>
+                  <input type="date" value={formData.fechaEntrega} onChange={(e) => setFormData({ ...formData, fechaEntrega: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                 </div>
               </div>
 
               {/* Lingotes por tipo de la exportación seleccionada */}
-              <div className="bg-amber-50 rounded-xl p-3 mb-4">
-                <p className="text-xs text-amber-700 font-medium mb-3">
+              <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-3 mb-4">
+                <p className="text-xs text-[var(--accent-text)] font-medium mb-3">
                   Stock de "{selectedExportacion?.nombre || '?'}"
                 </p>
                 <div className="space-y-3">
                   {itemsWithStock.map((item, idx) => {
                     const stockInsuficiente = item.cantidad > item.disponible;
                     return (
-                      <div key={idx} className={`bg-white rounded-xl p-3 border ${stockInsuficiente ? 'border-red-300' : 'border-amber-200'}`}>
+                      <div key={idx} className={`bg-white rounded-[var(--radius-lg)] p-3 border ${stockInsuficiente ? 'border-red-300' : 'border-[var(--accent-border)]'}`}>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-stone-700">{item.peso}g</span>
+                          <span className="font-semibold text-[var(--text-primary)]">{item.peso}g</span>
                           <span className={`text-xs ${stockInsuficiente ? 'text-red-600' : 'text-green-600'}`}>
                             disponibles: {item.disponible}
                           </span>
@@ -4069,7 +4069,7 @@ export default function LingotesTracker({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateItemCantidad(item.peso, item.cantidad - 1)}
-                            className="w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xl"
+                            className="w-10 h-10 rounded-[var(--radius-lg)] bg-black/[0.04] hover:bg-black/[0.06] text-[var(--text-secondary)] font-bold text-xl"
                             disabled={item.cantidad === 0}
                           >
                             −
@@ -4079,19 +4079,19 @@ export default function LingotesTracker({
                             inputMode="numeric"
                             value={item.cantidad}
                             onChange={(e) => updateItemCantidad(item.peso, parseInt(e.target.value) || 0)}
-                            className={`flex-1 border rounded-xl px-3 py-2 text-center font-bold text-lg focus:outline-none focus:ring-2 ${
+                            className={`flex-1 border rounded-[var(--radius-lg)] px-3 py-2 text-center font-bold text-lg focus:outline-none focus:ring-2 ${
                               stockInsuficiente
                                 ? 'border-red-300 text-red-600 focus:ring-red-400'
                                 : item.cantidad > 0
-                                  ? 'border-amber-400 text-amber-700 bg-amber-50 focus:ring-amber-400'
-                                  : 'border-stone-300 text-stone-400 focus:ring-amber-400'
+                                  ? 'border-[var(--accent)] text-[var(--accent-text)] bg-[var(--accent-soft)] focus:ring-[var(--accent)]'
+                                  : 'border-black/[0.08] text-[var(--text-tertiary)] focus:ring-[var(--accent)]'
                             }`}
                             min="0"
                             max={item.disponible}
                           />
                           <button
                             onClick={() => updateItemCantidad(item.peso, item.cantidad + 1)}
-                            className="w-10 h-10 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold text-xl"
+                            className="w-10 h-10 rounded-[var(--radius-lg)] bg-[var(--accent-soft)] hover:bg-[var(--accent-border)] text-[var(--accent-text)] font-bold text-xl"
                             disabled={item.cantidad >= item.disponible}
                           >
                             +
@@ -4099,14 +4099,14 @@ export default function LingotesTracker({
                           {item.disponible > 0 && (
                             <button
                               onClick={() => updateItemCantidad(item.peso, item.disponible)}
-                              className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-500 text-xs"
+                              className="px-2 py-1 rounded-[var(--radius-md)] bg-black/[0.04] hover:bg-black/[0.06] text-[var(--text-tertiary)] text-xs"
                             >
                               Max
                             </button>
                           )}
                         </div>
                         {item.cantidad > 0 && (
-                          <div className="mt-2 text-right text-sm text-stone-500">
+                          <div className="mt-2 text-right text-sm text-[var(--text-tertiary)]">
                             = {item.cantidad * item.peso}g
                           </div>
                         )}
@@ -4117,14 +4117,14 @@ export default function LingotesTracker({
               </div>
 
               {/* Summary - altura fija para evitar que se muevan los botones */}
-              <div className={`rounded-xl p-4 text-center min-h-[80px] flex flex-col justify-center ${allStockSuficiente && hasAnyItems ? 'bg-emerald-50' : hasAnyItems ? 'bg-red-50' : 'bg-stone-50'}`}>
+              <div className={`rounded-[var(--radius-lg)] p-4 text-center min-h-[80px] flex flex-col justify-center ${allStockSuficiente && hasAnyItems ? 'bg-emerald-50' : hasAnyItems ? 'bg-red-50' : 'bg-black/[0.02]'}`}>
                 {hasAnyItems ? (
                   <>
-                    <div className="text-sm text-stone-500 mb-1">Total entrega:</div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-1">Total entrega:</div>
                     <div className={`font-bold text-xl ${allStockSuficiente ? 'text-emerald-700' : 'text-red-700'}`}>
                       {totalLingotes} lingotes = {formatNum(totalGramos, 0)}g
                     </div>
-                    <div className="text-xs text-stone-400 mt-1">
+                    <div className="text-xs text-[var(--text-tertiary)] mt-1">
                       {itemsWithStock.filter(i => i.cantidad > 0).map(i => `${i.cantidad}×${i.peso}g`).join(' + ')}
                     </div>
                     {!allStockSuficiente && (
@@ -4132,7 +4132,7 @@ export default function LingotesTracker({
                     )}
                   </>
                 ) : (
-                  <p className="text-stone-400 text-sm">Selecciona al menos un lingote</p>
+                  <p className="text-[var(--text-tertiary)] text-sm">Selecciona al menos un lingote</p>
                 )}
               </div>
             </>
@@ -4286,12 +4286,12 @@ export default function LingotesTracker({
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeCierreModal}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-stone-800 mb-2">
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={closeCierreModal}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">
             Cerrar {cantidadLingotes > 1 ? `${cantidadLingotes} Lingotes` : 'Lingote'}
           </h3>
-          <p className="text-stone-500 text-sm mb-6">
+          <p className="text-[var(--text-tertiary)] text-sm mb-6">
             {cliente?.nombre} • {isMultiEntregaCierre
               ? `${resumenMulti} = ${pesoTotalMulti}g`
               : `${cantidadLingotes > 1 ? `${cantidadLingotes} x ` : ''}${pesoUnitario}g${cantidadLingotes > 1 ? ` = ${pesoUnitario * cantidadLingotes}g` : ''}`
@@ -4300,7 +4300,7 @@ export default function LingotesTracker({
           </p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">€/Onza</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">€/Onza</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -4311,7 +4311,7 @@ export default function LingotesTracker({
                     setFormData({ ...formData, euroOnza: e.target.value });
                     setEuroOnzaConfirmado(false);
                   }}
-                  className={`flex-1 border rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 ${euroOnzaConfirmado ? 'border-emerald-400 bg-emerald-50' : 'border-stone-300'}`}
+                  className={`flex-1 border rounded-[var(--radius-lg)] px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${euroOnzaConfirmado ? 'border-emerald-400 bg-emerald-50' : 'border-black/[0.08]'}`}
                   placeholder="Ej: 3693,42"
                   autoFocus
                 />
@@ -4319,12 +4319,12 @@ export default function LingotesTracker({
                   type="button"
                   onClick={confirmarEuroOnza}
                   disabled={!euroOnzaNum || euroOnzaConfirmado}
-                  className={`px-4 py-2 rounded-xl font-semibold transition-all ${
+                  className={`px-4 py-2 rounded-[var(--radius-lg)] font-semibold transition-all ${
                     euroOnzaConfirmado
                       ? 'bg-emerald-100 text-emerald-600 cursor-default'
                       : euroOnzaNum
-                        ? 'bg-amber-500 text-white hover:bg-amber-600'
-                        : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                        ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]'
+                        : 'bg-black/[0.06] text-[var(--text-tertiary)] cursor-not-allowed'
                   }`}
                 >
                   {euroOnzaConfirmado ? '✓' : 'OK'}
@@ -4332,22 +4332,22 @@ export default function LingotesTracker({
               </div>
             </div>
             {base > 0 && (
-              <div className="bg-stone-50 rounded-xl p-3">
+              <div className="bg-black/[0.02] rounded-[var(--radius-lg)] p-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-stone-500">Base (€/Onza ÷ 31,10349):</span>
-                  <span className="font-mono font-semibold text-stone-800">{formatNum(base)} €/g</span>
+                  <span className="text-[var(--text-tertiary)]">Base (€/Onza ÷ 31,10349):</span>
+                  <span className="font-mono font-semibold text-[var(--text-primary)]">{formatNum(base)} €/g</span>
                 </div>
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
-              <input type="number" inputMode="decimal" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} onClick={e => e.stopPropagation()} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Se rellena con OK" />
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Base Cliente (€/g)</label>
+              <input type="number" inputMode="decimal" step="0.01" value={formData.baseCliente} onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })} onClick={e => e.stopPropagation()} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" placeholder="Se rellena con OK" />
               {base > 0 && baseClienteNum > 0 && Math.abs(baseClienteNum - base) > 0.001 && (() => {
                 const diff = baseClienteNum - base;
                 const diffTotal = diff * pesoTotalNeto;
                 const isPositive = diff > 0;
                 return (
-                  <div className={`mt-2 px-3 py-2 rounded-lg text-sm ${isPositive ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                  <div className={`mt-2 px-3 py-2 rounded-[var(--radius-md)] text-sm ${isPositive ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
                     <div className="flex justify-between items-center">
                       <span className={isPositive ? 'text-emerald-700' : 'text-red-700'}>
                         {isPositive ? '+' : ''}{formatNum(diff)} €/g vs base
@@ -4361,11 +4361,11 @@ export default function LingotesTracker({
               })()}
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
-              <input type="number" inputMode="decimal" step="0.01" value={formData.precioJofisa} onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Base cliente + 0,25" />
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Precio Jofisa (€/g)</label>
+              <input type="number" inputMode="decimal" step="0.01" value={formData.precioJofisa} onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" placeholder="Base cliente + 0,25" />
             </div>
             {precioJofisaNum > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-[var(--radius-lg)] p-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-blue-600">Importe Jofisa{cantidadLingotes > 1 ? ' total' : ''}:</span>
                   <span className="font-mono font-semibold text-blue-800">{formatEur(importeJofisaTotal)}</span>
@@ -4377,29 +4377,29 @@ export default function LingotesTracker({
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Margen %</label>
-                <input type="number" inputMode="decimal" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Margen %</label>
+                <input type="number" inputMode="decimal" step="0.1" value={formData.margen} onChange={(e) => setFormData({ ...formData, margen: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Precio Cliente</label>
-                <div className="w-full border border-stone-200 bg-stone-50 rounded-xl px-4 py-3 font-mono text-stone-800">
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Precio Cliente</label>
+                <div className="w-full border border-black/[0.06] bg-black/[0.02] rounded-[var(--radius-lg)] px-4 py-3 font-mono text-[var(--text-primary)]">
                   {precioCliente ? formatNum(precioCliente) : '-'}
                 </div>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Fecha Cierre</label>
-              <input type="date" value={formData.fechaCierre} onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Fecha Cierre</label>
+              <input type="date" value={formData.fechaCierre} onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
             </div>
             {precioCliente > 0 && (
-              <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-4">
+              <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-[var(--radius-xl)] p-4">
                 <h4 className="font-semibold text-emerald-800 mb-3">Resumen Cliente</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-stone-600">Peso neto{cantidadLingotes > 1 ? ' total' : ''}:</span>
+                    <span className="text-[var(--text-secondary)]">Peso neto{cantidadLingotes > 1 ? ' total' : ''}:</span>
                     <span className="font-mono">{cantidadLingotes > 1 ? `${cantidadLingotes} x ${pesoNetoUnitario}g = ` : ''}{pesoTotalNeto}g</span>
                   </div>
-                  <div className="flex justify-between"><span className="text-stone-600">Precio cliente:</span><span className="font-mono">{formatNum(precioCliente)} €/g</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Precio cliente:</span><span className="font-mono">{formatNum(precioCliente)} €/g</span></div>
                   <div className="flex justify-between pt-2 border-t border-emerald-200">
                     <span className="font-semibold text-emerald-800">IMPORTE CLIENTE{cantidadLingotes > 1 ? ' TOTAL' : ''}:</span>
                     <span className="font-bold text-emerald-700 text-lg">{formatEur(importeClienteTotal)}</span>
@@ -4453,32 +4453,32 @@ export default function LingotesTracker({
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={handleClose}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
           <h3 className="text-xl font-bold text-red-800 mb-2">Nueva FUTURA</h3>
-          <p className="text-sm text-stone-500 mb-6">Añadir lingotes sin stock físico. Ciérralos después con el selector.</p>
+          <p className="text-sm text-[var(--text-tertiary)] mb-6">Añadir lingotes sin stock físico. Ciérralos después con el selector.</p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Cantidad</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Cantidad</label>
               <div className="flex gap-2">
                 {[1, 2, 4, 6, 10].map(q => (
-                  <button key={q} onClick={() => setFormData({ ...formData, cantidad: q })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.cantidad === q ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
+                  <button key={q} onClick={() => setFormData({ ...formData, cantidad: q })} className={`flex-1 py-2 rounded-[var(--radius-lg)] border-2 font-semibold transition-colors ${formData.cantidad === q ? 'border-red-500 bg-red-50 text-red-700' : 'border-black/[0.06] text-[var(--text-secondary)] hover:border-black/[0.08]'}`}>
                     {q}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Peso por lingote</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Peso por lingote</label>
               <div className="flex gap-2">
                 {[50, 100].map(p => (
-                  <button key={p} onClick={() => setFormData({ ...formData, pesoUnitario: p })} className={`flex-1 py-2 rounded-xl border-2 font-semibold transition-colors ${formData.pesoUnitario === p ? 'border-red-500 bg-red-50 text-red-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}>
+                  <button key={p} onClick={() => setFormData({ ...formData, pesoUnitario: p })} className={`flex-1 py-2 rounded-[var(--radius-lg)] border-2 font-semibold transition-colors ${formData.pesoUnitario === p ? 'border-red-500 bg-red-50 text-red-700' : 'border-black/[0.06] text-[var(--text-secondary)] hover:border-black/[0.08]'}`}>
                     {p}g
                   </button>
                 ))}
               </div>
             </div>
-            <div className="bg-red-50 rounded-xl p-3 text-center">
+            <div className="bg-red-50 rounded-[var(--radius-lg)] p-3 text-center">
               <span className="font-bold text-red-800">{formData.cantidad} x {formData.pesoUnitario}g = {pesoTotal}g</span>
             </div>
           </div>
@@ -4584,16 +4584,16 @@ export default function LingotesTracker({
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={handleClose}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <h3 className="text-xl font-bold text-red-800 mb-2">Cerrar FUTURA</h3>
-          <p className="text-sm text-stone-500 mb-4">
+          <p className="text-sm text-[var(--text-tertiary)] mb-4">
             {cliente?.nombre} • {cantidad} x {peso}g = {pesoTotal}g
           </p>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">€/Onza</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">€/Onza</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -4604,7 +4604,7 @@ export default function LingotesTracker({
                     setFormData({ ...formData, euroOnza: e.target.value });
                     setEuroOnzaConfirmado(false);
                   }}
-                  className={`flex-1 border rounded-xl px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-red-400 ${euroOnzaConfirmado ? 'border-emerald-400 bg-emerald-50' : 'border-stone-300'}`}
+                  className={`flex-1 border rounded-[var(--radius-lg)] px-4 py-3 text-lg font-mono focus:outline-none focus:ring-2 focus:ring-red-400 ${euroOnzaConfirmado ? 'border-emerald-400 bg-emerald-50' : 'border-black/[0.08]'}`}
                   placeholder="Ej: 3693,42"
                   autoFocus
                 />
@@ -4612,12 +4612,12 @@ export default function LingotesTracker({
                   type="button"
                   onClick={confirmarEuroOnza}
                   disabled={!euroOnzaNum || euroOnzaConfirmado}
-                  className={`px-4 py-2 rounded-xl font-semibold transition-all ${
+                  className={`px-4 py-2 rounded-[var(--radius-lg)] font-semibold transition-all ${
                     euroOnzaConfirmado
                       ? 'bg-emerald-100 text-emerald-600 cursor-default'
                       : euroOnzaNum
                         ? 'bg-red-500 text-white hover:bg-red-600'
-                        : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                        : 'bg-black/[0.06] text-[var(--text-tertiary)] cursor-not-allowed'
                   }`}
                 >
                   {euroOnzaConfirmado ? '✓' : 'OK'}
@@ -4626,77 +4626,77 @@ export default function LingotesTracker({
             </div>
 
             {base > 0 && (
-              <div className="bg-stone-50 rounded-xl p-3">
+              <div className="bg-black/[0.02] rounded-[var(--radius-lg)] p-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-stone-500">Base (€/Onza ÷ 31,10349):</span>
-                  <span className="font-mono font-semibold text-stone-800">{formatNum(base)} €/g</span>
+                  <span className="text-[var(--text-tertiary)]">Base (€/Onza ÷ 31,10349):</span>
+                  <span className="font-mono font-semibold text-[var(--text-primary)]">{formatNum(base)} €/g</span>
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Base Cliente (€/g)</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Base Cliente (€/g)</label>
               <input
                 type="number"
                 inputMode="decimal"
                 step="0.01"
                 value={formData.baseCliente}
                 onChange={(e) => setFormData({ ...formData, baseCliente: e.target.value })}
-                className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
                 placeholder="Se rellena con OK"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Precio Jofisa (€/g)</label>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Precio Jofisa (€/g)</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   step="0.01"
                   value={formData.precioJofisa}
                   onChange={(e) => setFormData({ ...formData, precioJofisa: e.target.value })}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
+                  className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Margen (%)</label>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Margen (%)</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   step="0.1"
                   value={formData.margen}
                   onChange={(e) => setFormData({ ...formData, margen: e.target.value })}
-                  className="w-full border border-stone-300 rounded-xl px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
+                  className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 font-mono focus:outline-none focus:ring-2 focus:ring-red-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Fecha cierre</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Fecha cierre</label>
               <input
                 type="date"
                 value={formData.fechaCierre}
                 onChange={(e) => setFormData({ ...formData, fechaCierre: e.target.value })}
-                className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Nº Factura (opcional)</label>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Nº Factura (opcional)</label>
               <input
                 type="text"
                 value={formData.nFactura}
                 onChange={(e) => setFormData({ ...formData, nFactura: e.target.value })}
-                className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400"
                 placeholder="2026-XX"
               />
             </div>
 
             {precioCliente > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="bg-red-50 border border-red-200 rounded-[var(--radius-lg)] p-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-stone-600">Precio cliente:</span>
+                  <span className="text-[var(--text-secondary)]">Precio cliente:</span>
                   <span className="font-mono font-semibold">{formatNum(precioCliente)} €/g</span>
                 </div>
                 <div className="flex justify-between">
@@ -4842,16 +4842,16 @@ export default function LingotesTracker({
     const totalFuturaSelected = clienteFutura.filter(f => selectedIds.includes(f.id)).reduce((s, f) => s + (f.peso || 0), 0);
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAssignFuturaModal(false)}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-stone-800 mb-2">Asignar FUTURA</h3>
-          <p className="text-sm text-stone-500 mb-4">{cliente?.nombre} tiene {clienteFutura.length} lingotes FUTURA</p>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setShowAssignFuturaModal(false)}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">Asignar FUTURA</h3>
+          <p className="text-sm text-[var(--text-tertiary)] mb-4">{cliente?.nombre} tiene {clienteFutura.length} lingotes FUTURA</p>
 
           {targetEntregasList.length > 0 ? (
             <>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-stone-700 mb-1">Asignar a entrega</label>
-                <select value={selectedTarget} onChange={e => { setSelectedTarget(e.target.value); setExtraLingotes({}); }} className="w-full border border-stone-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Asignar a entrega</label>
+                <select value={selectedTarget} onChange={e => { setSelectedTarget(e.target.value); setExtraLingotes({}); }} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
                   {targetEntregasList.map(e => {
                     const exp = getExportacion(e.exportacionId);
                     return <option key={e.id} value={e.id}>{e.fechaEntrega} {exp ? `(${exp.nombre})` : ''} - {numLingotes(e)} lingotes</option>;
@@ -4862,8 +4862,8 @@ export default function LingotesTracker({
               {/* Lingotes FUTURA */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-stone-700">Lingotes FUTURA</label>
-                  <button onClick={selectAll} className="text-xs text-amber-600 font-semibold hover:text-amber-700">
+                  <label className="text-sm font-medium text-[var(--text-primary)]">Lingotes FUTURA</label>
+                  <button onClick={selectAll} className="text-xs text-[var(--accent)] font-semibold hover:text-[var(--accent-text)]">
                     Seleccionar todos
                   </button>
                 </div>
@@ -4871,14 +4871,14 @@ export default function LingotesTracker({
                   {clienteFutura.map((f) => {
                     const isSelected = selectedIds.includes(f.id);
                     return (
-                      <div key={f.id} onClick={() => toggleId(f.id)} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-amber-100 border border-amber-300' : 'bg-stone-50 border border-stone-200 hover:bg-stone-100'}`}>
+                      <div key={f.id} onClick={() => toggleId(f.id)} className={`flex items-center justify-between p-2 rounded-[var(--radius-md)] cursor-pointer transition-colors ${isSelected ? 'bg-[var(--accent-soft)] border border-[var(--accent-border)]' : 'bg-black/[0.02] border border-black/[0.06] hover:bg-black/[0.04]'}`}>
                         <div className="flex items-center gap-2">
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${isSelected ? 'bg-amber-500 border-amber-500 text-white' : 'border-stone-300'}`}>
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${isSelected ? 'bg-[var(--accent)] border-[var(--accent)] text-white' : 'border-black/[0.08]'}`}>
                             {isSelected && '✓'}
                           </div>
                           <span className="font-mono text-sm">{f.peso}g</span>
                         </div>
-                        <div className="text-xs text-stone-500">
+                        <div className="text-xs text-[var(--text-tertiary)]">
                           {f.precio ? `${formatNum(f.precio)} €/g` : 'sin precio'}
                           {f.nFactura ? ` • ${f.nFactura}` : ''}
                         </div>
@@ -4890,7 +4890,7 @@ export default function LingotesTracker({
 
               {/* Lingotes adicionales del stock */}
               {stockDisponible.length > 0 && (
-                <div className="mb-4 p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                <div className="mb-4 p-3 bg-emerald-50 rounded-[var(--radius-lg)] border border-emerald-200">
                   <label className="text-sm font-medium text-emerald-800 mb-2 block">+ Añadir del stock ({selectedExp?.nombre})</label>
                   <div className="space-y-2">
                     {stockDisponible.map(s => (
@@ -4898,7 +4898,7 @@ export default function LingotesTracker({
                         <span className="font-mono text-sm text-emerald-700">{s.peso}g</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-emerald-600">disp: {s.cantidad}</span>
-                          <div className="flex items-center bg-white rounded-lg border border-emerald-300">
+                          <div className="flex items-center bg-white rounded-[var(--radius-md)] border border-emerald-300">
                             <button
                               onClick={() => updateExtraCantidad(s.peso, -1)}
                               className="w-8 h-8 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 rounded-l-lg"
@@ -4924,11 +4924,11 @@ export default function LingotesTracker({
 
               {/* Resumen */}
               {(selectedIds.length > 0 || totalExtraLingotes > 0) && (
-                <div className="bg-amber-50 rounded-xl p-3 mb-4 space-y-1">
+                <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-3 mb-4 space-y-1">
                   {selectedIds.length > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-amber-600">FUTURA:</span>
-                      <span className="font-bold text-amber-800">{selectedIds.length} lingotes ({totalFuturaSelected}g)</span>
+                      <span className="text-[var(--accent)]">FUTURA:</span>
+                      <span className="font-bold text-[var(--accent-text)]">{selectedIds.length} lingotes ({totalFuturaSelected}g)</span>
                     </div>
                   )}
                   {totalExtraLingotes > 0 && (
@@ -4937,9 +4937,9 @@ export default function LingotesTracker({
                       <span className="font-bold text-emerald-800">{totalExtraLingotes} lingotes ({totalExtraPeso}g)</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm pt-1 border-t border-amber-200">
-                    <span className="font-semibold text-stone-700">Total:</span>
-                    <span className="font-bold text-stone-800">{selectedIds.length + totalExtraLingotes} lingotes ({totalFuturaSelected + totalExtraPeso}g)</span>
+                  <div className="flex justify-between text-sm pt-1 border-t border-[var(--accent-border)]">
+                    <span className="font-semibold text-[var(--text-primary)]">Total:</span>
+                    <span className="font-bold text-[var(--text-primary)]">{selectedIds.length + totalExtraLingotes} lingotes ({totalFuturaSelected + totalExtraPeso}g)</span>
                   </div>
                 </div>
               )}
@@ -4953,7 +4953,7 @@ export default function LingotesTracker({
             </>
           ) : (
             <>
-              <p className="text-stone-500 text-sm mb-4">No hay entregas a las que asignar. Crea una nueva entrega primero.</p>
+              <p className="text-[var(--text-tertiary)] text-sm mb-4">No hay entregas a las que asignar. Crea una nueva entrega primero.</p>
               <Button variant="secondary" className="w-full" onClick={() => setShowAssignFuturaModal(false)}>Cerrar</Button>
             </>
           )}
@@ -5049,11 +5049,11 @@ export default function LingotesTracker({
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowMultiCierreModal(false)}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setShowMultiCierreModal(false)}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-stone-800">Seleccionar lingotes</h3>
-            <button onClick={selectAll} className="text-xs text-amber-600 hover:text-amber-700 font-semibold">
+            <h3 className="text-lg font-bold text-[var(--text-primary)]">Seleccionar lingotes</h3>
+            <button onClick={selectAll} className="text-xs text-[var(--accent)] hover:text-[var(--accent-text)] font-semibold">
               Seleccionar todos
             </button>
           </div>
@@ -5064,14 +5064,14 @@ export default function LingotesTracker({
               const someSelected = grupo.lingotes.some(l => multiCierreSelection[`${l.entregaId}_${l.lingoteIdx}`]);
 
               return (
-                <div key={grupo.entregaId} className="border border-stone-200 rounded-xl p-3">
+                <div key={grupo.entregaId} className="border border-black/[0.06] rounded-[var(--radius-lg)] p-3">
                   <div
                     className="flex items-center gap-2 mb-2 cursor-pointer"
                     onClick={() => toggleEntrega(grupo.entregaId, grupo.lingotes)}
                   >
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                      allSelected ? 'bg-amber-500 border-amber-500 text-white' :
-                      someSelected ? 'bg-amber-200 border-amber-400' : 'border-stone-300'
+                      allSelected ? 'bg-[var(--accent)] border-[var(--accent)] text-white' :
+                      someSelected ? 'bg-[var(--accent-border)] border-[var(--accent)]' : 'border-black/[0.08]'
                     }`}>
                       {allSelected && '✓'}
                       {someSelected && !allSelected && '–'}
@@ -5080,7 +5080,7 @@ export default function LingotesTracker({
                       className="px-2 py-0.5 rounded font-bold text-sm"
                       style={{ backgroundColor: getEntregaColor(grupo.fechaEntrega) + '20', color: getEntregaColor(grupo.fechaEntrega) }}
                     >{formatEntregaShort(grupo.fechaEntrega)}</span>
-                    <span className="text-xs text-stone-500">• Exp: {grupo.exportacionNombre}</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">• Exp: {grupo.exportacionNombre}</span>
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {grupo.lingotes.map(l => {
@@ -5090,10 +5090,10 @@ export default function LingotesTracker({
                         <button
                           key={key}
                           onClick={() => toggleLingote(l.entregaId, l.lingoteIdx)}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-mono font-semibold transition-colors ${
+                          className={`py-1.5 px-2 rounded-[var(--radius-md)] text-xs font-mono font-semibold transition-colors ${
                             isSelected
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                              ? 'bg-[var(--accent)] text-white'
+                              : 'bg-black/[0.04] text-[var(--text-secondary)] hover:bg-black/[0.06]'
                           }`}
                         >
                           {l.peso}g
@@ -5107,10 +5107,10 @@ export default function LingotesTracker({
           </div>
 
           {/* Resumen y botones */}
-          <div className="border-t border-stone-200 pt-4">
+          <div className="border-t border-black/[0.06] pt-4">
             {selectedCount > 0 && (
-              <div className="text-sm text-stone-600 mb-3 text-center">
-                <span className="font-bold text-amber-600">{selectedCount}</span> lingotes seleccionados = <span className="font-bold">{selectedPeso}g</span>
+              <div className="text-sm text-[var(--text-secondary)] mb-3 text-center">
+                <span className="font-bold text-[var(--accent)]">{selectedCount}</span> lingotes seleccionados = <span className="font-bold">{selectedPeso}g</span>
               </div>
             )}
             <div className="flex gap-3">
@@ -5254,21 +5254,21 @@ export default function LingotesTracker({
     };
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowFacturaModal(false)}>
-        <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-          <h3 className="text-lg font-bold text-stone-800 mb-4">Subir Factura</h3>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setShowFacturaModal(false)}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[85vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">Subir Factura</h3>
 
           {/* File input */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-stone-700 mb-2">Archivo (PDF o imagen)</label>
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Archivo (PDF o imagen)</label>
             <input
               type="file"
               accept=".pdf,image/*"
               onChange={handleFileChange}
-              className="w-full border border-stone-300 rounded-xl px-3 py-2 text-sm"
+              className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-3 py-2 text-sm"
             />
             {facturaFile && (
-              <div className="mt-2 p-2 bg-emerald-50 rounded-lg text-sm text-emerald-700">
+              <div className="mt-2 p-2 bg-emerald-50 rounded-[var(--radius-md)] text-sm text-emerald-700">
                 ✓ {facturaFile.name}
               </div>
             )}
@@ -5276,15 +5276,15 @@ export default function LingotesTracker({
 
           {/* Selección de lingotes */}
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-stone-700">Asignar a lingotes:</span>
-            <button onClick={selectAll} className="text-xs text-amber-600 hover:text-amber-700 font-semibold">
+            <span className="text-sm font-medium text-[var(--text-primary)]">Asignar a lingotes:</span>
+            <button onClick={selectAll} className="text-xs text-[var(--accent)] hover:text-[var(--accent-text)] font-semibold">
               Seleccionar todos
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto border border-stone-200 rounded-xl p-2 mb-4 max-h-48">
+          <div className="flex-1 overflow-y-auto border border-black/[0.06] rounded-[var(--radius-lg)] p-2 mb-4 max-h-48">
             {lingotesSinFactura.length === 0 ? (
-              <p className="text-stone-400 text-sm text-center py-4">No hay lingotes sin factura</p>
+              <p className="text-[var(--text-tertiary)] text-sm text-center py-4">No hay lingotes sin factura</p>
             ) : (
               <div className="space-y-1">
                 {lingotesSinFactura.map(l => {
@@ -5294,12 +5294,12 @@ export default function LingotesTracker({
                     <div
                       key={key}
                       onClick={() => setFacturaSelection(prev => ({ ...prev, [key]: !prev[key] }))}
-                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
-                        isSelected ? 'bg-amber-100 border border-amber-300' : 'bg-stone-50 hover:bg-stone-100'
+                      className={`flex items-center gap-2 p-2 rounded-[var(--radius-md)] cursor-pointer transition-colors ${
+                        isSelected ? 'bg-[var(--accent-soft)] border border-[var(--accent-border)]' : 'bg-black/[0.02] hover:bg-black/[0.04]'
                       }`}
                     >
                       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'bg-amber-500 border-amber-500 text-white' : 'border-stone-300'
+                        isSelected ? 'bg-[var(--accent)] border-[var(--accent)] text-white' : 'border-black/[0.08]'
                       }`}>
                         {isSelected && '✓'}
                       </div>
@@ -5312,8 +5312,8 @@ export default function LingotesTracker({
                         >{formatEntregaShort(l.fechaEntrega)}</span>
                       )}
                       <span className="font-mono text-sm">{l.peso}g</span>
-                      <span className="text-xs text-stone-500">{formatNum(l.precio || 0)}€/g</span>
-                      <span className="text-xs text-stone-400">{l.fechaCierre ? new Date(l.fechaCierre).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) : '—'}</span>
+                      <span className="text-xs text-[var(--text-tertiary)]">{formatNum(l.precio || 0)}€/g</span>
+                      <span className="text-xs text-[var(--text-tertiary)]">{l.fechaCierre ? new Date(l.fechaCierre).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) : '—'}</span>
                       <span className="text-xs text-emerald-600 font-medium ml-auto">{formatEur(l.importe || 0)}</span>
                     </div>
                   );
@@ -5323,8 +5323,8 @@ export default function LingotesTracker({
           </div>
 
           {selectedCount > 0 && (
-            <div className="text-sm text-center text-stone-600 mb-3">
-              <span className="font-bold text-amber-600">{selectedCount}</span> lingotes seleccionados
+            <div className="text-sm text-center text-[var(--text-secondary)] mb-3">
+              <span className="font-bold text-[var(--accent)]">{selectedCount}</span> lingotes seleccionados
             </div>
           )}
 
@@ -5352,13 +5352,13 @@ export default function LingotesTracker({
     const isPdf = viewingFactura.tipo?.includes('pdf');
 
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewingFactura(null)}>
-        <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-          <div className="flex justify-between items-center p-4 border-b border-stone-200">
-            <h3 className="font-bold text-stone-800">{viewingFactura.nombre}</h3>
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setViewingFactura(null)}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-4 border-b border-black/[0.06]">
+            <h3 className="font-bold text-[var(--text-primary)]">{viewingFactura.nombre}</h3>
             <button
               onClick={() => setViewingFactura(null)}
-              className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+              className="w-8 h-8 rounded-full bg-black/[0.04] hover:bg-black/[0.06] flex items-center justify-center"
             >
               ✕
             </button>
@@ -5367,18 +5367,18 @@ export default function LingotesTracker({
             {isPdf ? (
               <iframe
                 src={viewingFactura.data}
-                className="w-full h-[70vh] rounded-xl"
+                className="w-full h-[70vh] rounded-[var(--radius-lg)]"
                 title={viewingFactura.nombre}
               />
             ) : (
               <img
                 src={viewingFactura.data}
                 alt={viewingFactura.nombre}
-                className="max-w-full h-auto rounded-xl mx-auto"
+                className="max-w-full h-auto rounded-[var(--radius-lg)] mx-auto"
               />
             )}
           </div>
-          <div className="p-4 border-t border-stone-200 flex gap-3">
+          <div className="p-4 border-t border-black/[0.06] flex gap-3">
             <Button
               variant="danger"
               className="flex-1"
@@ -5407,16 +5407,16 @@ export default function LingotesTracker({
     const isPdf = factura.tipo?.includes('pdf');
 
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setViewingExportFactura(null)}>
-        <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-          <div className="flex justify-between items-center p-4 border-b border-stone-200">
+      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setViewingExportFactura(null)}>
+        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-4 border-b border-black/[0.06]">
             <div>
-              <h3 className="font-bold text-stone-800">{factura.nombre}</h3>
-              <p className="text-xs text-stone-500">Importación: {exp.nombre}</p>
+              <h3 className="font-bold text-[var(--text-primary)]">{factura.nombre}</h3>
+              <p className="text-xs text-[var(--text-tertiary)]">Importación: {exp.nombre}</p>
             </div>
             <button
               onClick={() => setViewingExportFactura(null)}
-              className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+              className="w-8 h-8 rounded-full bg-black/[0.04] hover:bg-black/[0.06] flex items-center justify-center"
             >
               ✕
             </button>
@@ -5425,22 +5425,22 @@ export default function LingotesTracker({
             {isPdf ? (
               <iframe
                 src={factura.data}
-                className="w-full h-[70vh] rounded-xl"
+                className="w-full h-[70vh] rounded-[var(--radius-lg)]"
                 title={factura.nombre}
               />
             ) : (
               <img
                 src={factura.data}
                 alt={factura.nombre}
-                className="max-w-full h-auto rounded-xl mx-auto"
+                className="max-w-full h-auto rounded-[var(--radius-lg)] mx-auto"
               />
             )}
           </div>
-          <div className="p-4 border-t border-stone-200 flex gap-3">
+          <div className="p-4 border-t border-black/[0.06] flex gap-3">
             <a
               href={factura.data}
               download={factura.nombre}
-              className="flex-1 py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-center font-medium"
+              className="flex-1 py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-[var(--radius-lg)] text-center font-medium"
             >
               📥 Descargar
             </a>
@@ -5457,38 +5457,40 @@ export default function LingotesTracker({
   const TabBtn = ({ id, label, icon }) => (
     <button
       onClick={() => { setActiveTab(id); setSelectedCliente(null); }}
-      className={`flex-1 py-3 px-2 text-xs sm:text-sm font-medium transition-all duration-300 relative ${
+      className={`flex-1 py-2.5 px-3 text-xs sm:text-sm font-medium transition-all duration-300 relative btn-press ${
         activeTab === id
-          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-md'
-          : 'text-amber-700 hover:text-amber-900 hover:bg-amber-100'
+          ? 'tab-pill-active'
+          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/[0.03]'
       }`}
-      style={{ borderRadius: activeTab === id ? '8px' : '0' }}
+      style={{ borderRadius: '100px', margin: '4px 2px' }}
     >
-      <span className="block">{icon}</span>
-      <span className="block mt-1">{label}</span>
+      <span className="relative inline-flex items-center gap-1.5">
+        <span className="text-sm">{icon}</span>
+        <span>{label}</span>
+      </span>
     </button>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-100 via-amber-50/30 to-orange-50/20">
+    <div className="page-bg">
       {/* Header + Nav sticky */}
       <div className="sticky top-0 z-40">
-        <header className="bg-gradient-to-r from-stone-700 to-stone-600 border-b border-stone-500 p-3 shadow-md">
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
+        <header className="glass-dark p-3">
+          <div className="flex items-center justify-between max-w-3xl mx-auto">
+            <div className="flex items-center gap-2.5 cursor-pointer" onClick={onBack}>
               <span className="text-2xl">🥇</span>
-              <h1 className="text-xl font-bold text-white drop-shadow-sm">Lingotes</h1>
-              <span className="text-xs text-stone-400 ml-1">v2.7</span>
+              <h1 className="text-xl font-semibold text-white tracking-tight">Lingotes</h1>
+              <span className="text-[10px] text-white/30 font-mono ml-1">v2.7</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-white/80 text-sm">{currentUser}</span>
+              <span className="text-white/60 text-sm">{currentUser}</span>
               <Button size="sm" onClick={() => setShowEntregaModal(true)}>+ Entrega</Button>
             </div>
           </div>
         </header>
 
-        {/* Navigation */}
-        <nav className="bg-white border-b border-amber-200 flex shadow-sm">
+        {/* Navigation — pill style */}
+        <nav className="glass border-b border-white/10 flex px-2 py-1">
           <TabBtn id="stock" label="Stock" icon="📊" />
           <TabBtn id="exportaciones" label="Importaciones" icon="📦" />
           {canViewStats && <TabBtn id="estadisticas" label="Stats" icon="💰" />}
@@ -5497,7 +5499,7 @@ export default function LingotesTracker({
       </div>
 
       {/* Content */}
-      <main className="max-w-2xl mx-auto p-4 pb-24">
+      <main className="max-w-3xl mx-auto p-5 pb-24">
         {activeTab === 'stock' && <StockOverview />}
         {activeTab === 'exportaciones' && <ExportacionesView />}
         {activeTab === 'estadisticas' && canViewStats && <EstadisticasView />}
