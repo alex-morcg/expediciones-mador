@@ -732,7 +732,7 @@ export default function LingotesTracker({
   };
 
   const deleteEntrega = async (entregaId) => {
-    if (confirm('Eliminar esta entrega? Los lingotes volverán al stock de la exportación.')) {
+    if (confirm('¿Eliminar esta entrega? El stock se recalculará automáticamente.')) {
       await onDeleteEntrega(entregaId);
     }
   };
@@ -1686,7 +1686,7 @@ export default function LingotesTracker({
                           <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
                           <td className="py-1.5 px-1 text-center">
                             <button
-                              onClick={() => isFutura ? marcarPagadoFutura(l.futuraId) : marcarPagado(l.entregaId, l.lingoteIdx)}
+                              onClick={() => (isFutura && l.futuraId && !l.entregaId) ? marcarPagadoFutura(l.futuraId) : marcarPagado(l.entregaId, l.lingoteIdx)}
                               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
                                 l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-black/[0.08] hover:border-emerald-400'
                               }`}
@@ -2055,7 +2055,7 @@ export default function LingotesTracker({
               .map(([nombre, lingotes]) => `${nombre}: ${lingotes.length} lingotes (${formatNum(lingotes.reduce((s,l) => s + (l.peso||0), 0), 0)}g)`)
               .join('\n');
 
-            alert(`Hay ${totalFutura} lingotes FUTURA pendientes de asignar:\n\n${clientesList}\n\nPuedes asignarlos desde la ficha de cada cliente.`);
+            alert(`Hay ${totalFutura} lingotes FUTURA pendientes de asignar:\n\n${clientesList}\n\nSe incluirán automáticamente al crear nuevas entregas.`);
           }
         }
 
@@ -3748,9 +3748,6 @@ export default function LingotesTracker({
                 ],
               };
 
-              // Acumulador para descontar del stock
-              const stockADescontar = {}; // { peso: cantidad }
-
               // Función para crear entregas
               const crearEntregas = async (clienteId, clienteNombre, entregasData) => {
                 for (const [fechaEntrega, lingotesEntrega] of Object.entries(entregasData)) {
@@ -3772,11 +3769,6 @@ export default function LingotesTracker({
                     pagado: l.pagado !== undefined ? l.pagado : true,
                     pesoDevuelto: 0,
                   }));
-
-                  // Acumular para descontar del stock
-                  for (const l of lingotesEntrega) {
-                    stockADescontar[l.peso] = (stockADescontar[l.peso] || 0) + 1;
-                  }
 
                   await onSaveEntrega({
                     clienteId: clienteId,
