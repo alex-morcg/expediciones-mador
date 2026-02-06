@@ -1336,24 +1336,27 @@ export function useFirestore(activeSection = 'expediciones') {
   const createBackup = async (tipo, usuario) => {
     try {
       const toArr = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const [expSnap, entSnap, futSnap, facSnap, confSnap, slogsSnap, glogsSnap] = await Promise.all([
+      const [expSnap, entSnap, futSnap, facSnap, confSnap] = await Promise.all([
         getDocs(collection(db, 'lingotes_exportaciones')),
         getDocs(collection(db, 'lingotes_entregas')),
         getDocs(collection(db, 'lingotes_futura')),
         getDocs(collection(db, 'lingotes_facturas')),
         getDocs(collection(db, 'lingotes_config')),
-        getDocs(collection(db, 'lingotes_stock_logs')),
-        getDocs(collection(db, 'logsGenerales')),
       ]);
+
+      // Facturas: excluir campo 'data' (base64 de PDFs/imágenes, muy pesado)
+      const facturasLimpias = facSnap.docs.map(d => {
+        const { data: _fileData, ...rest } = d.data();
+        return { id: d.id, ...rest };
+      });
 
       const datos = {
         exportaciones: toArr(expSnap),
         entregas: toArr(entSnap),
         futura: toArr(futSnap),
-        facturas: toArr(facSnap),
+        facturas: facturasLimpias,
         config: toArr(confSnap),
-        stockLogs: toArr(slogsSnap),
-        logsGenerales: toArr(glogsSnap),
+        // Logs no se respaldan (no son datos críticos, se pueden perder)
       };
 
       await addDoc(collection(db, 'lingotes_backups'), {
@@ -1367,8 +1370,6 @@ export function useFirestore(activeSection = 'expediciones') {
           entregas: datos.entregas.length,
           futura: datos.futura.length,
           facturas: datos.facturas.length,
-          stockLogs: datos.stockLogs.length,
-          logsGenerales: datos.logsGenerales.length,
         },
       });
 
@@ -1391,8 +1392,6 @@ export function useFirestore(activeSection = 'expediciones') {
         { nombre: 'lingotes_entregas', datos: datos.entregas },
         { nombre: 'lingotes_futura', datos: datos.futura },
         { nombre: 'lingotes_facturas', datos: datos.facturas },
-        { nombre: 'lingotes_stock_logs', datos: datos.stockLogs },
-        { nombre: 'logsGenerales', datos: datos.logsGenerales },
       ];
 
       for (const col of colecciones) {
