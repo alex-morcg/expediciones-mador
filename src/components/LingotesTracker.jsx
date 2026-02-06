@@ -133,6 +133,7 @@ export default function LingotesTracker({
   const [showNewFuturaModal, setShowNewFuturaModal] = useState(false); // Modal para crear FUTURA con precio
   const [newFuturaData, setNewFuturaData] = useState(null); // { clienteId, cantidad, peso }
   const [showStockLog, setShowStockLog] = useState(false);
+  const [showPagosPendientes, setShowPagosPendientes] = useState(false);
   const [editingCierre, setEditingCierre] = useState(null); // { entregaId, indices, lingote, isFutura, futuraIds }
 
   const stockMador = config.stockMador || 0;
@@ -1038,7 +1039,7 @@ export default function LingotesTracker({
           </Card>
         )}
 
-        {/* Log de Stock */}
+        {/* Movimientos de Stock */}
         {stockLogs.length > 0 && (() => {
           const getStockLogIcon = (tipo) => {
             switch (tipo) {
@@ -1095,7 +1096,7 @@ export default function LingotesTracker({
                 onClick={() => setShowStockLog(!showStockLog)}
                 className="w-full flex items-center justify-between"
               >
-                <h3 className="font-bold text-[var(--text-primary)]">📋 Log de Stock ({stockLogs.length})</h3>
+                <h3 className="font-bold text-[var(--text-primary)]">📋 Movimientos de Stock ({stockLogs.length})</h3>
                 <span className="text-[var(--text-tertiary)] text-sm">{showStockLog ? '▲' : '▼'}</span>
               </button>
               {showStockLog && (
@@ -1132,6 +1133,152 @@ export default function LingotesTracker({
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </Card>
+          );
+        })()}
+
+        {/* Pagos Pendientes */}
+        {(() => {
+          // Recopilar todos los lingotes pendientes de pago de todas las entregas
+          const pendientes = [];
+          entregas.forEach(e => {
+            const cliente = getCliente(e.clienteId);
+            (e.lingotes || []).forEach((l, idx) => {
+              if (l.estado === 'pendiente_pago') {
+                pendientes.push({
+                  ...l,
+                  entregaId: e.id,
+                  lingoteIdx: idx,
+                  clienteId: e.clienteId,
+                  clienteNombre: cliente?.nombre || 'Desconocido',
+                  clienteColor: cliente?.color || '#666',
+                  fechaEntrega: e.fechaEntrega,
+                });
+              }
+            });
+          });
+          // FUTURA pendientes de pago
+          (futuraLingotes || []).forEach(f => {
+            if (f.precio && !f.pagado) {
+              const cliente = getCliente(f.clienteId);
+              pendientes.push({
+                ...f,
+                futuraId: f.id,
+                isFutura: true,
+                estado: 'pendiente_pago',
+                importe: f.importe || (f.precio * f.peso),
+                clienteId: f.clienteId,
+                clienteNombre: cliente?.nombre || 'Desconocido',
+                clienteColor: cliente?.color || '#666',
+              });
+            }
+          });
+
+          if (pendientes.length === 0) return null;
+
+          // Agrupar por factura (nFactura). Sin factura = cada uno individual
+          const porFactura = {};
+          const sinFactura = [];
+          pendientes.forEach(l => {
+            if (l.nFactura) {
+              if (!porFactura[l.nFactura]) {
+                porFactura[l.nFactura] = { facturaId: l.nFactura, lingotes: [] };
+              }
+              porFactura[l.nFactura].lingotes.push(l);
+            } else {
+              sinFactura.push(l);
+            }
+          });
+
+          // Convertir a array de grupos
+          const grupos = Object.values(porFactura).map(g => {
+            const totalImporte = g.lingotes.reduce((s, l) => s + (l.importe || 0), 0);
+            const totalPeso = g.lingotes.reduce((s, l) => s + (l.peso || 0), 0);
+            // Clientes únicos en este grupo
+            const clientesUnicos = [...new Set(g.lingotes.map(l => l.clienteNombre))];
+            const factura = (facturas || []).find(f => f.id === g.facturaId);
+            return {
+              tipo: 'factura',
+              facturaId: g.facturaId,
+              facturaNombre: factura?.nombre?.replace(/\.pdf$/i, '') || g.facturaId,
+              cantidad: g.lingotes.length,
+              totalPeso,
+              totalImporte,
+              clientes: clientesUnicos,
+              clienteColor: g.lingotes[0].clienteColor,
+              lingotes: g.lingotes,
+            };
+          });
+
+          // Agrupar sin factura por cliente
+          const sinFacturaPorCliente = {};
+          sinFactura.forEach(l => {
+            const key = l.clienteNombre;
+            if (!sinFacturaPorCliente[key]) {
+              sinFacturaPorCliente[key] = { clienteNombre: key, clienteColor: l.clienteColor, lingotes: [] };
+            }
+            sinFacturaPorCliente[key].lingotes.push(l);
+          });
+          Object.values(sinFacturaPorCliente).forEach(g => {
+            grupos.push({
+              tipo: 'sin_factura',
+              cantidad: g.lingotes.length,
+              totalPeso: g.lingotes.reduce((s, l) => s + (l.peso || 0), 0),
+              totalImporte: g.lingotes.reduce((s, l) => s + (l.importe || 0), 0),
+              clientes: [g.clienteNombre],
+              clienteColor: g.clienteColor,
+              lingotes: g.lingotes,
+            });
+          });
+
+          const totalPendiente = pendientes.reduce((s, l) => s + (l.importe || 0), 0);
+
+          return (
+            <Card>
+              <button
+                onClick={() => setShowPagosPendientes(!showPagosPendientes)}
+                className="w-full flex items-center justify-between"
+              >
+                <h3 className="font-bold text-[var(--text-primary)]">💰 Pagos Pendientes ({pendientes.length})</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-orange-600">{formatEur(totalPendiente)}</span>
+                  <span className="text-[var(--text-tertiary)] text-sm">{showPagosPendientes ? '▲' : '▼'}</span>
+                </div>
+              </button>
+              {showPagosPendientes && (
+                <div className="space-y-2 mt-3">
+                  {grupos.map((g, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between p-2.5 rounded-[var(--radius-md)] border bg-orange-50 border-orange-200"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm">{g.tipo === 'factura' ? '📄' : '⚠️'}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs text-[var(--text-primary)] font-medium truncate">
+                            {g.tipo === 'factura'
+                              ? g.facturaNombre
+                              : `Sin factura`
+                            }
+                          </div>
+                          <div className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-1 flex-wrap">
+                            {g.clientes.map((c, ci) => (
+                              <span key={ci} className="font-semibold">{c}</span>
+                            ))}
+                            <span>•</span>
+                            <span>{g.cantidad} lingote{g.cantidad > 1 ? 's' : ''}</span>
+                            <span>•</span>
+                            <span>{formatNum(g.totalPeso, 0)}g</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-sm font-bold text-orange-700 whitespace-nowrap ml-2">
+                        {formatEur(g.totalImporte)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>
@@ -4166,7 +4313,7 @@ export default function LingotesTracker({
         {/* Borrar stock logs */}
         {stockLogs.length > 0 && (
         <Card>
-          <h3 className="font-bold text-blue-700 mb-4">📋 Log de Stock</h3>
+          <h3 className="font-bold text-blue-700 mb-4">📋 Movimientos de Stock</h3>
           <p className="text-sm text-[var(--text-secondary)] mb-4">
             Hay {stockLogs.length} logs de stock registrados. Puedes borrarlos para empezar desde cero.
           </p>
