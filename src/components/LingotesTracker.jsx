@@ -99,6 +99,8 @@ export default function LingotesTracker({
   onDeleteFactura,
   onUpdateFactura,
   onAddLogGeneral = () => {}, // (accion, descripcion, detalles) => void
+  stockLogs = [],
+  onAddStockLog = () => {},
   logsGenerales = [],
   loadLogsGenerales = () => {},
 }) {
@@ -129,6 +131,7 @@ export default function LingotesTracker({
   const [viewingExportFactura, setViewingExportFactura] = useState(null); // { exp, factura } - factura de exportación
   const [showNewFuturaModal, setShowNewFuturaModal] = useState(false); // Modal para crear FUTURA con precio
   const [newFuturaData, setNewFuturaData] = useState(null); // { clienteId, cantidad, peso }
+  const [showStockLog, setShowStockLog] = useState(false);
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -301,6 +304,20 @@ export default function LingotesTracker({
     timestamp: new Date().toISOString(),
   });
 
+  // Helper para crear stock logs
+  const createStockLog = (tipo, descripcion, cantidad, pesoTotal, delta, detalles = {}) => {
+    onAddStockLog({
+      tipo,
+      descripcion,
+      cantidad,
+      pesoTotal,
+      detalles,
+      stockResultante: stockRealTotal + delta,
+      usuario: currentUser,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
   const addEntrega = async (data) => {
     // data.items = [{ peso, cantidad }, ...]
     // data.futuraIdsToAssign = [futuraDocId, ...] (optional)
@@ -426,6 +443,14 @@ export default function LingotesTracker({
       totalLingotes,
       totalPeso,
       futuraAssigned: futuraAssignedCount,
+    });
+
+    // Stock log
+    createStockLog('salida', `Entrega a ${clienteNombre}: ${totalLingotes} lingotes (${totalPeso}g)`, totalLingotes, totalPeso, -totalPeso, {
+      clienteId: data.clienteId,
+      clienteNombre,
+      exportacionId: data.exportacionId,
+      exportacionNombre: exportacion?.nombre,
     });
   };
 
@@ -668,6 +693,15 @@ export default function LingotesTracker({
       totalLingotes: lingoteIndices.length,
       totalPeso,
     });
+
+    // Stock log - devolución devuelve stock
+    createStockLog('devolucion', `Devolución de ${clienteNombre}: ${lingoteIndices.length} x ${peso}g (${totalPeso}g)`, lingoteIndices.length, totalPeso, totalPeso, {
+      clienteId: entrega.clienteId,
+      clienteNombre,
+      exportacionId: entrega.exportacionId,
+      exportacionNombre: getExportacion(entrega.exportacionId)?.nombre,
+      entregaId,
+    });
   };
 
   // Cancelar devolución: volver a poner lingotes en estado 'en_curso' y quitar del stock
@@ -688,6 +722,15 @@ export default function LingotesTracker({
     const logs = [...(entrega.logs || []), log];
 
     await onUpdateEntrega(entregaId, { lingotes, logs });
+
+    // Stock log - cancelar devolución quita stock
+    const clienteNombre = getCliente(entrega.clienteId)?.nombre || 'Desconocido';
+    createStockLog('cancelar_devolucion', `Cancelada devolución de ${clienteNombre}: 1 x ${peso}g`, 1, peso, -peso, {
+      clienteId: entrega.clienteId,
+      clienteNombre,
+      exportacionId: entrega.exportacionId,
+      entregaId,
+    });
   };
 
   const marcarPagado = async (entregaId, lingoteIdx) => {
@@ -733,7 +776,24 @@ export default function LingotesTracker({
 
   const deleteEntrega = async (entregaId) => {
     if (confirm('¿Eliminar esta entrega? El stock se recalculará automáticamente.')) {
+      const entrega = entregas.find(e => e.id === entregaId);
       await onDeleteEntrega(entregaId);
+
+      // Stock log - eliminar entrega devuelve los lingotes no-devueltos al stock
+      if (entrega) {
+        const lingotesNoDevueltos = (entrega.lingotes || []).filter(l => l.estado !== 'devuelto');
+        const pesoRecuperado = lingotesNoDevueltos.reduce((s, l) => s + (l.peso || 0), 0);
+        if (pesoRecuperado > 0) {
+          const clienteNombre = getCliente(entrega.clienteId)?.nombre || 'Desconocido';
+          createStockLog('eliminar_entrega', `Entrega eliminada de ${clienteNombre}: ${lingotesNoDevueltos.length} lingotes (${pesoRecuperado}g)`, lingotesNoDevueltos.length, pesoRecuperado, pesoRecuperado, {
+            clienteId: entrega.clienteId,
+            clienteNombre,
+            exportacionId: entrega.exportacionId,
+            exportacionNombre: getExportacion(entrega.exportacionId)?.nombre,
+            entregaId,
+          });
+        }
+      }
     }
   };
 
@@ -887,6 +947,106 @@ export default function LingotesTracker({
             <p className="text-[var(--text-tertiary)] text-center py-6">No hay entregas registradas.</p>
           </Card>
         )}
+
+        {/* Log de Stock */}
+        {stockLogs.length > 0 && (() => {
+          const getStockLogIcon = (tipo) => {
+            switch (tipo) {
+              case 'crear_exportacion': return '📥';
+              case 'editar_exportacion': return '✏️';
+              case 'eliminar_exportacion': return '🗑️';
+              case 'salida': return '📤';
+              case 'devolucion': return '↩️';
+              case 'cancelar_devolucion': return '🔄';
+              case 'eliminar_entrega': return '♻️';
+              default: return '📝';
+            }
+          };
+          const getStockLogColor = (tipo) => {
+            switch (tipo) {
+              case 'crear_exportacion': return 'bg-emerald-50 border-emerald-200';
+              case 'editar_exportacion': return 'bg-blue-50 border-blue-200';
+              case 'eliminar_exportacion': return 'bg-red-50 border-red-200';
+              case 'salida': return 'bg-orange-50 border-orange-200';
+              case 'devolucion': return 'bg-green-50 border-green-200';
+              case 'cancelar_devolucion': return 'bg-amber-50 border-amber-200';
+              case 'eliminar_entrega': return 'bg-teal-50 border-teal-200';
+              default: return 'bg-black/[0.02] border-black/[0.06]';
+            }
+          };
+          const getDeltaSign = (tipo) => {
+            switch (tipo) {
+              case 'crear_exportacion':
+              case 'devolucion':
+              case 'eliminar_entrega':
+                return '+';
+              case 'eliminar_exportacion':
+              case 'salida':
+              case 'cancelar_devolucion':
+                return '-';
+              case 'editar_exportacion':
+                return '';
+              default:
+                return '';
+            }
+          };
+          const formatLogTime = (timestamp) => {
+            const d = new Date(timestamp);
+            const day = d.getDate();
+            const month = d.getMonth() + 1;
+            const hours = d.getHours().toString().padStart(2, '0');
+            const mins = d.getMinutes().toString().padStart(2, '0');
+            return `${day}/${month} ${hours}:${mins}`;
+          };
+          const logsToShow = stockLogs.slice(0, 50);
+          return (
+            <Card>
+              <button
+                onClick={() => setShowStockLog(!showStockLog)}
+                className="w-full flex items-center justify-between"
+              >
+                <h3 className="font-bold text-[var(--text-primary)]">📋 Log de Stock ({stockLogs.length})</h3>
+                <span className="text-[var(--text-tertiary)] text-sm">{showStockLog ? '▲' : '▼'}</span>
+              </button>
+              {showStockLog && (
+                <div className="space-y-2 max-h-80 overflow-y-auto mt-3">
+                  {logsToShow.map((log, i) => {
+                    const sign = getDeltaSign(log.tipo);
+                    const isPositive = sign === '+';
+                    const isNegative = sign === '-';
+                    return (
+                      <div key={log.id || i} className={`p-2.5 rounded-[var(--radius-md)] border ${getStockLogColor(log.tipo)}`}>
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm mt-0.5">{getStockLogIcon(log.tipo)}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-[var(--text-primary)]">{log.descripcion}</div>
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="text-[10px] text-[var(--text-tertiary)] flex items-center gap-2">
+                                <span>{formatLogTime(log.timestamp)}</span>
+                                <span>•</span>
+                                <span className="font-semibold text-[var(--text-secondary)]">{log.usuario}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {log.pesoTotal > 0 && (
+                                  <span className={`text-xs font-bold ${isPositive ? 'text-emerald-600' : isNegative ? 'text-red-600' : 'text-blue-600'}`}>
+                                    {sign}{formatNum(log.pesoTotal, 0)}g
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-[var(--text-tertiary)] bg-black/[0.04] px-1.5 py-0.5 rounded font-mono">
+                                  → {formatNum(log.stockResultante, 0)}g
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          );
+        })()}
 
         <Button className="w-full" size="lg" onClick={() => setShowEntregaModal(true)}>
           + Nueva Entrega
@@ -2031,6 +2191,16 @@ export default function LingotesTracker({
             nombre: data.nombre,
             grExport,
           });
+
+          // Stock log - diferencia de gramos
+          const oldGrExport = editingExp.grExport || 0;
+          const diff = grExport - oldGrExport;
+          if (diff !== 0) {
+            createStockLog('editar_exportacion', `Exportación editada: ${data.nombre} (${diff > 0 ? '+' : ''}${diff}g)`, 0, Math.abs(diff), diff, {
+              exportacionId: editingExp.id,
+              exportacionNombre: data.nombre,
+            });
+          }
         } else {
           await onSaveExportacion(data);
 
@@ -2038,6 +2208,11 @@ export default function LingotesTracker({
           onAddLogGeneral('crear_exportacion', `Exportación creada: ${data.nombre} (${grExport}g)`, {
             nombre: data.nombre,
             grExport,
+          });
+
+          // Stock log
+          createStockLog('crear_exportacion', `Exportación creada: ${data.nombre} (${grExport}g)`, 0, grExport, grExport, {
+            exportacionNombre: data.nombre,
           });
 
           // Check if there are FUTURA lingotes pending assignment
@@ -2420,12 +2595,21 @@ export default function LingotesTracker({
                     <button
                       onClick={async () => {
                         if (confirm(`¿Eliminar la exportación "${exp.nombre}"?\n\nEsto no se puede deshacer.`)) {
+                          const stockDisp = getStockDisponible(exp.id);
+                          const stockPeso = stockDisp.reduce((s, l) => s + (l.cantidad * l.peso), 0);
                           await onDeleteExportacion(exp.id);
                           // Log general
                           onAddLogGeneral('eliminar_exportacion', `Exportación eliminada: ${exp.nombre} (${exp.grExport}g)`, {
                             nombre: exp.nombre,
                             grExport: exp.grExport,
                           });
+                          // Stock log - solo el stock disponible se pierde realmente
+                          if (stockPeso > 0) {
+                            createStockLog('eliminar_exportacion', `Exportación eliminada: ${exp.nombre} (-${stockPeso}g de stock)`, 0, stockPeso, -stockPeso, {
+                              exportacionId: exp.id,
+                              exportacionNombre: exp.nombre,
+                            });
+                          }
                         }
                       }}
                       className="text-red-400 hover:text-red-600 text-sm font-medium"
@@ -3837,6 +4021,109 @@ export default function LingotesTracker({
             <LogGeneralSection logsGenerales={logsGenerales} loadLogsGenerales={loadLogsGenerales} />
           </Card>
         )}
+
+        {/* Reconstruir historial de stock logs */}
+        <Card>
+          <h3 className="font-bold text-blue-700 mb-4">📋 Reconstruir Log de Stock</h3>
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
+            Genera logs históricos de stock a partir de las exportaciones ({exportaciones.length}) y entregas ({entregas.length}) existentes.
+            Reconstruye el historial cronológico completo.
+          </p>
+          <Button
+            onClick={async () => {
+              if (!confirm('¿Generar logs históricos de stock? Se crearán nuevos registros basados en los datos existentes.')) return;
+
+              // Recopilar todos los eventos en orden cronológico
+              const eventos = [];
+
+              // 1. Exportaciones creadas (entrada de stock)
+              exportaciones.forEach(exp => {
+                const grExport = exp.grExport || (exp.lingotes || []).reduce((s, l) => s + (l.cantidad * l.peso), 0);
+                eventos.push({
+                  tipo: 'crear_exportacion',
+                  timestamp: exp.fecha ? new Date(exp.fecha + 'T08:00:00').toISOString() : new Date().toISOString(),
+                  descripcion: `Exportación creada: ${exp.nombre} (${grExport}g)`,
+                  cantidad: 0,
+                  pesoTotal: grExport,
+                  delta: grExport,
+                  detalles: { exportacionId: exp.id, exportacionNombre: exp.nombre },
+                });
+              });
+
+              // 2. Entregas a clientes (salida de stock) + devoluciones dentro de ellas
+              entregas.forEach(ent => {
+                const cliente = getCliente(ent.clienteId);
+                const clienteNombre = cliente?.nombre || 'Desconocido';
+                const lingotesEnt = ent.lingotes || [];
+                const totalPeso = lingotesEnt.reduce((s, l) => s + (l.peso || 0), 0);
+                const exportacion = getExportacion(ent.exportacionId);
+
+                // Evento de entrega
+                eventos.push({
+                  tipo: 'salida',
+                  timestamp: ent.fechaEntrega ? new Date(ent.fechaEntrega + 'T10:00:00').toISOString() : new Date().toISOString(),
+                  descripcion: `Entrega a ${clienteNombre}: ${lingotesEnt.length} lingotes (${totalPeso}g)`,
+                  cantidad: lingotesEnt.length,
+                  pesoTotal: totalPeso,
+                  delta: -totalPeso,
+                  detalles: {
+                    clienteId: ent.clienteId,
+                    clienteNombre,
+                    exportacionId: ent.exportacionId,
+                    exportacionNombre: exportacion?.nombre,
+                    entregaId: ent.id,
+                  },
+                });
+
+                // Devoluciones dentro de la entrega
+                lingotesEnt.forEach(l => {
+                  if (l.estado === 'devuelto' && l.fechaDevolucion) {
+                    eventos.push({
+                      tipo: 'devolucion',
+                      timestamp: new Date(l.fechaDevolucion + 'T12:00:00').toISOString(),
+                      descripcion: `Devolución de ${clienteNombre}: 1 x ${l.peso}g`,
+                      cantidad: 1,
+                      pesoTotal: l.peso,
+                      delta: l.peso,
+                      detalles: {
+                        clienteId: ent.clienteId,
+                        clienteNombre,
+                        exportacionId: ent.exportacionId,
+                        exportacionNombre: exportacion?.nombre,
+                        entregaId: ent.id,
+                      },
+                    });
+                  }
+                });
+              });
+
+              // Ordenar cronológicamente
+              eventos.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+              // Calcular stock acumulativo y crear logs
+              let stockAcumulado = 0;
+              let count = 0;
+              for (const ev of eventos) {
+                stockAcumulado += ev.delta;
+                await onAddStockLog({
+                  tipo: ev.tipo,
+                  descripcion: ev.descripcion,
+                  cantidad: ev.cantidad,
+                  pesoTotal: ev.pesoTotal,
+                  detalles: ev.detalles,
+                  stockResultante: stockAcumulado,
+                  usuario: 'Sistema (reconstrucción)',
+                  timestamp: ev.timestamp,
+                });
+                count++;
+              }
+
+              alert(`✅ Se han creado ${count} logs de stock históricos.`);
+            }}
+          >
+            📋 Reconstruir Historial
+          </Button>
+        </Card>
 
         {/* Reset data */}
         <Card>

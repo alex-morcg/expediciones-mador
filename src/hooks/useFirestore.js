@@ -316,6 +316,7 @@ export function useFirestore(activeSection = 'expediciones') {
   const [lingotesConfig, setLingotesConfig] = useState({ stockMador: 0, umbralRojo: 200, umbralNaranja: 500, umbralAmarillo: 1000 });
   const [lingotesFutura, setLingotesFutura] = useState([]);
   const [lingotesFacturas, setLingotesFacturas] = useState([]);
+  const [stockLogs, setStockLogs] = useState([]);
 
   // Logs generales - solo para Alex
   const [logsGenerales, setLogsGenerales] = useState([]);
@@ -515,6 +516,16 @@ export function useFirestore(activeSection = 'expediciones') {
         setLingotesFacturas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, (error) => {
         console.error('Firestore error (lingotes_facturas):', error);
+      })
+    );
+
+    // Stock logs - ordered by timestamp desc
+    const stockLogsQuery = query(collection(db, 'lingotes_stock_logs'), orderBy('timestamp', 'desc'));
+    lingotesUnsubscribers.current.push(
+      onSnapshot(stockLogsQuery, (snap) => {
+        setStockLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, (error) => {
+        console.error('Firestore error (lingotes_stock_logs):', error);
       })
     );
 
@@ -1265,6 +1276,15 @@ export function useFirestore(activeSection = 'expediciones') {
     await updateDoc(doc(db, 'lingotes_facturas', id), data);
   };
 
+  // Stock Logs
+  const addStockLog = async (logData) => {
+    try {
+      await addDoc(collection(db, 'lingotes_stock_logs'), logData);
+    } catch (err) {
+      console.error('Error guardando stock log:', err);
+    }
+  };
+
   return {
     // Data
     categorias,
@@ -1337,6 +1357,10 @@ export function useFirestore(activeSection = 'expediciones') {
     saveLingoteFactura,
     deleteLingoteFactura,
     updateLingoteFactura,
+
+    // Stock logs
+    stockLogs,
+    addStockLog,
 
     // Logs generales
     logsGenerales,
