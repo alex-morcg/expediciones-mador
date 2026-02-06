@@ -86,6 +86,7 @@ export default function MadorTracker() {
     lingotesFacturas, saveLingoteFactura, deleteLingoteFactura, updateLingoteFactura,
     stockLogs, addStockLog, clearStockLogs,
     logsGenerales, loadLogsGenerales, addLogGeneral,
+    backups, createBackup, restoreBackup,
   } = useFirestore(needsLingotes ? 'lingotes' : 'expediciones');
 
   // Local UI state
@@ -4947,6 +4948,9 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         onClearStockLogs={clearStockLogs}
         logsGenerales={logsGenerales}
         loadLogsGenerales={loadLogsGenerales}
+        backups={backups}
+        onCreateBackup={(tipo) => createBackup(tipo, usuarioActivo)}
+        onRestoreBackup={restoreBackup}
       />
     );
   }

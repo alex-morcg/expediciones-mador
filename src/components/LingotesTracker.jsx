@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ComposedChart, Line } from 'recharts';
@@ -104,6 +104,9 @@ export default function LingotesTracker({
   onClearStockLogs = () => {},
   logsGenerales = [],
   loadLogsGenerales = () => {},
+  backups = [],
+  onCreateBackup = () => {},
+  onRestoreBackup = () => {},
 }) {
   const [activeTab, setActiveTab] = useState('stock');
   const [selectedCliente, setSelectedCliente] = useState(null);
@@ -135,6 +138,24 @@ export default function LingotesTracker({
   const [showStockLog, setShowStockLog] = useState(false);
   const [showPagosPendientes, setShowPagosPendientes] = useState(false);
   const [editingCierre, setEditingCierre] = useState(null); // { entregaId, indices, lingote, isFutura, futuraIds }
+  const [restoringBackup, setRestoringBackup] = useState(false);
+
+  // Backup automático diario
+  const backupCreated = useRef(false);
+  useEffect(() => {
+    if (backupCreated.current) return;
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (backups.length === 0) {
+      backupCreated.current = true;
+      onCreateBackup('automatico');
+    } else {
+      const fechaUltimo = (backups[0]?.fecha || '').slice(0, 10);
+      if (fechaUltimo !== hoy) {
+        backupCreated.current = true;
+        onCreateBackup('automatico');
+      }
+    }
+  }, [backups]);
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -4393,6 +4414,64 @@ export default function LingotesTracker({
           </Button>
         </Card>
         )}
+
+        {/* Copias de Seguridad */}
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-[var(--text-primary)]">💾 Copias de Seguridad</h3>
+            <button
+              onClick={async () => {
+                const ok = await onCreateBackup('manual');
+                if (ok) alert('✅ Backup creado correctamente.');
+                else alert('❌ Error al crear backup.');
+              }}
+              className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              + Crear Backup
+            </button>
+          </div>
+          <p className="text-xs text-[var(--text-tertiary)] mb-3">
+            Se crea automáticamente 1 backup al día. Se guardan los 10 más recientes.
+          </p>
+
+          {backups.length === 0 ? (
+            <p className="text-xs text-[var(--text-tertiary)] italic">No hay backups guardados.</p>
+          ) : (
+            <div className="space-y-2">
+              {backups.map(b => (
+                <div key={b.id} className="flex items-center justify-between p-2.5 rounded-[var(--radius-md)] border bg-[var(--bg-secondary)] border-[var(--border-primary)]">
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-[var(--text-primary)] flex items-center gap-2 flex-wrap">
+                      {new Date(b.fecha).toLocaleString('es-ES')}
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${b.tipo === 'manual' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {b.tipo === 'manual' ? '🖐️ Manual' : '🔄 Auto'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                      {b.stats?.exportaciones || 0} exp · {b.stats?.entregas || 0} ent · {b.stats?.futura || 0} fut · {b.stats?.facturas || 0} fac
+                      {b.usuario && <span> · {b.usuario}</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`⚠️ ¿Restaurar backup del ${new Date(b.fecha).toLocaleString('es-ES')}?\n\nEsto REEMPLAZARÁ todos los datos actuales con los del backup.`)) return;
+                      if (!confirm('⚠️ ¿Estás SEGURO? Esta acción no se puede deshacer.')) return;
+                      setRestoringBackup(true);
+                      const ok = await onRestoreBackup(b.id);
+                      setRestoringBackup(false);
+                      if (ok) alert('✅ Backup restaurado correctamente.');
+                      else alert('❌ Error al restaurar backup.');
+                    }}
+                    disabled={restoringBackup}
+                    className="px-2 py-1 text-[10px] font-semibold bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 transition-colors shrink-0 ml-2"
+                  >
+                    {restoringBackup ? '⏳...' : '↩️ Restaurar'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
 
         {/* Reset data */}
         <Card>

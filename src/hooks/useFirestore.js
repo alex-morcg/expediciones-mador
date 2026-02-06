@@ -317,6 +317,7 @@ export function useFirestore(activeSection = 'expediciones') {
   const [lingotesFutura, setLingotesFutura] = useState([]);
   const [lingotesFacturas, setLingotesFacturas] = useState([]);
   const [stockLogs, setStockLogs] = useState([]);
+  const [backups, setBackups] = useState([]);
 
   // Logs generales - solo para Alex
   const [logsGenerales, setLogsGenerales] = useState([]);
@@ -526,6 +527,26 @@ export function useFirestore(activeSection = 'expediciones') {
         setStockLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, (error) => {
         console.error('Firestore error (lingotes_stock_logs):', error);
+      })
+    );
+
+    // Backups - solo metadatos (sin datos completos para no sobrecargar)
+    const backupsQuery = query(collection(db, 'lingotes_backups'), orderBy('fecha', 'desc'));
+    lingotesUnsubscribers.current.push(
+      onSnapshot(backupsQuery, (snap) => {
+        setBackups(snap.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            fecha: data.fecha,
+            tipo: data.tipo,
+            usuario: data.usuario,
+            descripcion: data.descripcion,
+            stats: data.stats,
+          };
+        }));
+      }, (error) => {
+        console.error('Firestore error (lingotes_backups):', error);
       })
     );
 
@@ -1296,6 +1317,109 @@ export function useFirestore(activeSection = 'expediciones') {
     }
   };
 
+  // --- Backups ---
+
+  const cleanOldBackups = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'lingotes_backups'));
+      const sorted = snap.docs
+        .map(d => ({ id: d.id, fecha: d.data().fecha }))
+        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      for (const b of sorted.slice(10)) {
+        await deleteDoc(doc(db, 'lingotes_backups', b.id));
+      }
+    } catch (err) {
+      console.error('Error limpiando backups antiguos:', err);
+    }
+  };
+
+  const createBackup = async (tipo, usuario) => {
+    try {
+      const toArr = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const [expSnap, entSnap, futSnap, facSnap, confSnap, slogsSnap, glogsSnap] = await Promise.all([
+        getDocs(collection(db, 'lingotes_exportaciones')),
+        getDocs(collection(db, 'lingotes_entregas')),
+        getDocs(collection(db, 'lingotes_futura')),
+        getDocs(collection(db, 'lingotes_facturas')),
+        getDocs(collection(db, 'lingotes_config')),
+        getDocs(collection(db, 'lingotes_stock_logs')),
+        getDocs(collection(db, 'logsGenerales')),
+      ]);
+
+      const datos = {
+        exportaciones: toArr(expSnap),
+        entregas: toArr(entSnap),
+        futura: toArr(futSnap),
+        facturas: toArr(facSnap),
+        config: toArr(confSnap),
+        stockLogs: toArr(slogsSnap),
+        logsGenerales: toArr(glogsSnap),
+      };
+
+      await addDoc(collection(db, 'lingotes_backups'), {
+        fecha: new Date().toISOString(),
+        tipo,
+        usuario: usuario || 'Sistema',
+        descripcion: tipo === 'manual' ? 'Backup manual' : 'Backup automático diario',
+        datos,
+        stats: {
+          exportaciones: datos.exportaciones.length,
+          entregas: datos.entregas.length,
+          futura: datos.futura.length,
+          facturas: datos.facturas.length,
+          stockLogs: datos.stockLogs.length,
+          logsGenerales: datos.logsGenerales.length,
+        },
+      });
+
+      await cleanOldBackups();
+      return true;
+    } catch (err) {
+      console.error('Error creando backup:', err);
+      return false;
+    }
+  };
+
+  const restoreBackup = async (backupId) => {
+    try {
+      const backupSnap = await getDoc(doc(db, 'lingotes_backups', backupId));
+      if (!backupSnap.exists()) return false;
+      const { datos } = backupSnap.data();
+
+      const colecciones = [
+        { nombre: 'lingotes_exportaciones', datos: datos.exportaciones },
+        { nombre: 'lingotes_entregas', datos: datos.entregas },
+        { nombre: 'lingotes_futura', datos: datos.futura },
+        { nombre: 'lingotes_facturas', datos: datos.facturas },
+        { nombre: 'lingotes_stock_logs', datos: datos.stockLogs },
+        { nombre: 'logsGenerales', datos: datos.logsGenerales },
+      ];
+
+      for (const col of colecciones) {
+        const snap = await getDocs(collection(db, col.nombre));
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, col.nombre, d.id));
+        }
+        for (const item of (col.datos || [])) {
+          const { id, ...rest } = item;
+          await setDoc(doc(db, col.nombre, id), rest);
+        }
+      }
+
+      // Config es especial
+      if (datos.config && datos.config.length > 0) {
+        const confDoc = datos.config[0];
+        const { id, ...confData } = confDoc;
+        await setDoc(doc(db, 'lingotes_config', id || 'settings'), confData);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Error restaurando backup:', err);
+      return false;
+    }
+  };
+
   return {
     // Data
     categorias,
@@ -1378,5 +1502,10 @@ export function useFirestore(activeSection = 'expediciones') {
     logsGenerales,
     loadLogsGenerales,
     addLogGeneral,
+
+    // Backups
+    backups,
+    createBackup,
+    restoreBackup,
   };
 }
