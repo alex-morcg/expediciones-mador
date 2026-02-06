@@ -101,6 +101,7 @@ export default function LingotesTracker({
   onAddLogGeneral = () => {}, // (accion, descripcion, detalles) => void
   stockLogs = [],
   onAddStockLog = () => {},
+  onClearStockLogs = () => {},
   logsGenerales = [],
   loadLogsGenerales = () => {},
 }) {
@@ -4031,7 +4032,10 @@ export default function LingotesTracker({
           </p>
           <Button
             onClick={async () => {
-              if (!confirm('¿Generar logs históricos de stock? Se crearán nuevos registros basados en los datos existentes.')) return;
+              if (!confirm('¿Generar logs históricos de stock? Se borrarán los logs existentes y se recrearán desde cero.')) return;
+
+              // Borrar logs existentes primero
+              await onClearStockLogs();
 
               // Recopilar todos los eventos en orden cronológico
               const eventos = [];

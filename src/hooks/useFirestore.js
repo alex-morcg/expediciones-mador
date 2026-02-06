@@ -1285,6 +1285,17 @@ export function useFirestore(activeSection = 'expediciones') {
     }
   };
 
+  const clearStockLogs = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'lingotes_stock_logs'));
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, 'lingotes_stock_logs', d.id));
+      }
+    } catch (err) {
+      console.error('Error borrando stock logs:', err);
+    }
+  };
+
   return {
     // Data
     categorias,
@@ -1361,6 +1372,7 @@ export function useFirestore(activeSection = 'expediciones') {
     // Stock logs
     stockLogs,
     addStockLog,
+    clearStockLogs,
 
     // Logs generales
     logsGenerales,
