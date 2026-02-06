@@ -133,6 +133,7 @@ export default function LingotesTracker({
   const [showNewFuturaModal, setShowNewFuturaModal] = useState(false); // Modal para crear FUTURA con precio
   const [newFuturaData, setNewFuturaData] = useState(null); // { clienteId, cantidad, peso }
   const [showStockLog, setShowStockLog] = useState(false);
+  const [editingCierre, setEditingCierre] = useState(null); // { entregaId, indices, lingote, isFutura, futuraIds }
 
   const stockMador = config.stockMador || 0;
   const umbralStock = {
@@ -662,6 +663,94 @@ export default function LingotesTracker({
     setSelectedFuturaIds([]);
     setSelectedEntrega(null);
     setSelectedLingoteIdx(null);
+  };
+
+  // Editar cierre: actualizar datos de cierre de lingotes ya cerrados
+  const editarCierre = async (entregaId, lingoteIndices, data) => {
+    const entrega = entregas.find(e => e.id === entregaId);
+    if (!entrega) return;
+    const lingotes = [...entrega.lingotes];
+    const peso = lingotes[lingoteIndices[0]]?.peso || 0;
+
+    for (const idx of lingoteIndices) {
+      const pesoNeto = (lingotes[idx].peso || 0) - (data.devolucion || 0);
+      lingotes[idx] = {
+        ...lingotes[idx],
+        euroOnza: data.euroOnza || null,
+        base: data.base || null,
+        baseCliente: data.baseCliente || null,
+        precioJofisa: data.precioJofisa || null,
+        importeJofisa: (data.precioJofisa || 0) * pesoNeto,
+        margen: data.margen || 0,
+        precio: data.precio,
+        importe: data.precio * pesoNeto,
+        nFactura: data.nFactura,
+        fechaCierre: data.fechaCierre,
+        pesoDevuelto: data.devolucion || 0,
+        margenCierre: data.margenCierre || 0,
+        margenTotal: data.margenTotal || 0,
+        // NO cambiar: estado, pagado, pesoCerrado
+      };
+    }
+
+    const totalPeso = lingoteIndices.length * peso;
+    const log = createLog('cierre', `Cierre editado: ${lingoteIndices.length} x ${peso}g (${totalPeso}g) a ${formatNum(data.precio)}€/g`);
+    const logs = [...(entrega.logs || []), log];
+    await onUpdateEntrega(entregaId, { lingotes, logs });
+
+    // Log general
+    const clienteNombre = getCliente(entrega.clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral('editar_cierre', `Cierre editado de ${clienteNombre}: ${lingoteIndices.length} x ${peso}g a ${formatNum(data.precio)}€/g`, {
+      clienteId: entrega.clienteId,
+      entregaId,
+      totalLingotes: lingoteIndices.length,
+      totalPeso,
+      precio: data.precio,
+    });
+
+    setShowCierreModal(false);
+    setEditingCierre(null);
+    setSelectedEntrega(null);
+    setSelectedLingoteIdx(null);
+    setSelectedLingoteIndices([]);
+  };
+
+  // Editar cierre FUTURA
+  const editarCierreFutura = async (futuraIds, data) => {
+    let totalPeso = 0;
+    let clienteId = null;
+    for (const futuraId of futuraIds) {
+      const f = (futuraLingotes || []).find(fl => fl.id === futuraId);
+      if (!f) continue;
+      if (!clienteId) clienteId = f.clienteId;
+      const pesoNeto = (f.peso || 0) - (data.devolucion || 0);
+      totalPeso += pesoNeto;
+      await onUpdateFutura(futuraId, {
+        euroOnza: data.euroOnza || null,
+        base: data.base || null,
+        baseCliente: data.baseCliente || null,
+        precioJofisa: data.precioJofisa || null,
+        importeJofisa: (data.precioJofisa || 0) * pesoNeto,
+        margen: data.margen || 0,
+        precio: data.precio,
+        importe: data.precio * pesoNeto,
+        nFactura: data.nFactura || null,
+        fechaCierre: data.fechaCierre || null,
+      });
+    }
+
+    const clienteNombre = getCliente(clienteId)?.nombre || 'Desconocido';
+    onAddLogGeneral('editar_cierre', `Cierre FUTURA editado de ${clienteNombre}: ${futuraIds.length} lingotes (${totalPeso}g) a ${formatNum(data.precio)}€/g`, {
+      clienteId,
+      totalLingotes: futuraIds.length,
+      totalPeso,
+      precio: data.precio,
+    });
+
+    setShowCierreModal(false);
+    setEditingCierre(null);
+    setSelectedFuturaId(null);
+    setSelectedFuturaIds([]);
   };
 
   // Devolver lingotes: marcarlos como devueltos y volver al stock de la exportación
@@ -1825,7 +1914,42 @@ export default function LingotesTracker({
                 porEntrega[l.entregaId].lingotes.push(l);
               });
 
-              const renderTabla = (lingotes, isFutura = false) => (
+              // Agrupar lingotes por cierre (misma fechaCierre + precio + euroOnza)
+              const agruparPorCierre = (lingotes) => {
+                const grupos = [];
+                lingotes.forEach(l => {
+                  const key = `${l.fechaCierre}_${l.precio}_${l.euroOnza}`;
+                  const existing = grupos.find(g => g.key === key);
+                  if (existing) {
+                    existing.lingotes.push(l);
+                  } else {
+                    grupos.push({ key, lingotes: [l], ref: l });
+                  }
+                });
+                return grupos;
+              };
+
+              const abrirEditarCierre = (grupo, isFutura = false) => {
+                const ref = grupo.ref;
+                if (isFutura) {
+                  const futuraIds = grupo.lingotes.map(l => l.futuraId).filter(Boolean);
+                  setEditingCierre({ isFutura: true, futuraIds, lingote: ref, indices: [] });
+                  setSelectedFuturaId(futuraIds[0]);
+                  setSelectedFuturaIds(futuraIds);
+                } else {
+                  const indices = grupo.lingotes.map(l => l.lingoteIdx);
+                  const entregaId = grupo.lingotes[0].entregaId;
+                  setEditingCierre({ entregaId, indices, lingote: ref, isFutura: false });
+                  setSelectedEntrega(entregas.find(e => e.id === entregaId));
+                  setSelectedLingoteIdx(indices[0]);
+                  setSelectedLingoteIndices(indices);
+                }
+                setShowCierreModal(true);
+              };
+
+              const renderTabla = (lingotes, isFutura = false) => {
+                const grupos = agruparPorCierre(lingotes);
+                return (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -1839,62 +1963,78 @@ export default function LingotesTracker({
                       </tr>
                     </thead>
                     <tbody>
-                      {lingotes.map((l, i) => (
-                        <tr key={i} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-[var(--accent-soft)]/50' : 'hover:bg-black/[0.02]'}`}>
-                          <td className="py-1.5 px-1 text-[10px] text-[var(--text-tertiary)]">{formatFechaCierre(l.fechaCierre)}</td>
-                          <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
-                          <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
-                          <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
-                          <td className="py-1.5 px-1 text-center">
-                            <button
-                              onClick={() => (isFutura && l.futuraId && !l.entregaId) ? marcarPagadoFutura(l.futuraId) : marcarPagado(l.entregaId, l.lingoteIdx)}
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
-                                l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-black/[0.08] hover:border-emerald-400'
-                              }`}
-                            >
-                              {l.pagado && '✓'}
-                            </button>
-                          </td>
-                          <td className="py-1.5 px-1 text-left">
-                            {l.nFactura ? (
+                      {grupos.map((grupo, gi) => (
+                        <React.Fragment key={gi}>
+                          {grupo.lingotes.map((l, i) => (
+                            <tr key={`${gi}-${i}`} className={`border-b border-stone-100 ${l.estado === 'pendiente_pago' ? 'bg-[var(--accent-soft)]/50' : 'hover:bg-black/[0.02]'}`}>
+                              <td className="py-1.5 px-1 text-[10px] text-[var(--text-tertiary)]">{formatFechaCierre(l.fechaCierre)}</td>
+                              <td className="py-1.5 px-1 text-right font-mono text-xs">{l.peso}g</td>
+                              <td className="py-1.5 px-1 text-right font-mono text-xs">{formatNum(l.precio)}</td>
+                              <td className="py-1.5 px-1 text-right font-mono font-semibold text-xs">{formatEur(l.importe || 0)}</td>
+                              <td className="py-1.5 px-1 text-center">
+                                <button
+                                  onClick={() => (isFutura && l.futuraId && !l.entregaId) ? marcarPagadoFutura(l.futuraId) : marcarPagado(l.entregaId, l.lingoteIdx)}
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors text-xs ${
+                                    l.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-black/[0.08] hover:border-emerald-400'
+                                  }`}
+                                >
+                                  {l.pagado && '✓'}
+                                </button>
+                              </td>
+                              <td className="py-1.5 px-1 text-left">
+                                {l.nFactura ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const factura = (facturas || []).find(f => f.id === l.nFactura);
+                                      if (factura) setViewingFactura(factura);
+                                    }}
+                                    className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1"
+                                    title="Ver factura"
+                                  >
+                                    <span>📄</span>
+                                    <span className="font-mono truncate max-w-[80px]">
+                                      {(() => {
+                                        const factura = (facturas || []).find(f => f.id === l.nFactura);
+                                        return factura?.nombre?.replace(/\.pdf$/i, '') || '';
+                                      })()}
+                                    </span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFacturaSelection({});
+                                      setFacturaFile(null);
+                                      setShowFacturaModal(true);
+                                    }}
+                                    className="text-red-400 hover:text-red-600 text-sm cursor-pointer"
+                                    title="Subir factura"
+                                  >
+                                    ⚠️
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Botón editar cierre del grupo */}
+                          <tr className="border-b border-stone-200">
+                            <td colSpan="6" className="py-1 text-right">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const factura = (facturas || []).find(f => f.id === l.nFactura);
-                                  if (factura) setViewingFactura(factura);
-                                }}
-                                className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1"
-                                title="Ver factura"
+                                onClick={() => abrirEditarCierre(grupo, isFutura)}
+                                className="text-xs text-blue-500 hover:text-blue-700 font-medium px-2 py-0.5 rounded hover:bg-blue-50 transition-colors"
                               >
-                                <span>📄</span>
-                                <span className="font-mono truncate max-w-[80px]">
-                                  {(() => {
-                                    const factura = (facturas || []).find(f => f.id === l.nFactura);
-                                    return factura?.nombre?.replace(/\.pdf$/i, '') || '';
-                                  })()}
-                                </span>
+                                ✏️ Editar{grupo.lingotes.length > 1 ? ` (${grupo.lingotes.length})` : ''}
                               </button>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setFacturaSelection({});
-                                  setFacturaFile(null);
-                                  setShowFacturaModal(true);
-                                }}
-                                className="text-red-400 hover:text-red-600 text-sm cursor-pointer"
-                                title="Subir factura"
-                              >
-                                ⚠️
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              );
+                );
+              };
 
               return (
                 <>
@@ -4362,18 +4502,21 @@ export default function LingotesTracker({
 
   // Cierre Modal - close one or multiple lingotes (entrega or futura standalone)
   const CierreModal = () => {
+    const isEditing = !!editingCierre;
     const isFuturaCierre = !!selectedFuturaId;
     const isMultiEntregaCierre = selectedEntrega?._allEntregasIndices?.length > 1;
     const isBulkCierre = selectedLingoteIndices.length > 1 || isMultiEntregaCierre;
     const isBulkFuturaCierre = isFuturaCierre && selectedFuturaIds.length > 1;
     const futuraDoc = isFuturaCierre ? (futuraLingotes || []).find(f => f.id === selectedFuturaId) : null;
-    const lingote = isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx];
+    const lingote = isEditing ? editingCierre.lingote : (isFuturaCierre ? futuraDoc : selectedEntrega?.lingotes?.[selectedLingoteIdx]);
 
     // Calcular cantidad y peso total para multi-entrega
     let cantidadLingotes = 1;
     let pesoTotalMulti = 0;
     let resumenMulti = '';
-    if (isBulkFuturaCierre) {
+    if (isEditing) {
+      cantidadLingotes = editingCierre.isFutura ? (editingCierre.futuraIds?.length || 1) : (editingCierre.indices?.length || 1);
+    } else if (isBulkFuturaCierre) {
       // Múltiples FUTURA
       cantidadLingotes = selectedFuturaIds.length;
     } else if (isMultiEntregaCierre) {
@@ -4399,15 +4542,15 @@ export default function LingotesTracker({
     const defaultPrecioJofisa = lingote?.precioJofisa || '';
     const defaultBaseCliente = lingote?.baseCliente || '';
     const defaultNFactura = lingote?.nFactura || '';
-    const [euroOnzaConfirmado, setEuroOnzaConfirmado] = useState(!!defaultEuroOnza);
+    const [euroOnzaConfirmado, setEuroOnzaConfirmado] = useState(isEditing ? !!defaultEuroOnza : !!defaultEuroOnza);
     const [formData, setFormData] = useState({
       euroOnza: defaultEuroOnza,
       baseCliente: defaultBaseCliente,
       precioJofisa: defaultPrecioJofisa,
-      margen: 6,
-      fechaCierre: new Date().toISOString().split('T')[0],
+      margen: isEditing ? (lingote?.margen ?? 6) : 6,
+      fechaCierre: isEditing ? (lingote?.fechaCierre || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
       nFactura: defaultNFactura,
-      devolucion: 0,
+      devolucion: isEditing ? (lingote?.pesoDevuelto || 0) : 0,
     });
 
     // Check if form has meaningful changes
@@ -4415,16 +4558,18 @@ export default function LingotesTracker({
       formData.precioJofisa !== defaultPrecioJofisa ||
       formData.baseCliente !== defaultBaseCliente ||
       formData.nFactura !== defaultNFactura ||
-      formData.devolucion !== 0 ||
-      formData.margen !== 6;
+      formData.devolucion !== (isEditing ? (lingote?.pesoDevuelto || 0) : 0) ||
+      formData.margen !== (isEditing ? (lingote?.margen ?? 6) : 6) ||
+      (isEditing && formData.fechaCierre !== (lingote?.fechaCierre || ''));
 
     const closeCierreModal = () => {
-      if (hasChanges && !confirm('¿Descartar los cambios del cierre?')) return;
+      if (hasChanges && !confirm(isEditing ? '¿Descartar los cambios?' : '¿Descartar los cambios del cierre?')) return;
       setShowCierreModal(false);
       setSelectedEntrega(null);
       setSelectedLingoteIdx(null);
       setSelectedLingoteIndices([]);
       setSelectedFuturaId(null);
+      setEditingCierre(null);
     };
 
     if (!lingote) return null;
@@ -4479,7 +4624,14 @@ export default function LingotesTracker({
         margenCierre: Math.round(margenCierre * 100) / 100,
         margenTotal: Math.round(margenTotal * 100) / 100,
       };
-      if (isFuturaCierre) {
+      if (isEditing) {
+        // Modo edición
+        if (editingCierre.isFutura) {
+          editarCierreFutura(editingCierre.futuraIds, cierreData);
+        } else {
+          editarCierre(editingCierre.entregaId, editingCierre.indices, cierreData);
+        }
+      } else if (isFuturaCierre) {
         if (selectedFuturaIds.length > 1) {
           cerrarFuturaMultiple(selectedFuturaIds, cierreData);
         } else {
@@ -4496,7 +4648,7 @@ export default function LingotesTracker({
       <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={closeCierreModal}>
         <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">
-            Cerrar {cantidadLingotes > 1 ? `${cantidadLingotes} Lingotes` : 'Lingote'}
+            {isEditing ? 'Editar' : 'Cerrar'} {cantidadLingotes > 1 ? `${cantidadLingotes} Lingotes` : 'Lingote'}
           </h3>
           <p className="text-[var(--text-tertiary)] text-sm mb-6">
             {cliente?.nombre} • {isMultiEntregaCierre
@@ -4618,7 +4770,7 @@ export default function LingotesTracker({
           <div className="flex gap-3 mt-6">
             <Button variant="secondary" className="flex-1" onClick={closeCierreModal}>Cancelar</Button>
             <Button variant="success" className="flex-1" disabled={!precioCliente} onClick={handleConfirm}>
-              Confirmar Cierre
+              {isEditing ? 'Guardar Cambios' : 'Confirmar Cierre'}
             </Button>
           </div>
         </div>
