@@ -115,7 +115,7 @@ export default function LingotesTracker({
   const [editingEntregaClienteId, setEditingEntregaClienteId] = useState(null);
   const [entregaFilter, setEntregaFilter] = useState('en_curso');
   const [showFuturaModal, setShowFuturaModal] = useState(false);
-  const [showAssignFuturaModal, setShowAssignFuturaModal] = useState(false);
+  // showAssignFuturaModal removed — FUTURA now auto-merged during entrega creation
   const [selectedFuturaId, setSelectedFuturaId] = useState(null);
   const [selectedFuturaIds, setSelectedFuturaIds] = useState([]); // For bulk FUTURA closing
   const [showHistorial, setShowHistorial] = useState(false);
@@ -176,16 +176,16 @@ export default function LingotesTracker({
   }, [entregas, futuraLingotes]);
 
   // CRUD
-  // Calculate global stock from all exportaciones (with exportacion names)
+  // Calculate global stock from all exportaciones (using calculated available stock)
   const stockGlobal = useMemo(() => {
     const stockByPeso = {};
     exportaciones.forEach(exp => {
-      (exp.lingotes || []).forEach(l => {
+      const disponible = getStockDisponible(exp.id);
+      disponible.forEach(l => {
         const peso = l.peso;
         if (!stockByPeso[peso]) stockByPeso[peso] = { cantidad: 0, exportaciones: [] };
         if (l.cantidad > 0) {
           stockByPeso[peso].cantidad += l.cantidad;
-          // Track which exportaciones contribute to this peso
           const existing = stockByPeso[peso].exportaciones.find(e => e.nombre === exp.nombre);
           if (existing) {
             existing.cantidad += l.cantidad;
@@ -195,12 +195,11 @@ export default function LingotesTracker({
         }
       });
     });
-    // Convert to array sorted by peso
     return Object.entries(stockByPeso)
       .map(([peso, data]) => ({ peso: parseFloat(peso), cantidad: data.cantidad, exportaciones: data.exportaciones }))
       .filter(s => s.cantidad > 0)
       .sort((a, b) => a.peso - b.peso);
-  }, [exportaciones]);
+  }, [exportaciones, stockDisponiblePorExp]);
 
   // Total stock real in grams
   const stockRealTotal = useMemo(() => {
@@ -210,6 +209,34 @@ export default function LingotesTracker({
   const stockRealLingotes = useMemo(() => {
     return stockGlobal.reduce((sum, s) => sum + s.cantidad, 0);
   }, [stockGlobal]);
+
+  // Stock disponible por exportacion = lingotes originales - consumidos por entregas
+  const stockDisponiblePorExp = useMemo(() => {
+    const result = {};
+    exportaciones.forEach(exp => {
+      // Start with original lingotes
+      const disponible = {};
+      (exp.lingotes || []).forEach(l => {
+        disponible[l.peso] = (disponible[l.peso] || 0) + (l.cantidad || 0);
+      });
+      // Subtract lingotes consumed by entregas linked to this exportacion
+      entregas.filter(e => e.exportacionId === exp.id).forEach(entrega => {
+        (entrega.lingotes || []).forEach(l => {
+          // Only subtract non-devuelto lingotes (devueltos are "returned" to stock)
+          if (l.estado !== 'devuelto') {
+            disponible[l.peso] = (disponible[l.peso] || 0) - 1;
+          }
+        });
+      });
+      // Convert to array format, keep only positive
+      result[exp.id] = Object.entries(disponible)
+        .map(([peso, cantidad]) => ({ peso: parseFloat(peso), cantidad: Math.max(0, cantidad) }))
+        .filter(l => l.cantidad > 0);
+    });
+    return result;
+  }, [exportaciones, entregas]);
+
+  const getStockDisponible = (expId) => stockDisponiblePorExp[expId] || [];
 
   // Comprimir imagen para que no supere el límite de Firestore (1MB)
   const comprimirImagen = (file, maxSizeKB = 500) => {
@@ -276,7 +303,9 @@ export default function LingotesTracker({
 
   const addEntrega = async (data) => {
     // data.items = [{ peso, cantidad }, ...]
+    // data.futuraIdsToAssign = [futuraDocId, ...] (optional)
     const items = data.items || [];
+    const futuraIdsToAssign = data.futuraIdsToAssign || [];
     const exportacion = exportaciones.find(e => e.id === data.exportacionId);
 
     if (!exportacion) {
@@ -284,51 +313,89 @@ export default function LingotesTracker({
       return;
     }
 
-    // Validate all items have sufficient stock IN THIS EXPORTACION
+    // Validate all items have sufficient stock IN THIS EXPORTACION (calculated)
+    // ALL lingotes count as stock deduction (including FUTURA-matched ones)
+    const disponible = getStockDisponible(data.exportacionId);
     for (const item of items) {
-      const expLingote = (exportacion.lingotes || []).find(l => l.peso === item.peso);
-      const stockDisponible = expLingote?.cantidad || 0;
-      if (stockDisponible < item.cantidad) {
-        alert(`No hay suficiente stock de lingotes de ${item.peso}g en ${exportacion.nombre}. Disponibles: ${stockDisponible}, Requeridos: ${item.cantidad}`);
+      const stockItem = disponible.find(l => l.peso === item.peso);
+      const stockCantidad = stockItem?.cantidad || 0;
+      if (stockCantidad < item.cantidad) {
+        alert(`No hay suficiente stock de lingotes de ${item.peso}g en ${exportacion.nombre}. Disponibles: ${stockCantidad}, Requeridos: ${item.cantidad}`);
         return;
       }
     }
 
-    // Deduct ONLY from selected exportacion
-    const newLingotes = [...(exportacion.lingotes || [])];
-    for (const item of items) {
-      const idx = newLingotes.findIndex(l => l.peso === item.peso && l.cantidad > 0);
-      if (idx !== -1) {
-        newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad - item.cantidad };
-      }
+    // Build FUTURA lookup and queues by peso (oldest first)
+    const futuraById = {};
+    for (const fId of futuraIdsToAssign) {
+      const f = (futuraLingotes || []).find(fl => fl.id === fId);
+      if (f) futuraById[fId] = f;
     }
-    // Remove empty entries
-    const filtered = newLingotes.filter(l => l.cantidad > 0);
-    await onSaveExportacion({ ...exportacion, lingotes: filtered }, exportacion.id);
+    const futuraQueueByPeso = {};
+    for (const fId of futuraIdsToAssign) {
+      const f = futuraById[fId];
+      if (!f) continue;
+      if (!futuraQueueByPeso[f.peso]) futuraQueueByPeso[f.peso] = [];
+      futuraQueueByPeso[f.peso].push(fId);
+    }
 
-    // Create the entrega with all lingotes
+    // Create lingotes: mix FUTURA-converted and fresh en_curso
     const lingotes = [];
+    let futuraAssignedCount = 0;
     for (const item of items) {
+      const queue = futuraQueueByPeso[item.peso] || [];
       for (let i = 0; i < item.cantidad; i++) {
-        lingotes.push({
-          peso: item.peso,
-          precio: null,
-          importe: 0,
-          nFactura: null,
-          fechaCierre: null,
-          pesoCerrado: 0,
-          pesoDevuelto: 0,
-          estado: 'en_curso',
-          pagado: false,
-          esDevolucion: false,
-        });
+        if (queue.length > 0) {
+          // Consume oldest FUTURA
+          const fId = queue.shift();
+          const f = futuraById[fId];
+          const hasPrecio = !!f.precio;
+          lingotes.push({
+            peso: f.peso,
+            precio: f.precio || null,
+            importe: f.importe || 0,
+            nFactura: f.nFactura || null,
+            fechaCierre: f.fechaCierre || null,
+            pesoCerrado: hasPrecio ? f.peso : 0,
+            pesoDevuelto: 0,
+            estado: hasPrecio ? (f.pagado ? 'finalizado' : 'pendiente_pago') : 'en_curso',
+            pagado: f.pagado || false,
+            esDevolucion: false,
+            esFutura: true,
+            ...(f.euroOnza != null && { euroOnza: f.euroOnza }),
+            ...(f.base != null && { base: f.base }),
+            ...(f.baseCliente != null && { baseCliente: f.baseCliente }),
+            ...(f.precioJofisa != null && { precioJofisa: f.precioJofisa }),
+            ...(f.margen != null && { margen: f.margen }),
+            ...(f.margenCierre != null && { margenCierre: f.margenCierre }),
+            ...(f.margenTotal != null && { margenTotal: f.margenTotal }),
+          });
+          futuraAssignedCount++;
+        } else {
+          // Fresh lingote from stock
+          lingotes.push({
+            peso: item.peso,
+            precio: null,
+            importe: 0,
+            nFactura: null,
+            fechaCierre: null,
+            pesoCerrado: 0,
+            pesoDevuelto: 0,
+            estado: 'en_curso',
+            pagado: false,
+            esDevolucion: false,
+          });
+        }
       }
     }
 
     // Crear log inicial
     const totalPeso = items.reduce((s, item) => s + (item.peso * item.cantidad), 0);
     const totalLingotes = items.reduce((s, item) => s + item.cantidad, 0);
-    const initialLog = createLog('entrega', `Entrega creada: ${totalLingotes} lingote${totalLingotes > 1 ? 's' : ''} (${totalPeso}g)`);
+    const logDesc = futuraAssignedCount > 0
+      ? `Entrega creada: ${totalLingotes} lingotes (${totalPeso}g) — ${futuraAssignedCount} FUTURA incluidos`
+      : `Entrega creada: ${totalLingotes} lingote${totalLingotes > 1 ? 's' : ''} (${totalPeso}g)`;
+    const initialLog = createLog('entrega', logDesc);
 
     await onSaveEntrega({
       clienteId: data.clienteId,
@@ -338,23 +405,28 @@ export default function LingotesTracker({
       logs: [initialLog],
     });
 
+    // Delete consumed FUTURA docs
+    for (const fId of futuraIdsToAssign) {
+      if (futuraById[fId]) {
+        await onDeleteFutura(fId);
+      }
+    }
+
     setShowEntregaModal(false);
     setEditingEntregaClienteId(null);
 
     // Log general
     const clienteNombre = getCliente(data.clienteId)?.nombre || 'Desconocido';
-    onAddLogGeneral('crear_entrega', `Entrega creada a ${clienteNombre}: ${totalLingotes} lingotes (${totalPeso}g)`, {
+    const logGeneralDesc = futuraAssignedCount > 0
+      ? `Entrega a ${clienteNombre}: ${totalLingotes} lingotes (${totalPeso}g) — ${futuraAssignedCount} FUTURA`
+      : `Entrega a ${clienteNombre}: ${totalLingotes} lingotes (${totalPeso}g)`;
+    onAddLogGeneral('crear_entrega', logGeneralDesc, {
       clienteId: data.clienteId,
       exportacionId: data.exportacionId,
       totalLingotes,
       totalPeso,
+      futuraAssigned: futuraAssignedCount,
     });
-
-    // Check if client has FUTURA orphan lingotes → prompt to assign
-    const clientFutura = (futuraLingotes || []).filter(f => f.clienteId === data.clienteId);
-    if (clientFutura.length > 0) {
-      setShowAssignFuturaModal(true);
-    }
   };
 
   const addFuturaLingote = async (data) => {
@@ -382,54 +454,6 @@ export default function LingotesTracker({
     });
 
     setShowFuturaModal(false);
-  };
-
-  const assignFuturaToEntrega = async (futuraIds, targetEntregaId) => {
-    const targetEntrega = entregas.find(e => e.id === targetEntregaId);
-    if (!targetEntrega) return;
-
-    // Build new lingotes from futura docs
-    const newLingotes = [];
-    for (const fId of futuraIds) {
-      const f = (futuraLingotes || []).find(fl => fl.id === fId);
-      if (!f) continue;
-      const hasPrecio = !!f.precio;
-      newLingotes.push({
-        peso: f.peso,
-        precio: f.precio || null,
-        importe: f.importe || 0,
-        nFactura: f.nFactura || null,
-        fechaCierre: f.fechaCierre || null,
-        pesoCerrado: hasPrecio ? f.peso : 0,
-        pesoDevuelto: 0,
-        estado: hasPrecio ? (f.pagado ? 'finalizado' : 'pendiente_pago') : 'en_curso',
-        pagado: f.pagado || false,
-        esDevolucion: false,
-      });
-    }
-
-    // Add to target entrega
-    await onUpdateEntrega(targetEntregaId, {
-      lingotes: [...targetEntrega.lingotes, ...newLingotes],
-    });
-
-    // Delete futura docs
-    for (const fId of futuraIds) {
-      await onDeleteFutura(fId);
-    }
-
-    // Log general
-    const clienteId = targetEntrega.clienteId;
-    const clienteNombre = getCliente(clienteId)?.nombre || 'Desconocido';
-    const totalPeso = newLingotes.reduce((s, l) => s + (l.peso || 0), 0);
-    onAddLogGeneral('asignar_futura', `FUTURA asignado a entrega de ${clienteNombre}: ${futuraIds.length} lingotes (${totalPeso}g)`, {
-      clienteId,
-      entregaId: targetEntregaId,
-      futuraCount: futuraIds.length,
-      totalPeso,
-    });
-
-    setShowAssignFuturaModal(false);
   };
 
   // Cerrar múltiples lingotes a la vez (bulk)
@@ -636,19 +660,6 @@ export default function LingotesTracker({
 
     await onUpdateEntrega(entregaId, { lingotes, logs });
 
-    // Devolver lingotes al stock de la exportación de origen
-    const exportacion = exportaciones.find(e => e.id === entrega.exportacionId);
-    if (exportacion) {
-      const newLingotes = [...(exportacion.lingotes || [])];
-      const existingIdx = newLingotes.findIndex(l => l.peso === peso);
-      if (existingIdx !== -1) {
-        newLingotes[existingIdx] = { ...newLingotes[existingIdx], cantidad: newLingotes[existingIdx].cantidad + lingoteIndices.length };
-      } else {
-        newLingotes.push({ peso, cantidad: lingoteIndices.length });
-      }
-      await onSaveExportacion({ ...exportacion, lingotes: newLingotes }, exportacion.id);
-    }
-
     // Log general
     const clienteNombre = getCliente(entrega.clienteId)?.nombre || 'Desconocido';
     onAddLogGeneral('devolucion', `Devolución de ${clienteNombre}: ${lingoteIndices.length} x ${peso}g (${totalPeso}g)`, {
@@ -677,19 +688,6 @@ export default function LingotesTracker({
     const logs = [...(entrega.logs || []), log];
 
     await onUpdateEntrega(entregaId, { lingotes, logs });
-
-    // Quitar del stock de la exportación (el lingote vuelve a estar en el cliente)
-    const exportacion = exportaciones.find(e => e.id === entrega.exportacionId);
-    if (exportacion) {
-      const newLingotes = [...(exportacion.lingotes || [])];
-      const existingIdx = newLingotes.findIndex(l => l.peso === peso);
-      if (existingIdx !== -1 && newLingotes[existingIdx].cantidad > 0) {
-        newLingotes[existingIdx] = { ...newLingotes[existingIdx], cantidad: newLingotes[existingIdx].cantidad - 1 };
-        // Eliminar si cantidad = 0
-        const filtered = newLingotes.filter(l => l.cantidad > 0);
-        await onSaveExportacion({ ...exportacion, lingotes: filtered }, exportacion.id);
-      }
-    }
   };
 
   const marcarPagado = async (entregaId, lingoteIdx) => {
@@ -735,36 +733,6 @@ export default function LingotesTracker({
 
   const deleteEntrega = async (entregaId) => {
     if (confirm('Eliminar esta entrega? Los lingotes volverán al stock de la exportación.')) {
-      const entrega = entregas.find(e => e.id === entregaId);
-      if (!entrega) return;
-
-      // Devolver lingotes al stock de la exportación
-      const exportacion = exportaciones.find(e => e.id === entrega.exportacionId);
-      if (exportacion) {
-        // Contar lingotes por peso de la entrega (solo los que no están cerrados/finalizados)
-        const lingotesPorPeso = {};
-        (entrega.lingotes || []).forEach(l => {
-          // Solo devolver lingotes en_curso o devueltos (no los cerrados/finalizados que ya se vendieron)
-          if (l.estado === 'en_curso' || l.estado === 'devuelto') {
-            lingotesPorPeso[l.peso] = (lingotesPorPeso[l.peso] || 0) + 1;
-          }
-        });
-
-        // Añadir de vuelta a la exportación
-        const newLingotes = [...(exportacion.lingotes || [])];
-        Object.entries(lingotesPorPeso).forEach(([peso, cantidad]) => {
-          const pesoNum = Number(peso);
-          const idx = newLingotes.findIndex(l => l.peso === pesoNum);
-          if (idx !== -1) {
-            newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad + cantidad };
-          } else {
-            newLingotes.push({ peso: pesoNum, cantidad });
-          }
-        });
-
-        await onSaveExportacion({ ...exportacion, lingotes: newLingotes }, exportacion.id);
-      }
-
       await onDeleteEntrega(entregaId);
     }
   };
@@ -1316,42 +1284,40 @@ export default function LingotesTracker({
           </button>
         </div>
 
-        {/* FUTURA cerrados pendientes de asignar a entrega física - solo si hay stock */}
+        {/* FUTURA pendientes — informativo, se asignan al crear entrega */}
         {(() => {
-          const futuraCerrados = clienteFutura.filter(f => f.precio);
-          const futuraCerradosWeight = futuraCerrados.reduce((sum, f) => sum + (f.peso || 0), 0);
+          if (clienteFutura.length === 0 || stockRealTotal === 0) return null;
 
-          if (futuraCerrados.length === 0 || stockRealTotal === 0) return null;
+          const futuraPorPeso = {};
+          clienteFutura.forEach(f => {
+            if (!futuraPorPeso[f.peso]) futuraPorPeso[f.peso] = { total: 0, cerrados: 0 };
+            futuraPorPeso[f.peso].total++;
+            if (f.precio) futuraPorPeso[f.peso].cerrados++;
+          });
+          const totalWeight = clienteFutura.reduce((sum, f) => sum + (f.peso || 0), 0);
 
           return (
-            <div className="bg-[var(--accent-soft)] border border-[var(--accent-border)] rounded-[var(--radius-xl)] p-4">
-              <div className="flex justify-between items-center mb-3">
+            <div className="bg-purple-50 border border-purple-200 rounded-[var(--radius-xl)] p-4">
+              <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">📦</span>
-                  <h3 className="font-bold text-[var(--accent-text)]">FUTURA pendientes de asignar</h3>
+                  <span className="text-lg">⏳</span>
+                  <h3 className="font-bold text-purple-800">FUTURA pendientes</h3>
                 </div>
-                <div className="text-sm text-[var(--accent)] font-semibold">
-                  {futuraCerrados.length} lingotes &bull; {formatNum(futuraCerradosWeight, 0)}g
-                </div>
+                <span className="text-sm text-purple-600 font-semibold">
+                  {clienteFutura.length} lingotes · {formatNum(totalWeight, 0)}g
+                </span>
               </div>
-              <p className="text-xs text-[var(--accent-text)] mb-3">Hay stock disponible. Asigna estos lingotes FUTURA a una entrega física.</p>
-
-              {/* Mostrar FUTURA cerrados */}
-              <div className="mb-3 p-2 bg-emerald-50/50 rounded-[var(--radius-md)] border border-emerald-200">
-                <div className="text-xs font-semibold text-emerald-700 mb-1">
-                  Cerrados ({futuraCerrados.length})
+              <p className="text-xs text-purple-600 mb-2">
+                Se asignarán automáticamente al crear una nueva entrega.
+              </p>
+              {Object.entries(futuraPorPeso).map(([peso, data]) => (
+                <div key={peso} className="flex justify-between text-sm py-0.5 px-2">
+                  <span className="font-mono text-purple-700">{peso}g × {data.total}</span>
+                  {data.cerrados > 0 && (
+                    <span className="text-xs text-purple-500">{data.cerrados} cerrados</span>
+                  )}
                 </div>
-                {futuraCerrados.map(f => (
-                  <div key={f.id} className="flex items-center justify-between text-sm py-1 px-2">
-                    <span className="font-mono text-emerald-700">{f.peso}g</span>
-                    <span className="text-xs text-emerald-600 font-semibold">{formatNum(f.precio)} €/g</span>
-                  </div>
-                ))}
-              </div>
-
-              <Button className="w-full" onClick={() => setShowAssignFuturaModal(true)}>
-                Asignar a nueva entrega
-              </Button>
+              ))}
             </div>
           );
         })()}
@@ -1964,14 +1930,9 @@ export default function LingotesTracker({
       resetForm();
     };
 
-    // Check if exportacion has been used (lingotes consumed from stock)
-    // Compare current stock with original grExport - if less, some were used
+    // Check if exportacion has been used (any entregas reference it)
     const editingExpHasBeenUsed = editingExp
-      ? (() => {
-          const currentStock = (editingExp.lingotes || []).reduce((sum, l) => sum + ((l.cantidad || 0) * (l.peso || 0)), 0);
-          const originalStock = editingExp.grExport || 0;
-          return currentStock < originalStock;
-        })()
+      ? entregas.some(e => e.exportacionId === editingExp.id)
       : false;
 
     // Calculate totals from lingotes array
@@ -2017,8 +1978,8 @@ export default function LingotesTracker({
         const totalImporte = entregasExp.reduce((sum, e) => sum + importeEntrega(e), 0);
         const totalLingotes = entregasExp.reduce((sum, e) => sum + numLingotes(e), 0);
 
-        // Calculate stock disponible from exp.lingotes array
-        const stockLingotes = exp.lingotes || [];
+        // Calculate stock disponible (calculated, not from exp.lingotes)
+        const stockLingotes = getStockDisponible(exp.id);
         const stockTotal = stockLingotes.reduce((sum, l) => sum + ((l.cantidad || 0) * (l.peso || 0)), 0);
         const stockCount = stockLingotes.reduce((sum, l) => sum + (l.cantidad || 0), 0);
 
@@ -2042,7 +2003,7 @@ export default function LingotesTracker({
 
         return { ...exp, totalEntregado, totalCerrado, totalDevuelto, totalPendiente, totalImporte, totalLingotes, porCliente, stockTotal, stockCount, facturaTotal, hasBeenUsed };
       });
-    }, [exportaciones, entregas, clientes]);
+    }, [exportaciones, entregas, clientes, stockDisponiblePorExp]);
 
     const saveExportacion = async () => {
       if (formData.nombre && formTotalLingotes > 0) {
@@ -3866,23 +3827,7 @@ export default function LingotesTracker({
                 // Gemma
                 await crearEntregas(clienteIds.Gemma, 'Gemma', gemmaEntregas);
 
-                // Descontar del stock de la exportación
-                const newLingotes = [...(selectedExp.lingotes || [])];
-                for (const [pesoStr, cantidad] of Object.entries(stockADescontar)) {
-                  const peso = parseInt(pesoStr);
-                  const idx = newLingotes.findIndex(l => l.peso === peso);
-                  if (idx !== -1) {
-                    newLingotes[idx] = { ...newLingotes[idx], cantidad: newLingotes[idx].cantidad - cantidad };
-                  }
-                }
-                // Filtrar los que quedan con cantidad > 0
-                const filteredLingotes = newLingotes.filter(l => l.cantidad > 0);
-                await onSaveExportacion({ ...selectedExp, lingotes: filteredLingotes }, selectedExp.id);
-
-                const totalDescontado = Object.entries(stockADescontar).reduce((sum, [peso, cant]) => sum + (parseInt(peso) * cant), 0);
-                console.log(`✅ Descontados ${totalDescontado}g del stock de ${selectedExp.nombre}`);
-
-                alert(`✅ Importación completada!\n\nNJ: 3 entregas + 13 FUTURA\nMilla: 2 entregas\nOrcash: 1 entrega\nGaudia: 3 entregas + 30 FUTURA\nGemma: 1 entrega\n\n📦 Descontados ${totalDescontado}g de ${selectedExp.nombre}`);
+                alert(`✅ Importación completada!\n\nNJ: 3 entregas + 13 FUTURA\nMilla: 2 entregas\nOrcash: 1 entrega\nGaudia: 3 entregas + 30 FUTURA\nGemma: 1 entrega\n\n📦 Stock se recalcula automáticamente`);
               } catch (err) {
                 console.error('Error:', err);
                 alert('Error: ' + err.message);
@@ -3936,7 +3881,7 @@ export default function LingotesTracker({
   const EntregaModal = () => {
     const defaultClienteId = editingEntregaClienteId || clientes[0]?.id || '';
     // Find first exportacion with stock
-    const exportacionesConStock = exportaciones.filter(e => (e.lingotes || []).some(l => l.cantidad > 0));
+    const exportacionesConStock = exportaciones.filter(e => getStockDisponible(e.id).some(l => l.cantidad > 0));
     const defaultExportacionId = exportacionesConStock[0]?.id || exportaciones[0]?.id || '';
     const defaultFecha = new Date().toISOString().split('T')[0];
 
@@ -3949,15 +3894,33 @@ export default function LingotesTracker({
 
     // Get stock for selected exportacion
     const selectedExportacion = exportaciones.find(e => e.id === formData.exportacionId);
-    const stockExportacion = (selectedExportacion?.lingotes || []).filter(l => l.cantidad > 0);
+    const stockExportacion = selectedExportacion ? getStockDisponible(selectedExportacion.id) : [];
+
+    // FUTURA detection: find client's pending FUTURA, sorted oldest first
+    const clienteFuturaForModal = (futuraLingotes || [])
+      .filter(f => f.clienteId === formData.clienteId)
+      .sort((a, b) => new Date(a.fechaCreacion || 0) - new Date(b.fechaCreacion || 0));
+
+    // Group FUTURA by peso
+    const futuraByPeso = {};
+    clienteFuturaForModal.forEach(f => {
+      if (!futuraByPeso[f.peso]) futuraByPeso[f.peso] = [];
+      futuraByPeso[f.peso].push(f);
+    });
 
     // Build items list based on selected exportacion's stock
     const itemsWithStock = stockExportacion.map(l => {
       const existingItem = formData.items.find(i => i.peso === l.peso);
+      const futuraForPeso = futuraByPeso[l.peso] || [];
+      const cantidad = existingItem?.cantidad || 0;
+      const futuraAutoAssign = Math.min(cantidad, futuraForPeso.length);
       return {
         peso: l.peso,
-        cantidad: existingItem?.cantidad || 0,
+        cantidad,
         disponible: l.cantidad,
+        futuraCount: futuraForPeso.length,
+        futuraAutoAssign,
+        freshCount: cantidad - futuraAutoAssign,
       };
     });
 
@@ -3968,6 +3931,7 @@ export default function LingotesTracker({
     // Totals
     const totalLingotes = itemsWithStock.reduce((sum, i) => sum + i.cantidad, 0);
     const totalGramos = itemsWithStock.reduce((sum, i) => sum + (i.cantidad * i.peso), 0);
+    const totalFuturaAssigned = itemsWithStock.reduce((sum, i) => sum + i.futuraAutoAssign, 0);
 
     // Check if form has meaningful changes from defaults
     const hasChanges = hasAnyItems ||
@@ -3998,11 +3962,23 @@ export default function LingotesTracker({
 
     const handleSubmit = () => {
       const activeItems = formData.items.filter(i => i.cantidad > 0);
+
+      // Compute which FUTURA IDs to assign, per peso, oldest first
+      const futuraToAssign = [];
+      for (const item of activeItems) {
+        const futuraForPeso = (futuraByPeso[item.peso] || []);
+        const assignCount = Math.min(item.cantidad, futuraForPeso.length);
+        for (let i = 0; i < assignCount; i++) {
+          futuraToAssign.push(futuraForPeso[i].id);
+        }
+      }
+
       addEntrega({
         clienteId: formData.clienteId,
         exportacionId: formData.exportacionId,
         fechaEntrega: formData.fechaEntrega,
         items: activeItems,
+        futuraIdsToAssign: futuraToAssign,
       });
     };
 
@@ -4027,7 +4003,8 @@ export default function LingotesTracker({
                     className="w-full border border-[var(--accent)] bg-[var(--accent-soft)] rounded-[var(--radius-lg)] px-4 py-3 font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   >
                     {exportacionesConStock.map(exp => {
-                      const stockTotal = (exp.lingotes || []).reduce((sum, l) => sum + (l.cantidad * l.peso), 0);
+                      const expStock = getStockDisponible(exp.id);
+                      const stockTotal = expStock.reduce((sum, l) => sum + (l.cantidad * l.peso), 0);
                       return (
                         <option key={exp.id} value={exp.id}>
                           {exp.nombre} — {formatNum(stockTotal, 0)}g disponibles
@@ -4049,6 +4026,29 @@ export default function LingotesTracker({
                   <input type="date" value={formData.fechaEntrega} onChange={(e) => setFormData({ ...formData, fechaEntrega: e.target.value })} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]" />
                 </div>
               </div>
+
+              {/* FUTURA banner */}
+              {clienteFuturaForModal.length > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-[var(--radius-lg)] p-3 mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-bold text-purple-800">⏳ FUTURA pendientes</span>
+                  </div>
+                  <p className="text-xs text-purple-600 mb-2">
+                    Se incluirán automáticamente al crear la entrega.
+                  </p>
+                  {Object.entries(futuraByPeso).map(([peso, futuras]) => {
+                    const conPrecio = futuras.filter(f => f.precio);
+                    return (
+                      <div key={peso} className="flex justify-between text-sm py-0.5">
+                        <span className="font-mono text-purple-700">{peso}g × {futuras.length}</span>
+                        <span className="text-purple-500 text-xs">
+                          {conPrecio.length > 0 ? `${conPrecio.length} cerrados` : 'sin cerrar'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Lingotes por tipo de la exportación seleccionada */}
               <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-3 mb-4">
@@ -4106,8 +4106,13 @@ export default function LingotesTracker({
                           )}
                         </div>
                         {item.cantidad > 0 && (
-                          <div className="mt-2 text-right text-sm text-[var(--text-tertiary)]">
-                            = {item.cantidad * item.peso}g
+                          <div className="mt-2 flex justify-between items-center text-sm">
+                            {item.futuraCount > 0 && item.futuraAutoAssign > 0 ? (
+                              <span className="text-purple-600 text-xs font-medium">
+                                {item.futuraAutoAssign} FUTURA + {item.freshCount} nuevos
+                              </span>
+                            ) : <span />}
+                            <span className="text-[var(--text-tertiary)]">= {item.cantidad * item.peso}g</span>
                           </div>
                         )}
                       </div>
@@ -4127,6 +4132,11 @@ export default function LingotesTracker({
                     <div className="text-xs text-[var(--text-tertiary)] mt-1">
                       {itemsWithStock.filter(i => i.cantidad > 0).map(i => `${i.cantidad}×${i.peso}g`).join(' + ')}
                     </div>
+                    {totalFuturaAssigned > 0 && (
+                      <div className="text-xs text-purple-600 font-medium mt-1">
+                        ⏳ {totalFuturaAssigned} FUTURA + {totalLingotes - totalFuturaAssigned} nuevos
+                      </div>
+                    )}
                     {!allStockSuficiente && (
                       <p className="text-red-600 text-xs mt-2">⚠️ Stock insuficiente en algún tipo</p>
                     )}
@@ -4723,244 +4733,7 @@ export default function LingotesTracker({
     );
   };
 
-  // Assign Futura Modal - select orphan FUTURA lingotes and assign to a real entrega
-  // Also allows adding extra lingotes from stock
-  const AssignFuturaModal = () => {
-    const clienteId = selectedCliente || editingEntregaClienteId;
-    const cliente = getCliente(clienteId);
-    const clienteFutura = (futuraLingotes || []).filter(f => f.clienteId === clienteId);
-    const targetEntregasList = entregas.filter(e => e.clienteId === clienteId);
-
-    const [selectedIds, setSelectedIds] = useState([]);
-    const [selectedTarget, setSelectedTarget] = useState(targetEntregasList[0]?.id || '');
-    // State para lingotes adicionales del stock: { peso: cantidad }
-    const [extraLingotes, setExtraLingotes] = useState({});
-
-    if (clienteFutura.length === 0) return null;
-
-    const toggleId = (id) => {
-      setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-    };
-
-    const selectAll = () => {
-      setSelectedIds(clienteFutura.map(f => f.id));
-    };
-
-    // Obtener stock disponible de la exportación de la entrega seleccionada
-    const selectedEntrega = entregas.find(e => e.id === selectedTarget);
-    const selectedExp = selectedEntrega ? exportaciones.find(ex => ex.id === selectedEntrega.exportacionId) : null;
-    const stockDisponible = selectedExp?.lingotes?.filter(l => l.cantidad > 0) || [];
-
-    const updateExtraCantidad = (peso, delta) => {
-      const stockItem = stockDisponible.find(s => s.peso === peso);
-      const maxCantidad = stockItem?.cantidad || 0;
-      setExtraLingotes(prev => {
-        const current = prev[peso] || 0;
-        const newVal = Math.max(0, Math.min(maxCantidad, current + delta));
-        if (newVal === 0) {
-          const { [peso]: _, ...rest } = prev;
-          return rest;
-        }
-        return { ...prev, [peso]: newVal };
-      });
-    };
-
-    const totalExtraLingotes = Object.entries(extraLingotes).reduce((sum, [peso, cant]) => sum + cant, 0);
-    const totalExtraPeso = Object.entries(extraLingotes).reduce((sum, [peso, cant]) => sum + (parseFloat(peso) * cant), 0);
-
-    const handleAssign = async () => {
-      if ((selectedIds.length === 0 && totalExtraLingotes === 0) || !selectedTarget) return;
-
-      const targetEntrega = entregas.find(e => e.id === selectedTarget);
-      if (!targetEntrega) return;
-
-      // 1. Build new lingotes from futura docs
-      const newLingotes = [];
-      for (const fId of selectedIds) {
-        const f = clienteFutura.find(fl => fl.id === fId);
-        if (!f) continue;
-        const hasPrecio = !!f.precio;
-        newLingotes.push({
-          peso: f.peso,
-          precio: f.precio || null,
-          importe: f.importe || 0,
-          nFactura: f.nFactura || null,
-          fechaCierre: f.fechaCierre || null,
-          pesoCerrado: hasPrecio ? f.peso : 0,
-          pesoDevuelto: 0,
-          estado: hasPrecio ? (f.pagado ? 'finalizado' : 'pendiente_pago') : 'en_curso',
-          pagado: f.pagado || false,
-          esDevolucion: false,
-          esFutura: true, // Marcar que viene de FUTURA
-        });
-      }
-
-      // 2. Add extra lingotes from stock
-      for (const [peso, cantidad] of Object.entries(extraLingotes)) {
-        for (let i = 0; i < cantidad; i++) {
-          newLingotes.push({
-            peso: parseFloat(peso),
-            precio: null,
-            importe: 0,
-            nFactura: null,
-            fechaCierre: null,
-            pesoCerrado: 0,
-            pesoDevuelto: 0,
-            estado: 'en_curso',
-            pagado: false,
-            esDevolucion: false,
-          });
-        }
-      }
-
-      // 3. Update entrega with new lingotes
-      await onUpdateEntrega(selectedTarget, {
-        lingotes: [...targetEntrega.lingotes, ...newLingotes],
-      });
-
-      // 4. Descontar stock de la exportación si hay extra lingotes
-      if (totalExtraLingotes > 0 && selectedExp) {
-        const updatedExpLingotes = selectedExp.lingotes.map(l => {
-          const usedCantidad = extraLingotes[l.peso] || 0;
-          return usedCantidad > 0 ? { ...l, cantidad: l.cantidad - usedCantidad } : l;
-        }).filter(l => l.cantidad > 0);
-
-        await onSaveExportacion({
-          ...selectedExp,
-          lingotes: updatedExpLingotes,
-        });
-      }
-
-      // 5. Delete futura docs
-      for (const fId of selectedIds) {
-        await onDeleteFutura(fId);
-      }
-
-      setShowAssignFuturaModal(false);
-    };
-
-    const totalFuturaSelected = clienteFutura.filter(f => selectedIds.includes(f.id)).reduce((s, f) => s + (f.peso || 0), 0);
-
-    return (
-      <div className="fixed inset-0 glass-overlay overlay-animate flex items-center justify-center z-50 p-4" onClick={() => setShowAssignFuturaModal(false)}>
-        <div className="glass-modal modal-animate rounded-[var(--radius-2xl)] p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">Asignar FUTURA</h3>
-          <p className="text-sm text-[var(--text-tertiary)] mb-4">{cliente?.nombre} tiene {clienteFutura.length} lingotes FUTURA</p>
-
-          {targetEntregasList.length > 0 ? (
-            <>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Asignar a entrega</label>
-                <select value={selectedTarget} onChange={e => { setSelectedTarget(e.target.value); setExtraLingotes({}); }} className="w-full border border-black/[0.08] rounded-[var(--radius-lg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
-                  {targetEntregasList.map(e => {
-                    const exp = getExportacion(e.exportacionId);
-                    return <option key={e.id} value={e.id}>{e.fechaEntrega} {exp ? `(${exp.nombre})` : ''} - {numLingotes(e)} lingotes</option>;
-                  })}
-                </select>
-              </div>
-
-              {/* Lingotes FUTURA */}
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-[var(--text-primary)]">Lingotes FUTURA</label>
-                  <button onClick={selectAll} className="text-xs text-[var(--accent)] font-semibold hover:text-[var(--accent-text)]">
-                    Seleccionar todos
-                  </button>
-                </div>
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {clienteFutura.map((f) => {
-                    const isSelected = selectedIds.includes(f.id);
-                    return (
-                      <div key={f.id} onClick={() => toggleId(f.id)} className={`flex items-center justify-between p-2 rounded-[var(--radius-md)] cursor-pointer transition-colors ${isSelected ? 'bg-[var(--accent-soft)] border border-[var(--accent-border)]' : 'bg-black/[0.02] border border-black/[0.06] hover:bg-black/[0.04]'}`}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center text-xs ${isSelected ? 'bg-[var(--accent)] border-[var(--accent)] text-white' : 'border-black/[0.08]'}`}>
-                            {isSelected && '✓'}
-                          </div>
-                          <span className="font-mono text-sm">{f.peso}g</span>
-                        </div>
-                        <div className="text-xs text-[var(--text-tertiary)]">
-                          {f.precio ? `${formatNum(f.precio)} €/g` : 'sin precio'}
-                          {f.nFactura ? ` • ${f.nFactura}` : ''}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Lingotes adicionales del stock */}
-              {stockDisponible.length > 0 && (
-                <div className="mb-4 p-3 bg-emerald-50 rounded-[var(--radius-lg)] border border-emerald-200">
-                  <label className="text-sm font-medium text-emerald-800 mb-2 block">+ Añadir del stock ({selectedExp?.nombre})</label>
-                  <div className="space-y-2">
-                    {stockDisponible.map(s => (
-                      <div key={s.peso} className="flex items-center justify-between">
-                        <span className="font-mono text-sm text-emerald-700">{s.peso}g</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-emerald-600">disp: {s.cantidad}</span>
-                          <div className="flex items-center bg-white rounded-[var(--radius-md)] border border-emerald-300">
-                            <button
-                              onClick={() => updateExtraCantidad(s.peso, -1)}
-                              className="w-8 h-8 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 rounded-l-lg"
-                              disabled={!extraLingotes[s.peso]}
-                            >
-                              −
-                            </button>
-                            <span className="w-8 text-center font-mono text-sm">{extraLingotes[s.peso] || 0}</span>
-                            <button
-                              onClick={() => updateExtraCantidad(s.peso, 1)}
-                              className="w-8 h-8 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 rounded-r-lg"
-                              disabled={(extraLingotes[s.peso] || 0) >= s.cantidad}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Resumen */}
-              {(selectedIds.length > 0 || totalExtraLingotes > 0) && (
-                <div className="bg-[var(--accent-soft)] rounded-[var(--radius-lg)] p-3 mb-4 space-y-1">
-                  {selectedIds.length > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-[var(--accent)]">FUTURA:</span>
-                      <span className="font-bold text-[var(--accent-text)]">{selectedIds.length} lingotes ({totalFuturaSelected}g)</span>
-                    </div>
-                  )}
-                  {totalExtraLingotes > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-emerald-600">Stock:</span>
-                      <span className="font-bold text-emerald-800">{totalExtraLingotes} lingotes ({totalExtraPeso}g)</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm pt-1 border-t border-[var(--accent-border)]">
-                    <span className="font-semibold text-[var(--text-primary)]">Total:</span>
-                    <span className="font-bold text-[var(--text-primary)]">{selectedIds.length + totalExtraLingotes} lingotes ({totalFuturaSelected + totalExtraPeso}g)</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button variant="secondary" className="flex-1" onClick={() => setShowAssignFuturaModal(false)}>Omitir</Button>
-                <Button className="flex-1" disabled={(selectedIds.length === 0 && totalExtraLingotes === 0) || !selectedTarget} onClick={handleAssign}>
-                  Asignar ({selectedIds.length + totalExtraLingotes})
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-[var(--text-tertiary)] text-sm mb-4">No hay entregas a las que asignar. Crea una nueva entrega primero.</p>
-              <Button variant="secondary" className="w-full" onClick={() => setShowAssignFuturaModal(false)}>Cerrar</Button>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
+  // AssignFuturaModal removed — FUTURA now auto-merged during entrega creation in EntregaModal
 
   // Modal para selección múltiple de lingotes de diferentes entregas
   const MultiCierreModal = () => {
@@ -5511,7 +5284,6 @@ export default function LingotesTracker({
       {showCierreModal && <CierreModal />}
       {showFuturaModal && <FuturaModal />}
       {showNewFuturaModal && <NewFuturaModal />}
-      {showAssignFuturaModal && <AssignFuturaModal />}
       {showMultiCierreModal && <MultiCierreModal />}
       {showFacturaModal && <FacturaModal />}
       {viewingFactura && <ViewFacturaModal />}
