@@ -865,6 +865,57 @@ export default function LingotesTracker({
     await onUpdateFutura(futuraId, { pagado: newPagado });
   };
 
+  // Marcar grupo completo como pagado (desde Pagos Pendientes)
+  const marcarGrupoPagado = async (grupo) => {
+    // Agrupar lingotes normales por entregaId para actualizar en bloque
+    const porEntrega = {};
+    const futuraIds = [];
+    grupo.lingotes.forEach(l => {
+      if (l.isFutura && l.futuraId) {
+        futuraIds.push(l.futuraId);
+      } else if (l.entregaId != null && l.lingoteIdx != null) {
+        if (!porEntrega[l.entregaId]) porEntrega[l.entregaId] = [];
+        porEntrega[l.entregaId].push(l.lingoteIdx);
+      }
+    });
+
+    // Actualizar lingotes normales por entrega
+    for (const [entregaId, indices] of Object.entries(porEntrega)) {
+      const entrega = entregas.find(e => e.id === entregaId);
+      if (!entrega) continue;
+      const lingotes = [...entrega.lingotes];
+      indices.forEach(idx => {
+        if (lingotes[idx] && lingotes[idx].estado === 'pendiente_pago') {
+          lingotes[idx] = { ...lingotes[idx], pagado: true, estado: 'finalizado' };
+        }
+      });
+      const pesoTotal = indices.reduce((s, idx) => s + (entrega.lingotes[idx]?.peso || 0), 0);
+      const importeTotal = indices.reduce((s, idx) => s + (entrega.lingotes[idx]?.importe || 0), 0);
+      const log = createLog('pago', `Pago grupal: ${indices.length} lingotes (${formatNum(pesoTotal, 0)}g) — ${formatEur(importeTotal)}`);
+      const logs = [...(entrega.logs || []), log];
+      await onUpdateEntrega(entregaId, { lingotes, logs });
+    }
+
+    // Actualizar FUTURA
+    for (const futuraId of futuraIds) {
+      await onUpdateFutura(futuraId, { pagado: true });
+    }
+
+    // Log general
+    const clientesStr = grupo.clientes.join(', ');
+    const desc = grupo.tipo === 'factura'
+      ? `Pago grupal factura "${grupo.facturaNombre}": ${grupo.cantidad} lingotes (${formatNum(grupo.totalPeso, 0)}g) — ${formatEur(grupo.totalImporte)} de ${clientesStr}`
+      : `Pago grupal sin factura: ${grupo.cantidad} lingotes (${formatNum(grupo.totalPeso, 0)}g) — ${formatEur(grupo.totalImporte)} de ${clientesStr}`;
+    onAddLogGeneral('pago_grupal', desc, {
+      tipo: grupo.tipo,
+      facturaId: grupo.facturaId || null,
+      cantidad: grupo.cantidad,
+      pesoTotal: grupo.totalPeso,
+      importeTotal: grupo.totalImporte,
+      clientes: grupo.clientes,
+    });
+  };
+
   const deleteEntrega = async (entregaId) => {
     if (confirm('¿Eliminar esta entrega? El stock se recalculará automáticamente.')) {
       const entrega = entregas.find(e => e.id === entregaId);
@@ -1274,9 +1325,22 @@ export default function LingotesTracker({
                           </div>
                         </div>
                       </div>
-                      <span className="text-sm font-bold text-orange-700 whitespace-nowrap ml-2">
-                        {formatEur(g.totalImporte)}
-                      </span>
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
+                        <span className="text-sm font-bold text-orange-700 whitespace-nowrap">
+                          {formatEur(g.totalImporte)}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`¿Marcar como pagado ${g.cantidad} lingote${g.cantidad > 1 ? 's' : ''} (${formatEur(g.totalImporte)})?`)) {
+                              marcarGrupoPagado(g);
+                            }
+                          }}
+                          className="px-2 py-1 text-[10px] font-semibold bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          ✓ Pagado
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
