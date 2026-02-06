@@ -5457,15 +5457,15 @@ export default function LingotesTracker({
   const TabBtn = ({ id, label, icon }) => (
     <button
       onClick={() => { setActiveTab(id); setSelectedCliente(null); }}
-      className={`flex-1 py-2.5 px-3 text-xs sm:text-sm font-medium transition-all duration-300 relative btn-press ${
+      className={`flex-1 py-2 px-1.5 sm:px-3 text-[11px] sm:text-sm font-medium transition-all duration-300 relative btn-press whitespace-nowrap ${
         activeTab === id
           ? 'tab-pill-active'
           : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/[0.03]'
       }`}
-      style={{ borderRadius: '100px', margin: '4px 2px' }}
+      style={{ borderRadius: '100px', margin: '4px 1px' }}
     >
-      <span className="relative inline-flex items-center gap-1.5">
-        <span className="text-sm">{icon}</span>
+      <span className="relative inline-flex items-center gap-1">
+        <span className="hidden sm:inline text-sm">{icon}</span>
         <span>{label}</span>
       </span>
     </button>

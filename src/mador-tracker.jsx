@@ -709,15 +709,15 @@ A la base le sumamos el ${paquete.igi}% de IGI que nos da un total de ${formatNu
   const TabButton = ({ id, label, icon, badge }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex-1 py-2.5 px-3 text-xs sm:text-sm font-medium transition-all duration-300 relative btn-press ${
+      className={`flex-1 py-2 px-1.5 sm:px-3 text-[11px] sm:text-sm font-medium transition-all duration-300 relative btn-press whitespace-nowrap ${
         activeTab === id
           ? 'tab-pill-active'
           : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/[0.03]'
       }`}
-      style={{ borderRadius: '100px', margin: '4px 2px' }}
+      style={{ borderRadius: '100px', margin: '4px 1px' }}
     >
-      <span className="relative inline-flex items-center gap-1.5">
-        <span className="text-sm">{icon}</span>
+      <span className="relative inline-flex items-center gap-1">
+        <span className="hidden sm:inline text-sm">{icon}</span>
         <span>{label}</span>
         {badge > 0 && (
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] absolute -top-0.5 -right-2" />
@@ -1176,34 +1176,36 @@ Usa punto decimal. Si no encuentras algo, pon null.`;
                   {cierreData.confirmado && (
                     <div>
                       <label className="block text-xs mb-1" style={{ color: clienteColor }}>Base Cliente €/g</label>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <input
                           type="number"
                           inputMode="decimal"
                           step="0.01"
                           value={cierreData.baseCliente}
                           onChange={(e) => setCierreData({ ...cierreData, baseCliente: e.target.value })}
-                          className="flex-1 bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none font-mono"
+                          className="flex-1 min-w-[120px] bg-white rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-primary)] focus:outline-none font-mono"
                           style={{ border: `1px solid ${clienteColor}50` }}
                         />
-                        <button
-                          type="button"
-                          onClick={() => aplicarDescuento(-0.02)}
-                          className="px-2 py-1 text-xs rounded-[var(--radius-md)] transition-colors"
-                          style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
-                        >-0,02</button>
-                        <button
-                          type="button"
-                          onClick={() => aplicarDescuento(-0.05)}
-                          className="px-2 py-1 text-xs rounded-[var(--radius-md)] transition-colors"
-                          style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
-                        >-0,05</button>
-                        <button
-                          type="button"
-                          onClick={() => aplicarDescuento(-0.10)}
-                          className="px-2 py-1 text-xs rounded-[var(--radius-md)] transition-colors"
-                          style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
-                        >-0,10</button>
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => aplicarDescuento(-0.02)}
+                            className="px-2.5 py-1.5 text-xs rounded-[var(--radius-md)] transition-colors btn-press"
+                            style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
+                          >-0,02</button>
+                          <button
+                            type="button"
+                            onClick={() => aplicarDescuento(-0.05)}
+                            className="px-2.5 py-1.5 text-xs rounded-[var(--radius-md)] transition-colors btn-press"
+                            style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
+                          >-0,05</button>
+                          <button
+                            type="button"
+                            onClick={() => aplicarDescuento(-0.10)}
+                            className="px-2.5 py-1.5 text-xs rounded-[var(--radius-md)] transition-colors btn-press"
+                            style={{ backgroundColor: clienteColor + '20', color: clienteColor, border: `1px solid ${clienteColor}40` }}
+                          >-0,10</button>
+                        </div>
                       </div>
                       {baseClienteNum !== baseRealNum && baseClienteNum > 0 && (() => {
                         const diffPorGramo = baseClienteNum - baseRealNum;
@@ -4996,7 +4998,7 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
         {/* Subnavegación contextual */}
         {activeTab === 'expediciones' && (selectedExpedicion || selectedPaquete) && (
           <div className="glass border-b border-white/10 px-4 py-2">
-            <div className="flex items-center gap-2 max-w-3xl mx-auto">
+            <div className="flex items-center gap-2 max-w-3xl mx-auto overflow-x-auto min-w-0">
               {selectedPaquete ? (
                 (() => {
                   const paq = paquetes.find(p => p.id === selectedPaquete);
@@ -5005,34 +5007,34 @@ Usa punto decimal. Si un peso aparece en kg, conviértelo a gramos.` }
                   const totales = paq ? calcularTotalesPaquete(paq, getExpedicionPrecioPorDefecto(paq?.expedicionId)) : null;
                   return (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedPaquete(null)}>← Volver</Button>
-                      <h2 className="text-lg font-semibold text-[var(--text-primary)]">{paq?.nombre}</h2>
+                      <Button variant="ghost" size="sm" className="flex-shrink-0" onClick={() => setSelectedPaquete(null)}>←</Button>
+                      <h2 className="text-base font-semibold text-[var(--text-primary)] truncate min-w-0">{paq?.nombre}</h2>
                       {cliente && (
                         <span
-                          className="text-xs px-2.5 py-1 rounded-full font-bold"
+                          className="text-xs px-2 py-0.5 rounded-full font-bold flex-shrink-0"
                           style={{ backgroundColor: (cliente.color || '#C8956C') + '18', color: cliente.color || '#C8956C' }}
                         >{cliente.abreviacion || cliente.nombre}</span>
                       )}
                       {totales && totales.totalFra > 0 && (
                         <span
-                          className="text-sm font-mono font-bold ml-auto"
+                          className="text-xs font-mono font-bold ml-auto flex-shrink-0"
                           style={{ color: cliente?.color || '#C8956C' }}
                         >{formatNum(totales.totalFra)}€</span>
                       )}
                       {categoria?.esFino && (
-                        <span className="bg-[var(--accent-soft)] text-[var(--accent-text)] text-xs px-2.5 py-1 rounded-full font-medium">FINO</span>
+                        <span className="bg-[var(--accent-soft)] text-[var(--accent-text)] text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0">FINO</span>
                       )}
                     </>
                   );
                 })()
               ) : selectedExpedicion ? (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedExpedicion(null)}>← Volver</Button>
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)] flex-1">Expedición {expediciones.find(e => e.id === selectedExpedicion)?.nombre}</h2>
+                  <Button variant="ghost" size="sm" className="flex-shrink-0" onClick={() => setSelectedExpedicion(null)}>←</Button>
+                  <h2 className="text-base font-semibold text-[var(--text-primary)] flex-1 truncate min-w-0">Exp. {expediciones.find(e => e.id === selectedExpedicion)?.nombre}</h2>
                   <select
                     value={ordenVista}
                     onChange={(e) => setOrdenVista(e.target.value)}
-                    className="input-glass !py-1.5 !px-3 !text-sm !w-auto"
+                    className="input-glass !py-1.5 !px-2 !text-xs !w-auto flex-shrink-0"
                   >
                     <option value="normal">📋 Normal</option>
                     <option value="pendientes">⚠️ Pendientes</option>
