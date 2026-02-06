@@ -175,6 +175,34 @@ export default function LingotesTracker({
     return { totalEntregado, totalCerrado, totalDevuelto, stockClientes, totalFutura };
   }, [entregas, futuraLingotes]);
 
+  // Stock disponible por exportacion = lingotes originales - consumidos por entregas
+  const stockDisponiblePorExp = useMemo(() => {
+    const result = {};
+    exportaciones.forEach(exp => {
+      // Start with original lingotes
+      const disponible = {};
+      (exp.lingotes || []).forEach(l => {
+        disponible[l.peso] = (disponible[l.peso] || 0) + (l.cantidad || 0);
+      });
+      // Subtract lingotes consumed by entregas linked to this exportacion
+      entregas.filter(e => e.exportacionId === exp.id).forEach(entrega => {
+        (entrega.lingotes || []).forEach(l => {
+          // Only subtract non-devuelto lingotes (devueltos are "returned" to stock)
+          if (l.estado !== 'devuelto') {
+            disponible[l.peso] = (disponible[l.peso] || 0) - 1;
+          }
+        });
+      });
+      // Convert to array format, keep only positive
+      result[exp.id] = Object.entries(disponible)
+        .map(([peso, cantidad]) => ({ peso: parseFloat(peso), cantidad: Math.max(0, cantidad) }))
+        .filter(l => l.cantidad > 0);
+    });
+    return result;
+  }, [exportaciones, entregas]);
+
+  const getStockDisponible = (expId) => stockDisponiblePorExp[expId] || [];
+
   // CRUD
   // Calculate global stock from all exportaciones (using calculated available stock)
   const stockGlobal = useMemo(() => {
@@ -209,34 +237,6 @@ export default function LingotesTracker({
   const stockRealLingotes = useMemo(() => {
     return stockGlobal.reduce((sum, s) => sum + s.cantidad, 0);
   }, [stockGlobal]);
-
-  // Stock disponible por exportacion = lingotes originales - consumidos por entregas
-  const stockDisponiblePorExp = useMemo(() => {
-    const result = {};
-    exportaciones.forEach(exp => {
-      // Start with original lingotes
-      const disponible = {};
-      (exp.lingotes || []).forEach(l => {
-        disponible[l.peso] = (disponible[l.peso] || 0) + (l.cantidad || 0);
-      });
-      // Subtract lingotes consumed by entregas linked to this exportacion
-      entregas.filter(e => e.exportacionId === exp.id).forEach(entrega => {
-        (entrega.lingotes || []).forEach(l => {
-          // Only subtract non-devuelto lingotes (devueltos are "returned" to stock)
-          if (l.estado !== 'devuelto') {
-            disponible[l.peso] = (disponible[l.peso] || 0) - 1;
-          }
-        });
-      });
-      // Convert to array format, keep only positive
-      result[exp.id] = Object.entries(disponible)
-        .map(([peso, cantidad]) => ({ peso: parseFloat(peso), cantidad: Math.max(0, cantidad) }))
-        .filter(l => l.cantidad > 0);
-    });
-    return result;
-  }, [exportaciones, entregas]);
-
-  const getStockDisponible = (expId) => stockDisponiblePorExp[expId] || [];
 
   // Comprimir imagen para que no supere el límite de Firestore (1MB)
   const comprimirImagen = (file, maxSizeKB = 500) => {
