@@ -4023,111 +4023,25 @@ export default function LingotesTracker({
           </Card>
         )}
 
-        {/* Reconstruir historial de stock logs */}
+        {/* Borrar stock logs */}
+        {stockLogs.length > 0 && (
         <Card>
-          <h3 className="font-bold text-blue-700 mb-4">📋 Reconstruir Log de Stock</h3>
+          <h3 className="font-bold text-blue-700 mb-4">📋 Log de Stock</h3>
           <p className="text-sm text-[var(--text-secondary)] mb-4">
-            Genera logs históricos de stock a partir de las exportaciones ({exportaciones.length}) y entregas ({entregas.length}) existentes.
-            Reconstruye el historial cronológico completo.
+            Hay {stockLogs.length} logs de stock registrados. Puedes borrarlos para empezar desde cero.
           </p>
           <Button
+            variant="danger"
             onClick={async () => {
-              if (!confirm('¿Generar logs históricos de stock? Se borrarán los logs existentes y se recrearán desde cero.')) return;
-
-              // Borrar logs existentes primero
+              if (!confirm(`¿Borrar los ${stockLogs.length} logs de stock? El log empezará vacío desde el stock actual.`)) return;
               await onClearStockLogs();
-
-              // Recopilar todos los eventos en orden cronológico
-              const eventos = [];
-
-              // 1. Exportaciones creadas (entrada de stock)
-              exportaciones.forEach(exp => {
-                const grExport = exp.grExport || (exp.lingotes || []).reduce((s, l) => s + (l.cantidad * l.peso), 0);
-                eventos.push({
-                  tipo: 'crear_exportacion',
-                  timestamp: exp.fecha ? new Date(exp.fecha + 'T08:00:00').toISOString() : new Date().toISOString(),
-                  descripcion: `Exportación creada: ${exp.nombre} (${grExport}g)`,
-                  cantidad: 0,
-                  pesoTotal: grExport,
-                  delta: grExport,
-                  detalles: { exportacionId: exp.id, exportacionNombre: exp.nombre },
-                });
-              });
-
-              // 2. Entregas a clientes (salida de stock) + devoluciones dentro de ellas
-              entregas.forEach(ent => {
-                const cliente = getCliente(ent.clienteId);
-                const clienteNombre = cliente?.nombre || 'Desconocido';
-                const lingotesEnt = ent.lingotes || [];
-                const totalPeso = lingotesEnt.reduce((s, l) => s + (l.peso || 0), 0);
-                const exportacion = getExportacion(ent.exportacionId);
-
-                // Evento de entrega
-                eventos.push({
-                  tipo: 'salida',
-                  timestamp: ent.fechaEntrega ? new Date(ent.fechaEntrega + 'T10:00:00').toISOString() : new Date().toISOString(),
-                  descripcion: `Entrega a ${clienteNombre}: ${lingotesEnt.length} lingotes (${totalPeso}g)`,
-                  cantidad: lingotesEnt.length,
-                  pesoTotal: totalPeso,
-                  delta: -totalPeso,
-                  detalles: {
-                    clienteId: ent.clienteId,
-                    clienteNombre,
-                    exportacionId: ent.exportacionId,
-                    exportacionNombre: exportacion?.nombre,
-                    entregaId: ent.id,
-                  },
-                });
-
-                // Devoluciones dentro de la entrega
-                lingotesEnt.forEach(l => {
-                  if (l.estado === 'devuelto' && l.fechaDevolucion) {
-                    eventos.push({
-                      tipo: 'devolucion',
-                      timestamp: new Date(l.fechaDevolucion + 'T12:00:00').toISOString(),
-                      descripcion: `Devolución de ${clienteNombre}: 1 x ${l.peso}g`,
-                      cantidad: 1,
-                      pesoTotal: l.peso,
-                      delta: l.peso,
-                      detalles: {
-                        clienteId: ent.clienteId,
-                        clienteNombre,
-                        exportacionId: ent.exportacionId,
-                        exportacionNombre: exportacion?.nombre,
-                        entregaId: ent.id,
-                      },
-                    });
-                  }
-                });
-              });
-
-              // Ordenar cronológicamente
-              eventos.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-              // Calcular stock acumulativo y crear logs
-              let stockAcumulado = 0;
-              let count = 0;
-              for (const ev of eventos) {
-                stockAcumulado += ev.delta;
-                await onAddStockLog({
-                  tipo: ev.tipo,
-                  descripcion: ev.descripcion,
-                  cantidad: ev.cantidad,
-                  pesoTotal: ev.pesoTotal,
-                  detalles: ev.detalles,
-                  stockResultante: stockAcumulado,
-                  usuario: 'Sistema (reconstrucción)',
-                  timestamp: ev.timestamp,
-                });
-                count++;
-              }
-
-              alert(`✅ Se han creado ${count} logs de stock históricos.`);
+              alert('✅ Logs de stock borrados.');
             }}
           >
-            📋 Reconstruir Historial
+            🗑️ Borrar logs de stock
           </Button>
         </Card>
+        )}
 
         {/* Reset data */}
         <Card>
