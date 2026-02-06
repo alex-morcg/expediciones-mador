@@ -4594,14 +4594,15 @@ export default function LingotesTracker({
     const importeClienteTotal = precioCliente * pesoTotalNeto;
 
     // Auto-fill baseCliente y precioJofisa cuando se confirma euroOnza
+    // En modo edición: siempre recalcular (sobreescribir valores existentes)
     const confirmarEuroOnza = () => {
       if (!euroOnzaNum) return;
       const baseCalc = Math.ceil((euroOnzaNum / 31.10349) * 100) / 100;
       const precioJofisaCalc = Math.round((baseCalc + 0.25) * 100) / 100;
       setFormData(prev => ({
         ...prev,
-        baseCliente: prev.baseCliente || baseCalc.toFixed(2),
-        precioJofisa: prev.precioJofisa || precioJofisaCalc.toFixed(2),
+        baseCliente: (isEditing || !prev.baseCliente) ? baseCalc.toFixed(2) : prev.baseCliente,
+        precioJofisa: (isEditing || !prev.precioJofisa) ? precioJofisaCalc.toFixed(2) : prev.precioJofisa,
       }));
       setEuroOnzaConfirmado(true);
     };
